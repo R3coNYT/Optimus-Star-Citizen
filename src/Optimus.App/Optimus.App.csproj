@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!--
+      L'application de bureau : une seule fenêtre, pas de service, pas de microservice (§70).
+      Elle ne contient aucune logique de commande - tout vient d'Optimus.Infrastructure, de
+      sorte que le banc d'essai en ligne de commande et cette fenêtre partagent exactement le
+      même moteur et ne peuvent pas diverger.
+    -->
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+
+    <!--
+      L'ICU doit rester active : sans elle, string.Normalize cesse de décomposer les accents
+      et « lumières » devient « lumi res » - ce qui avait fait résoudre la mauvaise commande.
+    -->
+    <InvariantGlobalization>false</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Optimus.Infrastructure\Optimus.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

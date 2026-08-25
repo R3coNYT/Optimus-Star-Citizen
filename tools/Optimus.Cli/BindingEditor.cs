@@ -6,27 +6,6 @@ using Optimus.Infrastructure.Input;
 
 namespace Optimus.Cli;
 
-/// <summary>Ce qu'une action représente pour le catalogue, et donc l'urgence à lui donner une touche.</summary>
-internal enum ActionNeed
-{
-    /// <summary>Séquence par défaut d'une commande : sans touche, la commande ne marche pas.</summary>
-    Primary,
-
-    /// <summary>Sens explicite : sans touche, « éteins » retombe sur la bascule. Utile, pas vital.</summary>
-    Directed,
-}
-
-/// <summary>Une action que le catalogue utilise, avec son état.</summary>
-internal sealed record ActionSlot(
-    string ActionId,
-    string CommandId,
-    string CommandName,
-    ActionNeed Need,
-    BindingLookup Status,
-    InputSpec? Input,
-    AssignmentOrigin? Origin,
-    string SearchText);
-
 /// <summary>
 /// L'éditeur de keybinds.
 ///
@@ -45,56 +24,14 @@ internal static class BindingEditor
 {
     /// <summary>Toutes les actions dont le catalogue a besoin, avec leur état courant.</summary>
     public static IReadOnlyList<ActionSlot> Inventory(
-        CommandCatalog catalog, BindingProfile bindings, BindingOverlay overlay)
-    {
-        List<ActionSlot> slots = new();
-        HashSet<string> seen = new(StringComparer.OrdinalIgnoreCase);
-
-        foreach (CommandDefinition command in catalog.Commands)
-        {
-            Collect(command, command.Actions, ActionNeed.Primary);
-            Collect(command, command.ActionsOn, ActionNeed.Directed);
-            Collect(command, command.ActionsOff, ActionNeed.Directed);
-        }
-
-        return slots.OrderBy(s => s.Need).ThenBy(s => s.ActionId, StringComparer.Ordinal).ToList();
-
-        void Collect(CommandDefinition command, IReadOnlyList<ActionStep> steps, ActionNeed need)
-        {
-            foreach (ActionStep step in steps)
-            {
-                if (step.Type != ActionStepType.GameAction || step.ActionId is null || !seen.Add(step.ActionId))
-                {
-                    continue;
-                }
-
-                BindingAssignment? assignment = overlay.Find(step.ActionId);
-                BindingLookup status = bindings.Resolve(step.ActionId, out Binding? binding);
-
-                // Les PHRASES VOCALES entrent dans la recherche. Le pilote connait « Feux du
-                // vaisseau » sous le nom de « lumieres » - c'est ce qu'il dit pour l'allumer -
-                // et chercher par le seul libelle lui refuserait le mot qu'il emploie vraiment.
-                string searchText = TextNormalizer.Normalize(
-                    $"{step.ActionId} {command.Id} {command.Name} {string.Join(' ', command.AllPhrases)}");
-
-                slots.Add(new ActionSlot(
-                    step.ActionId,
-                    command.Id,
-                    command.Name,
-                    need,
-                    assignment is not null ? BindingLookup.Bound : status,
-                    assignment?.Input ?? binding?.Input,
-                    assignment?.Origin,
-                    searchText));
-            }
-        }
-    }
+        CommandCatalog catalog, BindingProfile bindings, BindingOverlay overlay) =>
+        BindingInventory.Build(catalog, bindings, overlay);
 
     /// <summary>Affiche l'inventaire, en séparant ce qui bloque de ce qui améliore.</summary>
     public static void PrintInventory(
         IReadOnlyList<ActionSlot> slots, BindingOverlay overlay, string? mappingsDirectory = null)
     {
-        ActionSlot[] missing = slots.Where(s => s.Status != BindingLookup.Bound).ToArray();
+        ActionSlot[] missing = slots.Where(s => !s.IsBound).ToArray();
         ActionSlot[] blocking = missing.Where(s => s.Need == ActionNeed.Primary).ToArray();
         ActionSlot[] improving = missing.Where(s => s.Need == ActionNeed.Directed).ToArray();
 
@@ -164,22 +101,7 @@ internal static class BindingEditor
         // On cherche dans le libelle ET dans les phrases vocales, sans accents : le pilote
         // tape ce qu'il lit ou ce qu'il dit, jamais l'identifiant technique. « --bind portes »
         // doit trouver « Portes du vaisseau », et « --bind lumieres » « Feux du vaisseau ».
-        string needle = TextNormalizer.Normalize(target);
-
-        ActionSlot[] matches = slots
-            .Where(s => s.SearchText.Contains(needle, StringComparison.Ordinal))
-            .ToArray();
-
-        // Une correspondance exacte de libelle tranche : « boucliers » designe la bascule des
-        // boucliers, meme si cinq autres actions portent le mot.
-        ActionSlot[] exact = matches
-            .Where(s => TextNormalizer.Normalize(s.CommandName) == needle)
-            .ToArray();
-
-        if (exact.Length == 1)
-        {
-            matches = exact;
-        }
+        ActionSlot[] matches = BindingInventory.Search(slots, target).ToArray();
 
         if (matches.Length == 0)
         {
@@ -253,7 +175,7 @@ internal static class BindingEditor
         BindingOverlay overlay,
         string overlayPath)
     {
-        ActionSlot[] pending = slots.Where(s => s.Status != BindingLookup.Bound).ToArray();
+        ActionSlot[] pending = slots.Where(s => !s.IsBound).ToArray();
 
         if (pending.Length == 0)
         {
@@ -471,7 +393,7 @@ internal static class BindingEditor
         for (int i = 0; i < matches.Length; i++)
         {
             ActionSlot slot = matches[i];
-            string state = slot.Status == BindingLookup.Bound ? slot.Input!.ToString() : "aucune touche";
+            string state = slot.IsBound ? slot.Input!.ToString() : "aucune touche";
             string sense = slot.Need == ActionNeed.Directed ? " [sens explicite]" : string.Empty;
 
             Console.WriteLine($"    {i + 1,2}. {slot.CommandName,-26} {state,-24} {slot.ActionId}{sense}");
@@ -533,10 +455,7 @@ internal static class BindingEditor
         }
         else
         {
-            string needle = TextNormalizer.Normalize(target);
-            ActionSlot[] matches = assigned
-                .Where(slot => slot.SearchText.Contains(needle, StringComparison.Ordinal))
-                .ToArray();
+            ActionSlot[] matches = BindingInventory.Search(assigned, target).ToArray();
 
             if (matches.Length == 0)
             {
