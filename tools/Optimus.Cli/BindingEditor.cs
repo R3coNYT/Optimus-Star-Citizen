@@ -1,6 +1,7 @@
 ﻿using Optimus.Core.Bindings;
 using Optimus.Core.Domain.Bindings;
 using Optimus.Core.Domain.Commands;
+using Optimus.Core.Intent;
 using Optimus.Infrastructure.Input;
 
 namespace Optimus.Cli;
@@ -23,7 +24,8 @@ internal sealed record ActionSlot(
     ActionNeed Need,
     BindingLookup Status,
     InputSpec? Input,
-    AssignmentOrigin? Origin);
+    AssignmentOrigin? Origin,
+    string SearchText);
 
 /// <summary>
 /// L'éditeur de keybinds.
@@ -69,6 +71,12 @@ internal static class BindingEditor
                 BindingAssignment? assignment = overlay.Find(step.ActionId);
                 BindingLookup status = bindings.Resolve(step.ActionId, out Binding? binding);
 
+                // Les PHRASES VOCALES entrent dans la recherche. Le pilote connait « Feux du
+                // vaisseau » sous le nom de « lumieres » - c'est ce qu'il dit pour l'allumer -
+                // et chercher par le seul libelle lui refuserait le mot qu'il emploie vraiment.
+                string searchText = TextNormalizer.Normalize(
+                    $"{step.ActionId} {command.Id} {command.Name} {string.Join(' ', command.AllPhrases)}");
+
                 slots.Add(new ActionSlot(
                     step.ActionId,
                     command.Id,
@@ -76,7 +84,8 @@ internal static class BindingEditor
                     need,
                     assignment is not null ? BindingLookup.Bound : status,
                     assignment?.Input ?? binding?.Input,
-                    assignment?.Origin));
+                    assignment?.Origin,
+                    searchText));
             }
         }
     }
@@ -149,10 +158,25 @@ internal static class BindingEditor
         BindingOverlay overlay,
         string overlayPath)
     {
+        // On cherche dans le libelle ET dans les phrases vocales, sans accents : le pilote
+        // tape ce qu'il lit ou ce qu'il dit, jamais l'identifiant technique. « --bind portes »
+        // doit trouver « Portes du vaisseau », et « --bind lumieres » « Feux du vaisseau ».
+        string needle = TextNormalizer.Normalize(target);
+
         ActionSlot[] matches = slots
-            .Where(s => s.ActionId.Contains(target, StringComparison.OrdinalIgnoreCase)
-                     || s.CommandId.Contains(target, StringComparison.OrdinalIgnoreCase))
+            .Where(s => s.SearchText.Contains(needle, StringComparison.Ordinal))
             .ToArray();
+
+        // Une correspondance exacte de libelle tranche : « boucliers » designe la bascule des
+        // boucliers, meme si cinq autres actions portent le mot.
+        ActionSlot[] exact = matches
+            .Where(s => TextNormalizer.Normalize(s.CommandName) == needle)
+            .ToArray();
+
+        if (exact.Length == 1)
+        {
+            matches = exact;
+        }
 
         if (matches.Length == 0)
         {
@@ -160,19 +184,14 @@ internal static class BindingEditor
             return 1;
         }
 
-        if (matches.Length > 1)
-        {
-            Console.WriteLine($"  « {target} » désigne {matches.Length} actions :");
-            foreach (ActionSlot slot in matches)
-            {
-                Console.WriteLine($"    {slot.ActionId}   ({slot.CommandName})");
-            }
+        ActionSlot? selected = matches.Length == 1 ? matches[0] : Choose(target, matches);
 
-            Console.WriteLine("  Précisez laquelle.");
+        if (selected is null)
+        {
             return 1;
         }
 
-        ActionSlot chosen = matches[0];
+        ActionSlot chosen = selected;
 
         Console.WriteLine();
         Console.WriteLine($"  action    {chosen.ActionId}");
@@ -341,6 +360,51 @@ internal static class BindingEditor
         return 0;
     }
 
+
+
+
+    /// <summary>
+    /// Demande laquelle, quand un terme en désigne plusieurs.
+    ///
+    /// « portes » vaut aussi bien pour les portes du vaisseau que pour le verrouillage des sas,
+    /// et « lumières » recouvre la bascule et ses deux sens. Renvoyer le pilote à la ligne de
+    /// commande pour qu'il recopie un identifiant serait gratuitement raide : on est déjà en
+    /// console, et l'état de chacune tient sur une ligne.
+    /// </summary>
+    private static ActionSlot? Choose(string target, ActionSlot[] matches)
+    {
+        Console.WriteLine();
+        Console.WriteLine($"  « {target} » désigne {matches.Length} actions :");
+        Console.WriteLine();
+
+        for (int i = 0; i < matches.Length; i++)
+        {
+            ActionSlot slot = matches[i];
+            string state = slot.Status == BindingLookup.Bound ? slot.Input!.ToString() : "aucune touche";
+            string sense = slot.Need == ActionNeed.Directed ? " [sens explicite]" : string.Empty;
+
+            Console.WriteLine($"    {i + 1,2}. {slot.CommandName,-26} {state,-24} {slot.ActionId}{sense}");
+        }
+
+        Console.WriteLine();
+        Console.Write("  Numéro (Entrée pour renoncer) : ");
+
+        string? answer = Console.ReadLine();
+
+        if (string.IsNullOrWhiteSpace(answer))
+        {
+            Console.WriteLine("  Abandon : rien n'a été modifié.");
+            return null;
+        }
+
+        if (!int.TryParse(answer.Trim(), out int index) || index < 1 || index > matches.Length)
+        {
+            Console.Error.WriteLine($"  « {answer.Trim()} » n'est pas un numéro de la liste.");
+            return null;
+        }
+
+        return matches[index - 1];
+    }
 
     /// <summary>Export de profil le plus récent trouvé dans le dossier du jeu.</summary>
     private static string? NewestLayout(string? mappingsDirectory)
