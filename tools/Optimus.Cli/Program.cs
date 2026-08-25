@@ -1,11 +1,15 @@
 using Optimus.Core.Abstractions;
 using Optimus.Core.Domain.Bindings;
 using Optimus.Core.Domain.Commands;
+using Optimus.Core.Domain.Copilots;
+using Optimus.Core.Domain.Profiles;
 using Optimus.Core.Execution;
 using Optimus.Core.Intent;
 using Optimus.Core.Loading;
+using Optimus.Core.Personality;
 using Optimus.Infrastructure.Game;
 using Optimus.Infrastructure.Input;
+using Optimus.Infrastructure.Speech;
 
 namespace Optimus.Cli;
 
@@ -34,6 +38,8 @@ public static class Program
 
         bool real = args.Contains("--real", StringComparer.OrdinalIgnoreCase);
         bool status = args.Contains("--status", StringComparer.OrdinalIgnoreCase);
+        bool silent = args.Contains("--silent", StringComparer.OrdinalIgnoreCase);
+        bool listVoices = args.Contains("--voices", StringComparer.OrdinalIgnoreCase);
         string[] rest = args.Where(a => !a.StartsWith("--", StringComparison.Ordinal)).ToArray();
 
         string? repoRoot = FindRepositoryRoot(AppContext.BaseDirectory);
@@ -57,17 +63,44 @@ public static class Program
 
         LoadResult<CommandCatalog> catalog = JsonCatalogLoader.LoadCatalog(catalogPath);
         LoadResult<BindingProfile> profile = JsonCatalogLoader.LoadBindingProfile(profilePath);
+        LoadResult<UserProfile> user = ProfileLoader.Load(Path.Combine(repoRoot, "data", "profiles", "default.json"));
+        LoadResult<Copilot> copilot = CopilotLoader.Load(
+            Path.Combine(repoRoot, "data", "copilots", user.Value.PreferredCopilot));
 
         StarCitizenDetector detector = new();
         GameStatus game = detector.Detect();
 
-        PrintHeader(catalog, profile, game, real);
+        PrintHeader(catalog, profile, copilot, user, game, real);
+
+        await using ITextToSpeechProvider speech = silent
+            ? new NullTextToSpeechProvider()
+            : new WindowsTtsProvider();
+
+        if (listVoices)
+        {
+            foreach (VoiceInfo voice in await speech.GetVoicesAsync().ConfigureAwait(false))
+            {
+                string marker = voice.DisplayName == copilot.Value.Voice.VoiceId ? "  <- copilote" : string.Empty;
+                Console.WriteLine($"  {voice}{marker}");
+            }
+
+            return 0;
+        }
 
         if (status)
         {
             PrintGameDetail(game);
             return 0;
         }
+
+        // Le moteur est prechauffe des le demarrage : la premiere synthese coute jusqu'a
+        // 429 ms, et ce serait justement la premiere phrase entendue (D23).
+        if (!silent)
+        {
+            await speech.WarmUpAsync(copilot.Value.Voice.VoiceId).ConfigureAwait(false);
+        }
+
+        ResponseComposer composer = new(copilot.Value.Personality, copilot.Value.Responses);
 
         if (real && !EnsureRealModeIsSafe(game))
         {
@@ -82,7 +115,8 @@ public static class Program
 
         if (rest.Length > 0)
         {
-            await RunAsync(executor, detector, simulation, string.Join(' ', rest), real).ConfigureAwait(false);
+            await RunAsync(executor, detector, simulation, composer, speech, copilot.Value,
+                string.Join(' ', rest), real).ConfigureAwait(false);
             return 0;
         }
 
@@ -105,7 +139,8 @@ public static class Program
                 continue;
             }
 
-            await RunAsync(executor, detector, simulation, line, real).ConfigureAwait(false);
+            await RunAsync(executor, detector, simulation, composer, speech, copilot.Value, line, real)
+                .ConfigureAwait(false);
         }
     }
 
@@ -113,6 +148,9 @@ public static class Program
         CommandExecutor executor,
         StarCitizenDetector detector,
         SimulatedInputEngine? simulation,
+        ResponseComposer composer,
+        ITextToSpeechProvider speech,
+        Copilot copilot,
         string utterance,
         bool real)
     {
@@ -155,6 +193,24 @@ public static class Program
             Console.WriteLine($"  ANOMALIE : {simulation.StillPressed.Count} entrée(s) encore enfoncée(s)");
         }
 
+        // La parole vient APRES l'action, jamais avant : une synthese lente doit degrader le
+        // confort, jamais la reactivite du jeu (docs/09).
+        ResponseRequest? request = ResponseRouter.Route(result);
+
+        if (request is not null)
+        {
+            ComposedResponse? spoken = composer.ComposeFirst(request.Keys, request.Event, request.Variables);
+
+            if (spoken is not null)
+            {
+                Console.WriteLine($"  {copilot.Name,-11} « {spoken.Text} »   ({spoken.CandidateCount} variantes possibles)");
+
+                await speech.SpeakAsync(
+                    new SpeechRequest(spoken.Text, copilot.Voice.VoiceId, copilot.EffectiveRate, copilot.Voice.Volume))
+                    .ConfigureAwait(false);
+            }
+        }
+
         Console.WriteLine();
     }
 
@@ -191,18 +247,36 @@ public static class Program
     }
 
     private static void PrintHeader(
-        LoadResult<CommandCatalog> catalog, LoadResult<BindingProfile> profile, GameStatus game, bool real)
+        LoadResult<CommandCatalog> catalog,
+        LoadResult<BindingProfile> profile,
+        LoadResult<Copilot> copilot,
+        LoadResult<UserProfile> user,
+        GameStatus game,
+        bool real)
     {
+        VoiceInputSettings listening = user.Value.VoiceInput;
+
+        string mode = listening.Mode == ListeningMode.AlwaysOn
+            ? $"écoute permanente, déclenchée par « {copilot.Value.WakeWord} »"
+            : $"push-to-talk sur {listening.PushToTalkKey}" +
+              (listening.RequireWakeWordInPushToTalk ? " + mot d'éveil" : string.Empty);
+
         Console.WriteLine("+--------------------------------------------------------------+");
         Console.WriteLine($"|  OPTIMUS - banc d'essai du moteur  [{(real ? "MODE RÉEL " : "simulation")}]              |");
         Console.WriteLine("+--------------------------------------------------------------+");
+        Console.WriteLine($"copilote      : {copilot.Value.Name} · {copilot.Value.Voice.VoiceId ?? "voix par défaut"}" +
+                          $" · débit {copilot.Value.EffectiveRate:F2}");
+        Console.WriteLine($"personnalité  : {copilot.Value.Responses.EntryCount} entrées, " +
+                          $"{copilot.Value.Responses.VariantCount} variantes · " +
+                          $"{copilot.Value.Personality.Traits.MaxWords} mots max");
+        Console.WriteLine($"écoute        : {mode}");
         Console.WriteLine($"catalogue     : {catalog.Value.Count} commandes");
         Console.WriteLine($"bindings      : {profile.Value.BoundCount} actions liées, {profile.Value.UnboundCount} sans touche" +
                           $"  (jeu {profile.Value.GameVersion}, build {profile.Value.GameBuild})");
         Console.WriteLine($"scancodes     : {ScanCodeMap.Count} touches connues");
         Console.WriteLine($"Star Citizen  : {game}");
 
-        foreach (LoadIssue issue in catalog.Issues.Concat(profile.Issues))
+        foreach (LoadIssue issue in catalog.Issues.Concat(profile.Issues).Concat(copilot.Issues).Concat(user.Issues))
         {
             Console.WriteLine($"  anomalie de chargement : {issue}");
         }

@@ -1,0 +1,36 @@
+{
+  "$schema": "optimus://schemas/userprofile-1.json",
+  "id": "default",
+  "display_name": "Pilote",
+  "language": "fr-FR",
+  "preferred_copilot": "optimus",
+  "active_binding_profile": "defaults-4.9",
+
+  "voice_input": {
+    "notes": [
+      "mode = always_on : Optimus ecoute en permanence, et la grammaire n'accepte que les",
+      "phrases COMMENCANT par le mot d'eveil. Une conversation ordinaire ne correspond alors",
+      "a aucune alternative et se trouve rejetee par construction - c'est plus sur qu'un",
+      "detecteur de mot d'eveil suivi d'une transcription libre.",
+      "mode = push_to_talk : la touche delimite la commande, le mot d'eveil devient facultatif."
+    ],
+    "mode": "always_on",
+    "push_to_talk_key": "INSERT",
+    "require_wake_word_in_push_to_talk": false,
+    "confidence_threshold": 0.40,
+    "input_device_id": null
+  },
+
+  "hotkeys": {
+    "push_to_talk": "INSERT",
+    "toggle_microphone": "CTRL+INSERT",
+    "kill_switch": "CTRL+ALT+PAUSE",
+    "toggle_simulation": "CTRL+ALT+S"
+  },
+
+  "safety": {
+    "simulation_mode": false,
+    "require_game_foreground": true,
+    "confirm_dangerous": true
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "$schema": "optimus://schemas/copilot-1.json",
+  "id": "optimus",
+  "name": "Optimus",
+  "version": "0.1.0",
+  "description": "Copilote militaire. Calme, professionnel, loyal, humour sec.",
+  "language": "fr-FR",
+  "wake_word": "Optimus",
+  "accent_color": "#22d3ee",
+  "voice": {
+    "provider": "windows-onecore",
+    "voice_id": "Microsoft Paul",
+    "rate": 1.0,
+    "volume": 0.9
+  },
+  "personality_ref": "personality.json",
+  "responses_ref": "responses.fr.json"
+}

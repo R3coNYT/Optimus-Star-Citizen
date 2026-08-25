@@ -1,0 +1,215 @@
+{
+  "$schema": "optimus://schemas/responseset-1.json",
+  "locale": "fr-FR",
+  "notes": [
+    "Plusieurs variantes par entree : repeter la meme phrase a chaque commande est ce qui",
+    "trahit le plus vite un automate. Les variantes marquees d'un requires ne sont eligibles",
+    "que pour les personnalites qui s'y pretent - un copilote militaire ne dira jamais celles",
+    "qui demandent du sarcasme.",
+    "{pilote} est remplace par une forme d'adresse tiree au sort dans le lexique."
+  ],
+  "entries": {
+    "system.success": {
+      "success": [
+        { "text": "Reçu." },
+        { "text": "C'est fait." },
+        { "text": "Exécuté." },
+        { "text": "À vos ordres, {pilote}." },
+        { "text": "Affirmatif." },
+        { "text": "Voilà qui est fait.", "requires": { "formality_min": 60 } }
+      ]
+    },
+    "system.unknown_command": {
+      "unknown": [
+        { "text": "Je ne connais pas cette commande." },
+        { "text": "Négatif. Cette instruction ne figure pas dans mes protocoles." },
+        { "text": "Je n'ai pas compris, {pilote}." },
+        { "text": "Reformulez, je vous prie." }
+      ]
+    },
+    "system.no_binding": {
+      "fail": [
+        { "text": "La commande existe, mais aucun raccourci n'est configuré." },
+        { "text": "Négatif. Aucune touche n'est assignée à cette action." },
+        { "text": "Action reconnue, raccourci manquant. À configurer dans les réglages." }
+      ]
+    },
+    "system.game_not_running": {
+      "fail": [
+        { "text": "Star Citizen n'est pas lancé, {pilote}." },
+        { "text": "Négatif. Aucun vaisseau à piloter pour l'instant." }
+      ]
+    },
+    "system.game_not_foreground": {
+      "fail": [
+        { "text": "Compris, mais le jeu n'est pas au premier plan." },
+        { "text": "J'attends que vous reveniez dans le cockpit." }
+      ]
+    },
+    "system.kill_switch": {
+      "fail": [
+        { "text": "Commandes verrouillées. Arrêt d'urgence actif." },
+        { "text": "Négatif. Je suis en sécurité, {pilote}." }
+      ]
+    },
+    "system.needs_confirmation": {
+      "clarify": [
+        { "text": "Confirmez-vous ?" },
+        { "text": "Cette action est irréversible. Confirmez." },
+        { "text": "J'attends votre confirmation, {pilote}." }
+      ]
+    },
+    "system.clarify": {
+      "clarify": [
+        { "text": "Vous voulez dire {command} ?" },
+        { "text": "Précisez, {pilote}." },
+        { "text": "Plusieurs commandes correspondent." }
+      ]
+    },
+    "system.failed": {
+      "fail": [
+        { "text": "Échec de l'exécution." },
+        { "text": "Négatif. La séquence n'a pas abouti." },
+        { "text": "Quelque chose a bloqué, {pilote}." }
+      ]
+    },
+
+    "ship.doors.toggle": {
+      "success": [
+        { "text": "Portes ouvertes, {pilote}." },
+        { "text": "Compartiments déverrouillés." },
+        { "text": "Sas actionnés." },
+        { "text": "Voilà. Tâchez de ne pas tomber dehors.", "requires": { "sarcasm_min": 50 } }
+      ]
+    },
+    "ship.lights.toggle": {
+      "success": [
+        { "text": "Éclairage commuté." },
+        { "text": "Feux de bord." },
+        { "text": "Lumières, {pilote}." }
+      ]
+    },
+    "ship.engines.toggle": {
+      "success": [
+        { "text": "Propulseurs commutés." },
+        { "text": "Moteurs, {pilote}." },
+        { "text": "Poussée disponible." }
+      ]
+    },
+    "ship.power.toggle": {
+      "success": [
+        { "text": "Alimentation générale commutée." },
+        { "text": "Réacteur, {pilote}." },
+        { "text": "Circuits sous tension." }
+      ]
+    },
+    "ship.flightready": {
+      "success": [
+        { "text": "Séquence de démarrage engagée." },
+        { "text": "Vaisseau paré au décollage, {pilote}." },
+        { "text": "Tous les systèmes en ligne." }
+      ]
+    },
+    "ship.self_destruct": {
+      "success": [
+        { "text": "Autodestruction amorcée. Il serait temps de partir." },
+        { "text": "Compte à rebours lancé, {pilote}." }
+      ]
+    },
+    "quantum.engage": {
+      "success": [
+        { "text": "Calcul de trajectoire terminé. Accrochez-vous, {pilote}." },
+        { "text": "Saut quantique engagé." },
+        { "text": "Vecteur verrouillé. Départ." }
+      ]
+    },
+    "nav.master_mode.cycle": {
+      "success": [
+        { "text": "Mode de vol commuté." },
+        { "text": "Bascule effectuée, {pilote}." }
+      ]
+    },
+    "flight.landing_gear.toggle": {
+      "success": [
+        { "text": "Train d'atterrissage." },
+        { "text": "Train commuté, {pilote}." }
+      ]
+    },
+    "flight.autoland": {
+      "success": [
+        { "text": "Approche automatique engagée." },
+        { "text": "Je nous pose, {pilote}." }
+      ]
+    },
+    "scan.mode.toggle": {
+      "success": [
+        { "text": "Mode scan." },
+        { "text": "Capteurs en veille active." }
+      ]
+    },
+    "scan.ping": {
+      "success": [
+        { "text": "Ping émis." },
+        { "text": "Balayage en cours." }
+      ]
+    },
+    "combat.countermeasure.decoy": {
+      "success": [
+        { "text": "Leurre largué." },
+        { "text": "Contre-mesures déployées." }
+      ]
+    },
+    "shields.raise.front": {
+      "success": [
+        { "text": "Boucliers renforcés à l'avant." },
+        { "text": "Protection frontale, {pilote}." }
+      ]
+    },
+    "power.reset": {
+      "success": [
+        { "text": "Répartition neutre rétablie." },
+        { "text": "Puissance équilibrée." }
+      ]
+    },
+
+    "system.status": {
+      "any": [
+        { "text": "Tous les systèmes sont opérationnels, {pilote}." },
+        { "text": "Paramètres nominaux. Aucune anomalie détectée." },
+        { "text": "Réacteur nominal, boucliers à cent pour cent, rien à signaler." }
+      ]
+    },
+    "system.mute": {
+      "any": [
+        { "text": "Compris. Silence radio." },
+        { "text": "Je me tais, {pilote}." }
+      ]
+    },
+    "system.cancel": {
+      "any": [
+        { "text": "Annulé." },
+        { "text": "Comme vous voudrez." }
+      ]
+    },
+    "dialogue.acknowledge": {
+      "any": [
+        { "text": "À votre service, {pilote}." },
+        { "text": "C'est mon travail." },
+        { "text": "Ne me remerciez pas, remerciez l'ingénierie.", "requires": { "humor_min": 35 } }
+      ]
+    },
+    "dialogue.reaction": {
+      "any": [
+        { "text": "J'aurais préféré ne pas voir ça, {pilote}." },
+        { "text": "Situation notée." },
+        { "text": "Je préfère ne pas commenter.", "requires": { "sarcasm_min": 20 } }
+      ]
+    },
+    "system.startup": {
+      "any": [
+        { "text": "Optimus en ligne. À vos ordres, {pilote}." },
+        { "text": "Systèmes initialisés. Je vous écoute." }
+      ]
+    }
+  }
+}

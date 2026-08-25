@@ -5,7 +5,7 @@
       Windows, comme la couche qu'il éprouve. Les tests du cœur, eux, restent en net8.0 neutre :
       c'est la vérification vivante que Optimus.Core ne dépend d'aucune API système.
     -->
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>

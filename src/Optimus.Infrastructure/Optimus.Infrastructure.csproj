@@ -7,7 +7,8 @@
       lieu de les signaler, et documente au passage la seule plateforme réellement visée.
       Le cœur (Optimus.Core), lui, reste neutre et testable partout.
     -->
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
 
     <!--
       Exigé par le générateur de sources de LibraryImport, qui produit des marshalers
