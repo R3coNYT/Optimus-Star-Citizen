@@ -150,6 +150,8 @@ internal static class BindingEditor
         Console.WriteLine("  --bind <action|commande>   assigner une seule touche");
         Console.WriteLine("  --import-layout <fichier>  reprendre vos réglages exportés du jeu");
         Console.WriteLine("  --export-layout            produire le fichier à charger dans le jeu");
+        Console.WriteLine("  --unbind [action]          défaire une assignation");
+        Console.WriteLine("  --reset-bindings           tout défaire, après confirmation");
     }
 
     /// <summary>Assigne une touche à une action, la frappe faisant foi.</summary>
@@ -493,6 +495,134 @@ internal static class BindingEditor
         }
 
         return matches[index - 1];
+    }
+
+
+    /// <summary>
+    /// Retire une assignation, rendant à l'action la touche que le jeu lui donnait — ou son
+    /// absence de touche.
+    ///
+    /// Un éditeur qui écrit sans permettre de revenir en arrière est un piège : la capture est
+    /// immédiate, une touche pressée par erreur est enregistrée aussitôt, et il faut pouvoir
+    /// défaire sans aller éditer un JSON à la main.
+    /// </summary>
+    public static int Unassign(
+        string? target,
+        IReadOnlyList<ActionSlot> slots,
+        BindingOverlay overlay,
+        string overlayPath)
+    {
+        if (overlay.Count == 0)
+        {
+            Console.WriteLine();
+            Console.WriteLine("  Aucune assignation : il n'y a rien à défaire.");
+            return 0;
+        }
+
+        // On ne cherche que parmi ce qui a été assigné : proposer une action intouchée n'aurait
+        // aucun sens ici, et allongerait la liste de choix pour rien.
+        ActionSlot[] assigned = slots
+            .Where(slot => overlay.Find(slot.ActionId) is not null)
+            .ToArray();
+
+        ActionSlot? chosen;
+
+        if (string.IsNullOrWhiteSpace(target))
+        {
+            chosen = assigned.Length == 1 ? assigned[0] : Choose("vos assignations", assigned);
+        }
+        else
+        {
+            string needle = TextNormalizer.Normalize(target);
+            ActionSlot[] matches = assigned
+                .Where(slot => slot.SearchText.Contains(needle, StringComparison.Ordinal))
+                .ToArray();
+
+            if (matches.Length == 0)
+            {
+                Console.Error.WriteLine($"Aucune de vos assignations ne correspond à « {target} ».");
+                return 1;
+            }
+
+            chosen = matches.Length == 1 ? matches[0] : Choose(target, matches);
+        }
+
+        if (chosen is null)
+        {
+            return 1;
+        }
+
+        BindingAssignment removed = overlay.Find(chosen.ActionId)!;
+        overlay.Remove(chosen.ActionId);
+        overlay.Save(overlayPath);
+
+        Console.WriteLine();
+        Console.WriteLine($"  retiré     {removed.Input}  de {chosen.ActionId}");
+        Console.WriteLine($"  écrit     {overlayPath}");
+
+        PrintGameSideCaveat();
+        return 0;
+    }
+
+    /// <summary>Efface toutes les assignations, après confirmation écrite.</summary>
+    public static int Reset(BindingOverlay overlay, string overlayPath)
+    {
+        if (overlay.Count == 0)
+        {
+            Console.WriteLine();
+            Console.WriteLine("  Aucune assignation : il n'y a rien à effacer.");
+            return 0;
+        }
+
+        Console.WriteLine();
+        Console.WriteLine($"  {overlay.Count} assignation(s) vont être effacées :");
+
+        foreach (BindingAssignment assignment in overlay.Assignments)
+        {
+            Console.WriteLine($"    {assignment.Input,-22} {assignment.ActionId}");
+        }
+
+        // Confirmation écrite plutôt qu'un simple o/n : effacer le travail de configuration de
+        // quelqu'un mérite mieux qu'une touche pressée par réflexe.
+        Console.WriteLine();
+        Console.Write("  Tapez EFFACER pour confirmer : ");
+
+        string? answer = Console.ReadLine();
+
+        if (!string.Equals(answer?.Trim(), "EFFACER", StringComparison.Ordinal))
+        {
+            Console.WriteLine("  Abandon : rien n'a été modifié.");
+            return 0;
+        }
+
+        foreach (BindingAssignment assignment in overlay.Assignments.ToArray())
+        {
+            overlay.Remove(assignment.ActionId);
+        }
+
+        overlay.Save(overlayPath);
+
+        Console.WriteLine();
+        Console.WriteLine($"  effacé    {overlayPath}");
+
+        PrintGameSideCaveat();
+        return 0;
+    }
+
+    /// <summary>
+    /// Rappelle que défaire côté Optimus ne défait rien côté jeu.
+    ///
+    /// C'est la contrepartie de D35 : puisque assigner demandait deux moitiés, retirer aussi.
+    /// Taire cette asymétrie laisserait une touche active dans Star Citizen alors qu'Optimus la
+    /// croit libre — exactement le genre d'écart qu'on ne découvre qu'en vol.
+    /// </summary>
+    private static void PrintGameSideCaveat()
+    {
+        Console.WriteLine();
+        Console.WriteLine("  Attention : Star Citizen garde la touche qu'il a déjà apprise. Optimus ne");
+        Console.WriteLine("  l'enverra plus, mais elle reste active si vous la pressez vous-même.");
+        Console.WriteLine("  Pour la retirer aussi du jeu : Options > Keybindings, ou rechargez le");
+        Console.WriteLine("  profil par défaut depuis Control Profiles.");
     }
 
     /// <summary>Export de profil le plus récent trouvé dans le dossier du jeu.</summary>

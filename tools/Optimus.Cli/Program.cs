@@ -48,6 +48,9 @@ public static class Program
         bool importRequested = args.Contains("--import-layout", StringComparer.OrdinalIgnoreCase);
         string? importLayout = OptionValue(args, "--import-layout");
         bool exportLayout = args.Contains("--export-layout", StringComparer.OrdinalIgnoreCase);
+        bool unbindRequested = args.Contains("--unbind", StringComparer.OrdinalIgnoreCase);
+        string? unbindTarget = OptionValue(args, "--unbind");
+        bool resetBindings = args.Contains("--reset-bindings", StringComparer.OrdinalIgnoreCase);
         string? exportPath = OptionValue(args, "--export-layout");
         string[] rest = args.Where(a => !a.StartsWith("--", StringComparison.Ordinal)).ToArray();
 
@@ -114,7 +117,8 @@ public static class Program
 
         // L'editeur de keybinds n'a besoin ni de voix ni de micro : il se traite avant que
         // quoi que ce soit de couteux ne demarre.
-        if (showBindings || bindRequested || importRequested || exportLayout)
+        if (showBindings || bindRequested || importRequested || exportLayout
+            || unbindRequested || resetBindings)
         {
             IReadOnlyList<ActionSlot> slots = BindingEditor.Inventory(catalog.Value, profile.Value, overlay);
 
@@ -122,6 +126,16 @@ public static class Program
             // ou : autant s'en servir plutot que de demander au pilote un chemin qu'il devrait
             // aller chercher a la main.
             string? mappings = StarCitizenDetector.ResolveMappingsDirectory(game.ExecutablePath);
+
+            if (resetBindings)
+            {
+                return BindingEditor.Reset(overlay, overlayPath);
+            }
+
+            if (unbindRequested)
+            {
+                return BindingEditor.Unassign(unbindTarget, slots, overlay, overlayPath);
+            }
 
             if (importRequested)
             {
