@@ -141,7 +141,15 @@ public static partial class TextNormalizer
         return normalizedText;
     }
 
-    /// <summary>Distance d'édition tolérant une ou deux fautes selon la longueur du mot.</summary>
+    /// <summary>
+    /// Le mot entendu est-il assez proche du mot d'éveil.
+    ///
+    /// La tolérance est délibérément serrée : une seule modification jusqu'à neuf lettres.
+    /// À deux, « optique » passait pour « optimus » — un mot courant, sans rapport, qui aurait
+    /// fait croire au copilote qu'on l'appelait. Une lettre suffit à absorber les vraies
+    /// approximations de transcription (« optimuss », « optimis ») sans ouvrir la porte au
+    /// voisinage lexical.
+    /// </summary>
     private static bool IsCloseEnough(string candidate, string reference)
     {
         if (candidate == reference)
@@ -149,7 +157,7 @@ public static partial class TextNormalizer
             return true;
         }
 
-        int tolerance = reference.Length >= 7 ? 2 : 1;
+        int tolerance = reference.Length >= 10 ? 2 : 1;
         return LevenshteinDistance(candidate, reference) <= tolerance;
     }
 

@@ -113,6 +113,13 @@ public static class Program
         FastIntentMatcher matcher = new(catalog.Value);
         CommandExecutor executor = new(catalog.Value, profile.Value, engine, matcher);
 
+        if (args.Contains("--listen", StringComparer.OrdinalIgnoreCase))
+        {
+            return await ListenAsync(
+                executor, detector, simulation, composer, speech,
+                copilot.Value, user.Value, catalog.Value, real).ConfigureAwait(false);
+        }
+
         if (rest.Length > 0)
         {
             await RunAsync(executor, detector, simulation, composer, speech, copilot.Value,
@@ -142,6 +149,120 @@ public static class Program
             await RunAsync(executor, detector, simulation, composer, speech, copilot.Value, line, real)
                 .ConfigureAwait(false);
         }
+    }
+
+    /// <summary>
+    /// Écoute du micro jusqu'à interruption.
+    ///
+    /// C'est ici que les deux modes prennent corps : en écoute permanente, la grammaire n'accepte
+    /// que les phrases commençant par le mot d'éveil ; en push-to-talk, elle accepte les deux
+    /// formes mais reste désactivée hors appui.
+    /// </summary>
+    private static async Task<int> ListenAsync(
+        CommandExecutor executor,
+        StarCitizenDetector detector,
+        SimulatedInputEngine? simulation,
+        ResponseComposer composer,
+        ITextToSpeechProvider speech,
+        Copilot copilot,
+        UserProfile user,
+        CommandCatalog catalog,
+        bool real)
+    {
+        VoiceInputSettings settings = user.VoiceInput;
+        VoiceGrammar grammar = VoiceGrammarBuilder.Build(catalog, copilot.WakeWord, settings);
+
+        await using WindowsGrammarListener listener = new(grammar, settings.ConfidenceThreshold, copilot.Language);
+
+        Console.WriteLine($"moteur        : {listener.RecognizerName}");
+        Console.WriteLine($"grammaire     : {grammar.Count} alternatives" +
+                          $"{(grammar.WakeWordRequired ? $", « {copilot.WakeWord} » obligatoire" : ", mot d'éveil facultatif")}");
+        Console.WriteLine($"seuil         : {settings.ConfidenceThreshold:F2}");
+        Console.WriteLine();
+
+        using PushToTalkWatcher? pushToTalk = settings.Mode == ListeningMode.PushToTalk
+            ? new PushToTalkWatcher(settings.PushToTalkKey)
+            : null;
+
+        if (pushToTalk is not null)
+        {
+            // Hors appui, la grammaire est desactivee : le moteur n'a plus rien a reconnaitre.
+            listener.SetActive(false);
+            pushToTalk.StateChanged += (_, pressed) =>
+            {
+                listener.SetActive(pressed);
+                Console.WriteLine(pressed ? "  [micro ouvert]" : "  [micro fermé]");
+            };
+            pushToTalk.Start();
+
+            Console.WriteLine($"Maintiens {settings.PushToTalkKey} et parle. Ctrl+C pour quitter.");
+        }
+        else
+        {
+            Console.WriteLine($"Dis « {copilot.WakeWord}, ... ». Ctrl+C pour quitter.");
+        }
+
+        Console.WriteLine();
+
+        using SemaphoreSlim processing = new(1, 1);
+
+        listener.Recognized += async (_, recognition) =>
+        {
+            // Une seule commande traitee a la fois : deux sequences d'entrees qui se
+            // chevaucheraient enverraient des touches entremelees au jeu.
+            if (!await processing.WaitAsync(0).ConfigureAwait(false))
+            {
+                return;
+            }
+
+            try
+            {
+                if (recognition.CommandId is null)
+                {
+                    // Parole entendue hors grammaire : le cas normal en ecoute permanente.
+                    if (!string.IsNullOrWhiteSpace(recognition.Text))
+                    {
+                        Console.WriteLine($"  (ignoré) {recognition}");
+                    }
+
+                    return;
+                }
+
+                Console.WriteLine();
+                Console.WriteLine($"  entendu     {recognition}");
+
+                if (!recognition.Accepted)
+                {
+                    Console.WriteLine("  rejeté      confiance sous le seuil");
+                    return;
+                }
+
+                await RunAsync(executor, detector, simulation, composer, speech, copilot,
+                    recognition.Text, real).ConfigureAwait(false);
+            }
+            finally
+            {
+                processing.Release();
+            }
+        };
+
+        await listener.StartAsync().ConfigureAwait(false);
+
+        using CancellationTokenSource stop = new();
+        Console.CancelKeyPress += (_, e) => { e.Cancel = true; stop.Cancel(); };
+
+        try
+        {
+            await Task.Delay(Timeout.Infinite, stop.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            Console.WriteLine();
+            Console.WriteLine("Écoute interrompue.");
+        }
+
+        await listener.StopAsync().ConfigureAwait(false);
+        return 0;
     }
 
     private static async Task RunAsync(

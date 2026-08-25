@@ -22,4 +22,8 @@
     <ProjectReference Include="..\Optimus.Core\Optimus.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="System.Speech" Version="8.0.0" />
+  </ItemGroup>
+
 </Project>

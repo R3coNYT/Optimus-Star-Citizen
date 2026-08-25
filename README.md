@@ -43,6 +43,24 @@ sans rien dire.
 dotnet run --project tools/Optimus.Cli -- --real "Optimus, allume les lumieres"
 ```
 
+## Parler à Optimus
+
+```bash
+dotnet run --project tools/Optimus.Cli -- --listen
+```
+
+Optimus écoute, reconnaît la commande, l'exécute et répond à voix haute.
+
+Deux modes, réglés dans [`data/profiles/default.json`](data/profiles/default.json) :
+
+| Mode | Déclenchement | Grammaire |
+|---|---|---|
+| `always_on` *(défaut)* | le mot d'éveil | uniquement `Optimus <commande>` |
+| `push_to_talk` | une touche configurable | les deux formes, désactivée hors appui |
+
+En écoute permanente, la grammaire n'accepte que les phrases commençant par « Optimus » :
+une conversation ordinaire ne correspond à aucune alternative et n'est pas même transcrite.
+
 ## Architecture
 
 | Projet | Cible | Rôle |
