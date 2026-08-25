@@ -136,6 +136,11 @@ foreach ($folder in (Get-ChildItem -LiteralPath $dataDestination -Directory)) {
     Write-Ok ("data\{0,-12} {1} fichier(s)" -f $folder.Name, $count)
 }
 
+# La marque du web se transmet par la copie et fait bloquer les binaires par Smart App
+# Control. La retirer ici ne coute rien ; elle peut revenir a la copie vers la machine de
+# jeu, d'ou tools/diagnose-app-control.ps1 pour la traiter la-bas (risque R16).
+Get-ChildItem -LiteralPath $OutputDir -Recurse -File | Unblock-File -ErrorAction SilentlyContinue
+
 $size = [math]::Round(((Get-ChildItem -LiteralPath $OutputDir -Recurse -File | Measure-Object Length -Sum).Sum / 1MB), 1)
 
 Write-Host ''
