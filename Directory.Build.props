@@ -1,0 +1,22 @@
+<Project>
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>12.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <InvariantGlobalization>true</InvariantGlobalization>
+
+    <!--
+      Un avertissement ignoré est une régression en attente. Le moteur pilote un clavier :
+      on ne se paie pas le luxe de laisser passer une référence potentiellement nulle.
+    -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+
+    <NeutralLanguage>fr-FR</NeutralLanguage>
+    <Company>Optimus</Company>
+    <Product>Optimus</Product>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+
+</Project>

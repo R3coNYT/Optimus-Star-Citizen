@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!--
+      Windows, comme la couche qu'il éprouve. Les tests du cœur, eux, restent en net8.0 neutre :
+      c'est la vérification vivante que Optimus.Core ne dépend d'aucune API système.
+    -->
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+    <PackageReference Include="xunit" Version="2.5.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.3" />
+    <PackageReference Include="coverlet.collector" Version="6.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Import global posé par le modèle xUnit, à conserver. -->
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Optimus.Core\Optimus.Core.csproj" />
+    <ProjectReference Include="..\..\src\Optimus.Infrastructure\Optimus.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Localisation de la racine du dépôt : même besoin, même code, pas de copie. -->
+    <Compile Include="..\Optimus.Core.Tests\TestData.cs" Link="TestData.cs" />
+  </ItemGroup>
+
+</Project>
