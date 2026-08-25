@@ -11,6 +11,38 @@
     "confidence": 85
   },
   "style": ["military", "sci_fi", "immersive", "technical"],
+  "notes": [
+    "Les regles decident de COMMENT le copilote repond selon la situation, pas de ce qu'il dit.",
+    "Elles sont arbitrees par priorite : la plus haute l'emporte sur les valeurs en conflit."
+  ],
+  "rules": [
+    {
+      "when": "combat_active",
+      "behavior": "short_responses",
+      "priority": 100,
+      "max_words": 6,
+      "_note": "Sous le feu, un copilote bavard est insupportable. Six mots, sans humour."
+    },
+    {
+      "when": "repeated_failure",
+      "behavior": "suggest_fix",
+      "priority": 95,
+      "threshold": 3,
+      "response_key": "system.repeated_failure",
+      "_note": "Troisieme echec d'affilee : cesser de constater, proposer une correction."
+    },
+    {
+      "when": "command_failed",
+      "behavior": "explain_reason",
+      "priority": 90,
+      "_note": "Un echec sans cause est inutile au pilote."
+    },
+    {
+      "when": "command_unknown",
+      "behavior": "stay_neutral",
+      "priority": 80
+    }
+  ],
   "lexicon": {
     "address_user": ["commandant", "capitaine"],
     "forbidden_phrases": [

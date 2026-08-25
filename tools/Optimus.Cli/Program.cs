@@ -357,6 +357,16 @@ public static class Program
                 sequenceOptions: real ? new SequenceOptions(RealTime: true) : SequenceOptions.Instant)
             .ConfigureAwait(false);
 
+        State.Record(result);
+
+        // Bascule declarative du mode de combat : faute de telemetrie, Optimus se fie a ce que
+        // le pilote lui annonce. Un IGameStateProvider prendra le relais le jour venu.
+        if (result.Command?.Id == "nav.master_mode.cycle" && result.Succeeded)
+        {
+            bool combat = State.ToggleCombat();
+            Console.WriteLine($"  contexte    mode {(combat ? "COMBAT" : "navigation")}");
+        }
+
         Console.WriteLine();
         Console.WriteLine(result.Describe());
 
@@ -417,6 +427,7 @@ public static class Program
                 real ? new SequenceOptions(RealTime: true) : SequenceOptions.Instant)
             .ConfigureAwait(false);
 
+        State.Record(result);
         Console.WriteLine(result.Describe());
 
         ResponseRequest? request = ResponseRouter.Route(result);
@@ -429,7 +440,16 @@ public static class Program
         Console.WriteLine();
     }
 
-    /// <summary>Compose une réplique et la prononce.</summary>
+    /// <summary>État de session du copilote, alimenté par chaque exécution.</summary>
+    private static readonly CopilotState State = new();
+
+    /// <summary>
+    /// Compose une réplique et la prononce, après arbitrage des règles de comportement.
+    ///
+    /// C'est ici que le caractère du copilote rencontre la situation : les règles peuvent
+    /// imposer la brièveté, interdire l'humour, ou substituer une réplique plus utile — par
+    /// exemple cesser de constater un échec pour en donner la cause.
+    /// </summary>
     private static async Task SayAsync(
         ResponseComposer composer,
         ITextToSpeechProvider speech,
@@ -438,14 +458,31 @@ public static class Program
         ResponseEvent responseEvent,
         IReadOnlyDictionary<string, string>? variables = null)
     {
-        ComposedResponse? spoken = composer.ComposeFirst(keys, responseEvent, variables);
+        CopilotContext context = State.Snapshot();
+        EffectiveBehavior behavior = BehaviorEngine.Resolve(copilot.Personality.Rules, context, responseEvent);
+
+        // Les cles suggerees par les regles passent devant : « troisieme echec » est plus utile
+        // que « negatif » repete une fois de plus.
+        IReadOnlyList<string> effectiveKeys = behavior.PreferredKeys.Count > 0
+            ? behavior.PreferredKeys.Concat(keys).ToList()
+            : keys;
+
+        ComposedResponse? spoken = composer.ComposeFirst(
+            effectiveKeys,
+            responseEvent,
+            variables,
+            ResponseContext.From(behavior, context.CombatActive));
 
         if (spoken is null)
         {
             return;
         }
 
-        Console.WriteLine($"  {copilot.Name,-11} « {spoken.Text} »   ({spoken.CandidateCount} variantes possibles)");
+        string rules = behavior.AppliedRules.Count > 0
+            ? $"   [{string.Join(", ", behavior.AppliedRules)}]"
+            : string.Empty;
+
+        Console.WriteLine($"  {copilot.Name,-11} « {spoken.Text} »   ({spoken.CandidateCount} variantes){rules}");
 
         await speech.SpeakAsync(
             new SpeechRequest(spoken.Text, copilot.Voice.VoiceId, copilot.EffectiveRate, copilot.Voice.Volume))

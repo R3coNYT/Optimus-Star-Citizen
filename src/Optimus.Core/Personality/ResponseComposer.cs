@@ -8,7 +8,27 @@ namespace Optimus.Core.Personality;
 /// En combat, on abrège et on cesse de plaisanter. Un copilote bavard sous le feu est
 /// insupportable — c'est la règle comportementale la plus utile du modèle.
 /// </param>
-public readonly record struct ResponseContext(bool CombatActive = false);
+/// <param name="MaxWordsOverride">Budget de mots imposé par une règle, prioritaire sur la verbosité.</param>
+/// <param name="SuppressHumor">
+/// Vrai quand la situation ne s'y prête pas.
+///
+/// Formulé en négatif à dessein : sur une structure, <c>default</c> met tous les champs à zéro
+/// sans passer par les valeurs par défaut du constructeur. Un <c>AllowHumor = true</c> valait
+/// donc <c>false</c> partout où le contexte n'était pas fourni — et l'humour se trouvait
+/// désactivé en silence dans tout le produit. Le cas normal doit être celui que zéro exprime.
+/// </param>
+public readonly record struct ResponseContext(
+    bool CombatActive = false,
+    int? MaxWordsOverride = null,
+    bool SuppressHumor = false)
+{
+    /// <summary>Traduit une décision du moteur de règles en contexte de composition.</summary>
+    public static ResponseContext From(EffectiveBehavior behavior, bool combatActive = false)
+    {
+        ArgumentNullException.ThrowIfNull(behavior);
+        return new ResponseContext(combatActive, behavior.MaxWords, !behavior.AllowHumor);
+    }
+}
 
 /// <summary>Réplique choisie, avec de quoi expliquer pourquoi elle l'a été.</summary>
 /// <param name="Text">Texte final, variables interpolées et lexique appliqué.</param>
@@ -80,7 +100,7 @@ public sealed partial class ResponseComposer
 
         string text = Interpolate(chosen.Text, variables);
         text = ApplyLexicon(text);
-        text = TrimToWordBudget(text);
+        text = TrimToWordBudget(text, context.MaxWordsOverride);
 
         return new ComposedResponse(text, chosen.Text, candidates.Count);
     }
@@ -132,12 +152,16 @@ public sealed partial class ResponseComposer
             // En combat comme après un échec, l'humour est déplacé : on écarte les variantes
             // qui en dépendent, quelles que soient les valeurs des curseurs.
             bool humorous = variant.Requires?.HumorMin is > 0 || variant.Requires?.SarcasmMin is > 0;
-            if (humorous && (context.CombatActive || responseEvent == ResponseEvent.Fail))
+            if (humorous && (context.SuppressHumor || context.CombatActive || responseEvent == ResponseEvent.Fail))
             {
                 continue;
             }
 
-            if (context.CombatActive && CountWords(variant.Text) > 8)
+            // Sous contrainte de brièveté, on préfère écarter d'emblée les variantes trop
+            // longues plutôt que de les tronquer : une phrase amputée sonne plus faux qu'une
+            // phrase courte choisie exprès.
+            int budget = context.MaxWordsOverride ?? (context.CombatActive ? 8 : int.MaxValue);
+            if (CountWords(variant.Text) > budget)
             {
                 continue;
             }
@@ -240,9 +264,9 @@ public sealed partial class ResponseComposer
     /// Tronque à la limite de mots dictée par la verbosité, en coupant à une frontière de
     /// phrase quand c'est possible : mieux vaut une phrase de moins qu'une phrase amputée.
     /// </summary>
-    private string TrimToWordBudget(string text)
+    private string TrimToWordBudget(string text, int? overrideBudget = null)
     {
-        int budget = _personality.Traits.MaxWords;
+        int budget = overrideBudget ?? _personality.Traits.MaxWords;
         if (CountWords(text) <= budget)
         {
             return text;

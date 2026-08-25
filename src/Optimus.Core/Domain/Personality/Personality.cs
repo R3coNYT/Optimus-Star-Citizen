@@ -73,8 +73,15 @@ public enum SpeechStyle
 public sealed record Personality(
     PersonalityTraits Traits,
     Lexicon Lexicon,
-    SpeechStyle Style = SpeechStyle.Military | SpeechStyle.SciFi | SpeechStyle.Immersive)
+    SpeechStyle Style = SpeechStyle.Military | SpeechStyle.SciFi | SpeechStyle.Immersive,
+    IReadOnlyList<BehaviorRule>? Rules = null)
 {
+    /// <summary>
+    /// Règles de comportement. Ce sont elles qui font qu'un copilote se tait en combat et
+    /// explique la cause d'un échec plutôt que de le constater.
+    /// </summary>
+    public IReadOnlyList<BehaviorRule> Rules { get; init; } = Rules ?? Array.Empty<BehaviorRule>();
+
     /// <summary>Personnalité neutre, utilisée à défaut de configuration.</summary>
     public static Personality Default { get; } = new(new PersonalityTraits(), Lexicon.Empty);
 }

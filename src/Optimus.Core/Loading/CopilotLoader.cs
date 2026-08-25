@@ -129,7 +129,77 @@ public static class CopilotLoader
         return new Domain.Personality.Personality(
             traits,
             lexicon,
-            style == SpeechStyle.None ? SpeechStyle.Immersive : style);
+            style == SpeechStyle.None ? SpeechStyle.Immersive : style,
+            ReadRules(root, path, issues));
+    }
+
+    /// <summary>
+    /// Lit les règles de comportement. Une règle mal formée est écartée et signalée : mieux
+    /// vaut un copilote qui adapte moins qu'un copilote qui refuse de démarrer.
+    /// </summary>
+    private static List<BehaviorRule> ReadRules(JsonElement root, string path, List<LoadIssue> issues)
+    {
+        List<BehaviorRule> rules = new();
+
+        if (!root.TryGetProperty("rules", out JsonElement array) || array.ValueKind != JsonValueKind.Array)
+        {
+            return rules;
+        }
+
+        foreach (JsonElement element in array.EnumerateArray())
+        {
+            string? when = GetString(element, "when");
+            string? behavior = GetString(element, "behavior");
+
+            if (!TryParseTrigger(when, out BehaviorTrigger trigger))
+            {
+                issues.Add(new LoadIssue(path, "rules", $"Circonstance « {when} » inconnue, règle ignorée."));
+                continue;
+            }
+
+            if (!TryParseEffect(behavior, out BehaviorEffect effect))
+            {
+                issues.Add(new LoadIssue(path, "rules", $"Comportement « {behavior} » inconnu, règle ignorée."));
+                continue;
+            }
+
+            rules.Add(new BehaviorRule(
+                trigger,
+                effect,
+                GetInt(element, "priority") ?? 50,
+                GetInt(element, "threshold") ?? 0,
+                GetInt(element, "max_words"),
+                GetString(element, "response_key")));
+        }
+
+        return rules;
+    }
+
+    private static bool TryParseTrigger(string? value, out BehaviorTrigger trigger)
+    {
+        switch (value?.ToLowerInvariant())
+        {
+            case "combat_active": trigger = BehaviorTrigger.CombatActive; return true;
+            case "command_failed": trigger = BehaviorTrigger.CommandFailed; return true;
+            case "repeated_failure": trigger = BehaviorTrigger.RepeatedFailure; return true;
+            case "command_unknown": trigger = BehaviorTrigger.CommandUnknown; return true;
+            case "idle_long": trigger = BehaviorTrigger.IdleLong; return true;
+            case "startup": trigger = BehaviorTrigger.Startup; return true;
+            default: trigger = BehaviorTrigger.CombatActive; return false;
+        }
+    }
+
+    private static bool TryParseEffect(string? value, out BehaviorEffect effect)
+    {
+        switch (value?.ToLowerInvariant())
+        {
+            case "short_responses": effect = BehaviorEffect.ShortResponses; return true;
+            case "explain_reason": effect = BehaviorEffect.ExplainReason; return true;
+            case "suggest_fix": effect = BehaviorEffect.SuggestFix; return true;
+            case "stay_neutral": effect = BehaviorEffect.StayNeutral; return true;
+            case "speak": effect = BehaviorEffect.Speak; return true;
+            default: effect = BehaviorEffect.StayNeutral; return false;
+        }
     }
 
     private static ResponseSet ReadResponses(string path, List<LoadIssue> issues)

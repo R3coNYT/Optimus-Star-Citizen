@@ -16,7 +16,30 @@
         { "text": "Exécuté." },
         { "text": "À vos ordres, {pilote}." },
         { "text": "Affirmatif." },
-        { "text": "Voilà qui est fait.", "requires": { "formality_min": 60 } }
+        { "text": "Voilà qui est fait.", "requires": { "formality_min": 60 } },
+        { "text": "Bien reçu." },
+        { "text": "Commande passée." },
+        { "text": "Entendu, {pilote}." },
+        { "text": "Conforme." }
+      ]
+    },
+    "system.repeated_failure": {
+      "fail": [
+        { "text": "Troisième échec. Le raccourci de {command} n'est pas configuré." },
+        { "text": "Cela ne passera pas tant que {command} n'aura pas de touche assignée." },
+        { "text": "{command} échoue systématiquement. Vérifiez sa configuration." }
+      ]
+    },
+    "system.game_detected": {
+      "any": [
+        { "text": "Star Citizen détecté. Je prends mon poste." },
+        { "text": "Vaisseau en ligne. Je vous écoute, {pilote}." }
+      ]
+    },
+    "system.game_closed": {
+      "any": [
+        { "text": "Le jeu s'est fermé. Je reste en veille." },
+        { "text": "Retour à quai. Je passe en veille." }
       ]
     },
     "system.unknown_command": {
@@ -31,7 +54,10 @@
       "fail": [
         { "text": "La commande existe, mais aucun raccourci n'est configuré." },
         { "text": "Négatif. Aucune touche n'est assignée à cette action." },
-        { "text": "Action reconnue, raccourci manquant. À configurer dans les réglages." }
+        { "text": "Action reconnue, raccourci manquant." },
+        { "text": "{command} n'a pas de touche. Impossible d'agir." },
+        { "text": "Je connais {command}, mais le jeu ne lui a assigné aucune touche." },
+        { "text": "Raccourci absent, {pilote}." }
       ]
     },
     "system.game_not_running": {
@@ -86,7 +112,24 @@
       "success": [
         { "text": "Éclairage commuté." },
         { "text": "Feux de bord." },
-        { "text": "Lumières, {pilote}." }
+        { "text": "Lumières, {pilote}." },
+        { "text": "Éclairage." },
+        { "text": "Feux commutés." },
+        { "text": "Voilà de la lumière." }
+      ]
+    },
+    "nav.master_mode.combat": {
+      "success": [
+        { "text": "Mode combat. Paré." },
+        { "text": "Armes chaudes, {pilote}." },
+        { "text": "Configuration de combat." }
+      ]
+    },
+    "nav.master_mode.calm": {
+      "success": [
+        { "text": "Retour en navigation." },
+        { "text": "Mode voyage, {pilote}." },
+        { "text": "Systèmes en configuration de croisière." }
       ]
     },
     "ship.engines.toggle": {
@@ -120,7 +163,11 @@
       "success": [
         { "text": "Calcul de trajectoire terminé. Accrochez-vous, {pilote}." },
         { "text": "Saut quantique engagé." },
-        { "text": "Vecteur verrouillé. Départ." }
+        { "text": "Vecteur verrouillé. Départ." },
+        { "text": "Quantum." },
+        { "text": "Trajectoire calculée. En route, {pilote}." },
+        { "text": "Distorsion engagée." },
+        { "text": "J'espère que vous savez où l'on va.", "requires": { "sarcasm_min": 45 } }
       ]
     },
     "nav.master_mode.cycle": {
