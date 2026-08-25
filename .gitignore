@@ -1,0 +1,119 @@
+# ---------------------------------------------------------------------------
+# Optimus - .gitignore
+#
+# Principe : le depot contient les SOURCES du projet (code, donnees, conception,
+# outillage). Ce qui est exclu est soit REGENERABLE (compilation), soit PERSONNEL
+# (voix, cles), soit TROP LOURD (modeles d'IA), soit la PROPRIETE D'UN TIERS
+# (donnees extraites du jeu).
+#
+# Ce qui est livre a l'utilisateur final n'est pas decide ici mais par l'installeur :
+# voir installer/ et les profils de publication. Un fichier present dans le depot
+# n'est pas pour autant embarque dans le produit.
+# ---------------------------------------------------------------------------
+
+# --- Compilation .NET : entierement regenerable ---
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+artifacts/
+publish/
+*.dll
+*.pdb
+*.exe
+!tools/**/*.ps1
+
+# --- Fichiers propres a l'IDE et au poste de travail ---
+.vs/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.DotSettings.user
+launchSettings.json
+
+# --- NuGet ---
+packages/
+*.nupkg
+*.snupkg
+.nuget/
+
+# --- Tests et couverture ---
+TestResults/
+*.trx
+*.coverage
+*.coverclover.xml
+coverage*.json
+coverage*.xml
+BenchmarkDotNet.Artifacts/
+
+# --- Installeur et publication (Velopack) ---
+installer/Releases/
+installer/output/
+*.msi
+*.appinstaller
+
+# ---------------------------------------------------------------------------
+# Donnees personnelles : ne doivent JAMAIS partir sur un depot public
+# ---------------------------------------------------------------------------
+
+# Enregistrements vocaux des spikes : c'est la voix de l'utilisateur.
+# Les rapports .md des spikes, eux, restent versionnes : ce sont des mesures.
+docs/spikes/audio/
+**/spikes/audio/
+*.wav
+*.mp3
+*.ogg
+
+# Secrets : cles API, jeton du Bridge, tokens Discord.
+# Chiffres par DPAPI en production, mais aucune raison de les voir ici.
+**/secrets.dat
+**/secrets.json
+*.token
+appsettings.*.local.json
+.env
+.env.*
+
+# Configuration utilisateur locale (normalement dans %APPDATA%, jamais ici)
+config/local/
+*.local.json
+
+# ---------------------------------------------------------------------------
+# Fichiers lourds : a telecharger, pas a versionner
+# ---------------------------------------------------------------------------
+
+# Modeles de reconnaissance et de synthese vocale (de 75 Mo a 1,5 Go piece).
+# Optimus les recupere au premier lancement ; l'installeur reste leger.
+models/
+voices/
+*.bin
+*.onnx
+*.ggml
+*.gguf
+
+# ---------------------------------------------------------------------------
+# Donnees extraites de Star Citizen : propriete de CIG
+#
+# defaultProfile.xml et le contenu de Data.p4k appartiennent a Cloud Imperium.
+# On versionne notre TRANSFORMATION (data/bindings/starcitizen/*.json), pas la
+# source brute. Chaque utilisateur extrait la sienne avec tools/get-default-profile.ps1.
+# ---------------------------------------------------------------------------
+sc-extract/
+**/sc-extract/
+defaultProfile.xml
+*.p4k
+*.dcb
+
+# --- Journaux ---
+logs/
+*.log
+
+# --- Systeme ---
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
