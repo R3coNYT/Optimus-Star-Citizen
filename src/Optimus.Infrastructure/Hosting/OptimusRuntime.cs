@@ -98,6 +98,19 @@ public sealed class OptimusRuntime : IAsyncDisposable
 
     public string DataRoot { get; }
 
+    /// <summary>Fichier du profil utilisateur : réglages d'écoute.</summary>
+    public string ProfilePath => Path.Combine(DataRoot, "data", "profiles", "default.json");
+
+    /// <summary>Dossier du copilote : fiche, personnalité, répliques.</summary>
+    public string CopilotDirectory =>
+        Path.Combine(DataRoot, "data", "copilots", User.PreferredCopilot);
+
+    /// <summary>Fiche du copilote : voix et mot d'éveil.</summary>
+    public string CopilotPath => Path.Combine(CopilotDirectory, "copilot.json");
+
+    /// <summary>Fichier de personnalité : curseurs de caractère.</summary>
+    public string PersonalityPath => Path.Combine(CopilotDirectory, "personality.json");
+
     public CommandCatalog Catalog { get; }
 
     /// <summary>Profil du jeu seul, sans les choix du pilote. Sert à savoir ce qui manque.</summary>
@@ -108,11 +121,11 @@ public sealed class OptimusRuntime : IAsyncDisposable
 
     public BindingOverlay Overlay { get; }
 
-    public UserProfile User { get; }
+    public UserProfile User { get; private set; }
 
-    public Copilot Copilot { get; }
+    public Copilot Copilot { get; private set; }
 
-    public ResponseComposer Composer { get; }
+    public ResponseComposer Composer { get; private set; }
 
     public ITextToSpeechProvider Speech { get; }
 
@@ -236,6 +249,38 @@ public sealed class OptimusRuntime : IAsyncDisposable
     {
         Bindings = Compose(DefaultBindings, Overlay);
         _executor = new CommandExecutor(Catalog, Bindings, _engine, new FastIntentMatcher(Catalog));
+        StateChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// Relit les réglages depuis le disque et reconstruit ce qui en dépend.
+    ///
+    /// Les fichiers restent la source de vérité : l'interface écrit, puis demande une relecture.
+    /// Un seul chemin de chargement, donc aucune divergence possible entre ce qui est affiché et
+    /// ce qui sera lu au prochain démarrage.
+    ///
+    /// L'écoute redémarre si elle courait : la grammaire dépend du mot d'éveil et du mode, les
+    /// seuils du moteur de reconnaissance. Les garder tièdes donnerait une fenêtre qui affiche
+    /// un réglage et un micro qui en applique un autre.
+    /// </summary>
+    public async Task ReloadSettingsAsync(CancellationToken cancellationToken = default)
+    {
+        bool wasListening = IsListening;
+
+        if (wasListening)
+        {
+            await StopListeningAsync().ConfigureAwait(false);
+        }
+
+        User = ProfileLoader.Load(ProfilePath).Value;
+        Copilot = CopilotLoader.Load(CopilotDirectory).Value;
+        Composer = new ResponseComposer(Copilot.Personality, Copilot.Responses);
+
+        if (wasListening)
+        {
+            await StartListeningAsync(cancellationToken).ConfigureAwait(false);
+        }
+
         StateChanged?.Invoke(this, EventArgs.Empty);
     }
 

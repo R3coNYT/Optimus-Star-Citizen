@@ -119,6 +119,7 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
         ImportLayoutCommand = new RelayCommand(ImportLayout);
         ExportLayoutCommand = new RelayCommand(ExportLayout);
         TestCommandCommand = new AsyncRelayCommand(TestCommandAsync, () => SelectedCommand is not null);
+        Settings = new SettingsViewModel(_runtime, Add);
 
         // Le jeu peut demarrer ou s'arreter pendant la session : l'etat s'observe, il ne se
         // suppose pas. Deux secondes suffisent - c'est un affichage, pas une garde.
@@ -171,8 +172,21 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
 
     public AsyncRelayCommand TestCommandCommand { get; }
 
+    /// <summary>Les réglages, dans leur propre onglet.</summary>
+    public SettingsViewModel Settings { get; }
+
+    private Window? _owner;
+
     /// <summary>Fenêtre propriétaire, requise pour capturer une touche et ouvrir les dialogues.</summary>
-    public Window? Owner { get; set; }
+    public Window? Owner
+    {
+        get => _owner;
+        set
+        {
+            _owner = value;
+            Settings.Owner = value;
+        }
+    }
 
     public string CopilotName => _runtime.Copilot.Name;
 
@@ -268,8 +282,17 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
         }
     }
 
-    /// <summary>Préchauffe la voix : la première synthèse coûte jusqu'à 429 ms sinon (D23).</summary>
-    public Task WarmUpAsync() => _runtime.WarmUpAsync();
+    /// <summary>
+    /// Préchauffe la voix et remplit la liste des voix installées.
+    ///
+    /// La première synthèse coûte jusqu'à 429 ms : la faire au démarrage évite qu'elle tombe sur
+    /// la toute première phrase entendue, celle qui fait la première impression (D23).
+    /// </summary>
+    public async Task WarmUpAsync()
+    {
+        await _runtime.WarmUpAsync().ConfigureAwait(true);
+        await Settings.LoadVoicesAsync().ConfigureAwait(true);
+    }
 
     private async Task ToggleListeningAsync()
     {
@@ -549,6 +572,9 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
             Raise(nameof(KillSwitchLabel));
             Raise(nameof(CombatActive));
             Raise(nameof(BindingSummary));
+            Raise(nameof(WakeWord));
+            Raise(nameof(VoiceName));
+            Raise(nameof(CopilotName));
         });
     }
 
