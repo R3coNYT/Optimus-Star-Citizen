@@ -499,7 +499,7 @@
       "kind": "query",
       "name": "Rapport systeme",
       "category": "system",
-      "voice_phrases": ["rapport systeme", "etat des systemes", "fais un rapport", "statut", "comment on va"],
+      "voice_phrases": ["rapport systeme", "etat des systemes", "fais un rapport", "statut"],
       "actions": [],
       "cooldown_ms": 1000
     },
@@ -540,6 +540,42 @@
       "cooldown_ms": 300
     },
 
+    {
+      "id": "dialogue.identity",
+      "kind": "dialogue",
+      "name": "Qui es-tu",
+      "category": "immersion",
+      "voice_phrases": ["qui es tu", "presente toi", "c'est quoi ton nom", "comment tu t'appelles", "tu es qui"],
+      "actions": [],
+      "cooldown_ms": 1500
+    },
+    {
+      "id": "dialogue.wellbeing",
+      "kind": "dialogue",
+      "name": "Comment vas-tu",
+      "category": "immersion",
+      "voice_phrases": ["comment vas tu", "ca va", "tu vas bien", "tout va bien"],
+      "actions": [],
+      "cooldown_ms": 1500
+    },
+    {
+      "id": "system.confirm",
+      "kind": "query",
+      "name": "Confirmer",
+      "category": "system",
+      "voice_phrases": ["oui", "confirme", "vas-y", "affirmatif", "je confirme", "exact"],
+      "actions": [],
+      "cooldown_ms": 200
+    },
+    {
+      "id": "system.deny",
+      "kind": "query",
+      "name": "Refuser",
+      "category": "system",
+      "voice_phrases": ["non", "negatif", "surtout pas", "n'en fais rien"],
+      "actions": [],
+      "cooldown_ms": 200
+    },
     {
       "id": "dialogue.acknowledge",
       "kind": "dialogue",

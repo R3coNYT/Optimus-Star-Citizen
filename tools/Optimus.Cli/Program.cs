@@ -209,6 +209,14 @@ public static class Program
 
         using SemaphoreSlim processing = new(1, 1);
 
+        // Commande proposée mais pas encore confirmée. Les confiances des vraies commandes et
+        // des phrases hors catalogue se chevauchent — 0,55 pour une commande valide, 0,64 pour
+        // une question inconnue — aucun seuil ne peut donc les séparer. Plutôt que de refuser,
+        // Optimus propose et attend un « Optimus, confirme ».
+        CommandDefinition? pending = null;
+        DateTimeOffset pendingUntil = DateTimeOffset.MinValue;
+        TimeSpan pendingLifetime = TimeSpan.FromSeconds(12);
+
         listener.Recognized += async (_, recognition) =>
         {
             // Une seule commande traitee a la fois : deux sequences d'entrees qui se
@@ -234,10 +242,24 @@ public static class Program
                         return;
 
                     case RecognitionOutcome.Unclear:
-                        // On a bien ete interpelle, sans commande sure a la cle. Se taire ici
-                        // serait un echec silencieux ; deviner serait pire.
                         Console.WriteLine();
                         Console.WriteLine($"  entendu     {recognition}");
+
+                        // Une commande a bien ete reconnue, sans assez de certitude pour agir.
+                        // On la propose : refuser une commande valide est aussi penible
+                        // qu'executer celle qu'on n'a pas demandee.
+                        if (recognition.CommandId is not null &&
+                            catalog.TryGet(recognition.CommandId, out CommandDefinition? candidate) &&
+                            candidate is not null)
+                        {
+                            pending = candidate;
+                            pendingUntil = DateTimeOffset.UtcNow + pendingLifetime;
+
+                            await SayAsync(composer, speech, copilot, ["system.propose"], ResponseEvent.Clarify,
+                                new Dictionary<string, string> { ["command"] = candidate.Name })
+                                .ConfigureAwait(false);
+                            return;
+                        }
 
                         await SayAsync(composer, speech, copilot,
                             ["system.unknown_command"], ResponseEvent.Unknown).ConfigureAwait(false);
@@ -247,6 +269,31 @@ public static class Program
                     default:
                         Console.WriteLine();
                         Console.WriteLine($"  entendu     {recognition}");
+
+                        bool pendingAlive = pending is not null && DateTimeOffset.UtcNow <= pendingUntil;
+
+                        if (recognition.CommandId == "system.confirm" && pendingAlive)
+                        {
+                            CommandDefinition confirmed = pending!;
+                            pending = null;
+
+                            Console.WriteLine($"  confirmé    {confirmed.Name}");
+                            await RunCommandAsync(executor, detector, simulation, composer, speech, copilot,
+                                confirmed, real).ConfigureAwait(false);
+                            return;
+                        }
+
+                        if (recognition.CommandId == "system.deny" && pendingAlive)
+                        {
+                            pending = null;
+                            await SayAsync(composer, speech, copilot, ["system.deny"], ResponseEvent.Any)
+                                .ConfigureAwait(false);
+                            return;
+                        }
+
+                        // Toute autre commande annule la proposition en attente : l'utilisateur
+                        // est passe a autre chose.
+                        pending = null;
 
                         await RunAsync(executor, detector, simulation, composer, speech, copilot,
                             recognition.Text, real).ConfigureAwait(false);
@@ -331,6 +378,48 @@ public static class Program
         // confort, jamais la reactivite du jeu (docs/09).
         ResponseRequest? request = ResponseRouter.Route(result);
 
+        if (request is not null)
+        {
+            await SayAsync(composer, speech, copilot, request.Keys, request.Event, request.Variables)
+                .ConfigureAwait(false);
+        }
+
+        Console.WriteLine();
+    }
+
+    /// <summary>Exécute une commande déjà identifiée, sans repasser par la résolution d'intention.</summary>
+    private static async Task RunCommandAsync(
+        CommandExecutor executor,
+        StarCitizenDetector detector,
+        SimulatedInputEngine? simulation,
+        ResponseComposer composer,
+        ITextToSpeechProvider speech,
+        Copilot copilot,
+        CommandDefinition command,
+        bool real)
+    {
+        simulation?.Reset();
+
+        GameStatus game = real ? detector.Detect() : GameStatus.NotRunning;
+
+        ExecutionEnvironment environment = real
+            ? new ExecutionEnvironment(
+                SimulationMode: false,
+                GameRunning: game.IsRunning,
+                GameForeground: game.IsForeground,
+                RequireGameForeground: true)
+            : ExecutionEnvironment.Sandbox;
+
+        ExecutionResult result = await executor
+            .ExecuteCommandAsync(
+                command,
+                environment,
+                real ? new SequenceOptions(RealTime: true) : SequenceOptions.Instant)
+            .ConfigureAwait(false);
+
+        Console.WriteLine(result.Describe());
+
+        ResponseRequest? request = ResponseRouter.Route(result);
         if (request is not null)
         {
             await SayAsync(composer, speech, copilot, request.Keys, request.Event, request.Variables)

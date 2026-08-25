@@ -191,6 +191,39 @@
         { "text": "Comme vous voudrez." }
       ]
     },
+    "dialogue.identity": {
+      "any": [
+        { "text": "Optimus, votre copilote de bord. À vos ordres." },
+        { "text": "Optimus. J'assiste le pilotage et je surveille les systèmes." },
+        { "text": "Copilote Optimus, {pilote}. Opérationnel." }
+      ]
+    },
+    "dialogue.wellbeing": {
+      "any": [
+        { "text": "Tous mes circuits sont nominaux, {pilote}." },
+        { "text": "Opérationnel. Et vous ?" },
+        { "text": "Aucune anomalie de mon côté." }
+      ]
+    },
+    "system.confirm": {
+      "any": [
+        { "text": "Confirmé." },
+        { "text": "Exécution." }
+      ]
+    },
+    "system.deny": {
+      "any": [
+        { "text": "Annulé." },
+        { "text": "Bien reçu, je n'en fais rien." }
+      ]
+    },
+    "system.propose": {
+      "clarify": [
+        { "text": "Vous voulez dire {command} ?" },
+        { "text": "{command}, c'est bien ça ?" },
+        { "text": "Je crois avoir entendu {command}. Je confirme ?" }
+      ]
+    },
     "dialogue.acknowledge": {
       "any": [
         { "text": "À votre service, {pilote}." },
