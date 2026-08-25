@@ -1,4 +1,4 @@
-using Optimus.Core.Domain.Commands;
+﻿using Optimus.Core.Domain.Commands;
 
 namespace Optimus.Core.Intent;
 
@@ -32,10 +32,16 @@ public enum IntentDecision
 }
 
 /// <summary>Un candidat et son score.</summary>
-public sealed record IntentCandidate(CommandDefinition Command, double Score, MatchKind Kind, string MatchedPhrase)
+public sealed record IntentCandidate(
+    CommandDefinition Command,
+    double Score,
+    MatchKind Kind,
+    string MatchedPhrase,
+    CommandPolarity Polarity = CommandPolarity.Neutral)
 {
     public override string ToString() =>
-        $"{Command.Id} {Score:F2} ({Kind}, « {MatchedPhrase} »)";
+        $"{Command.Id} {Score:F2} ({Kind}, « {MatchedPhrase} »)" +
+        (Polarity == CommandPolarity.Neutral ? string.Empty : $" [{Polarity}]");
 }
 
 /// <summary>Résultat complet d'une résolution, tel qu'affiché par le mode debug.</summary>
@@ -75,7 +81,7 @@ public sealed class FastIntentMatcher
     /// <summary>Écart minimal avec le second candidat pour trancher sans demander.</summary>
     public const double AmbiguityMargin = 0.15;
 
-    private readonly List<(string Phrase, string[] Tokens, CommandDefinition Command)> _index = new();
+    private readonly List<(string Phrase, string[] Tokens, CommandDefinition Command, CommandPolarity Polarity)> _index = new();
 
     public FastIntentMatcher(CommandCatalog catalog)
     {
@@ -83,16 +89,23 @@ public sealed class FastIntentMatcher
 
         foreach (CommandDefinition command in catalog.Commands)
         {
-            foreach (string phrase in command.VoicePhrases)
-            {
-                string normalized = TextNormalizer.Normalize(phrase);
-                if (normalized.Length == 0)
-                {
-                    continue;
-                }
+            Index(command, command.VoicePhrases, CommandPolarity.Neutral);
+            Index(command, command.PhrasesOn, CommandPolarity.On);
+            Index(command, command.PhrasesOff, CommandPolarity.Off);
+        }
+    }
 
-                _index.Add((normalized, normalized.Split(' '), command));
+    private void Index(CommandDefinition command, IReadOnlyList<string> phrases, CommandPolarity polarity)
+    {
+        foreach (string phrase in phrases)
+        {
+            string normalized = TextNormalizer.Normalize(phrase);
+            if (normalized.Length == 0)
+            {
+                continue;
             }
+
+            _index.Add((normalized, normalized.Split(' '), command, polarity));
         }
     }
 
@@ -121,7 +134,7 @@ public sealed class FastIntentMatcher
         // ne doivent pas la faire paraître dix fois plus probable.
         Dictionary<string, IntentCandidate> bestPerCommand = new(StringComparer.Ordinal);
 
-        foreach ((string phrase, string[] phraseTokens, CommandDefinition command) in _index)
+        foreach ((string phrase, string[] phraseTokens, CommandDefinition command, CommandPolarity polarity) in _index)
         {
             (double score, MatchKind kind) = Score(normalized, tokens, phrase, phraseTokens);
             if (score <= 0)
@@ -131,7 +144,7 @@ public sealed class FastIntentMatcher
 
             if (!bestPerCommand.TryGetValue(command.Id, out IntentCandidate? existing) || score > existing.Score)
             {
-                bestPerCommand[command.Id] = new IntentCandidate(command, score, kind, phrase);
+                bestPerCommand[command.Id] = new IntentCandidate(command, score, kind, phrase, polarity);
             }
         }
 
@@ -185,13 +198,19 @@ public sealed class FastIntentMatcher
             return (1.0, MatchKind.Exact);
         }
 
-        // Phrase de référence entièrement présente dans l'énoncé : « optimus ouvre les portes
-        // maintenant » contient « ouvre les portes ». Le score décroît avec les mots en trop,
-        // sans quoi une phrase très courte l'emporterait sur tout.
+        // Phrase de référence entièrement présente dans l'énoncé : « ouvre les portes
+        // maintenant » contient « ouvre les portes ».
+        //
+        // La part de l'énoncé réellement couverte gouverne le score, et il faut qu'elle le
+        // gouverne pour de bon. Le plancher valait 0,90 auparavant — au-dessus du seuil
+        // d'exécution — de sorte qu'un mot isolé revendiquait n'importe quelle phrase qui le
+        // contenait : « priorité aux armes » déclenchait la bascule des armes à 0,93. Un
+        // vocable d'un mot dans un énoncé de trois tombe désormais dans la bande de
+        // proposition, où Optimus demande confirmation au lieu d'agir.
         if (ContainsSequence(utteranceTokens, phraseTokens))
         {
             double coverage = (double)phraseTokens.Length / utteranceTokens.Length;
-            return (0.90 + (0.08 * coverage), MatchKind.Contained);
+            return (Math.Round(0.72 + (0.26 * coverage), 4), MatchKind.Contained);
         }
 
         double tokenScore = TokenSetSimilarity(utteranceTokens, phraseTokens);

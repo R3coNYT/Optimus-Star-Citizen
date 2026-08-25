@@ -88,7 +88,22 @@ $resolved = 0
 $needsBinding = @()
 $missingAction = @()
 
+$directedTotal = 0
+$directedBound = 0
+
 foreach ($command in $catalog.commands) {
+    # Sens explicites : Star Citizen les declare (v_lights_on / v_lights_off) sans leur
+    # assigner de touche. Leur absence n'est pas un defaut du catalogue - c'est ce que
+    # l'editeur de keybinds sert a combler - donc on les compte a part.
+    foreach ($directed in (@($command.actions_on) + @($command.actions_off))) {
+        if (-not $directed -or $directed.type -ne 'game_action') { continue }
+        $directedTotal++
+        if ($bindings.ContainsKey($directed.action_id)) { $directedBound++ }
+        elseif (-not $unbound.ContainsKey($directed.action_id)) {
+            $errors += "$($command.id) : action dirigee inconnue du jeu - $($directed.action_id)"
+        }
+    }
+
     foreach ($action in @($command.actions)) {
         if (-not $action -or $action.type -ne 'game_action') { continue }
         $id = $action.action_id
@@ -133,7 +148,9 @@ function ConvertTo-Normalized {
 
 $phraseCount = 0
 foreach ($command in $catalog.commands) {
-    foreach ($phrase in @($command.voice_phrases)) {
+    $allPhrases = @($command.voice_phrases) + @($command.phrases_on) + @($command.phrases_off)
+    foreach ($phrase in $allPhrases) {
+        if (-not $phrase) { continue }
         $phraseCount++
         $normalized = ConvertTo-Normalized $phrase
         if ($normalized -eq '') { $errors += "$($command.id) : phrase vide"; continue }
@@ -204,4 +221,5 @@ if ($errors.Count -gt 0) {
 }
 Write-Host "VALIDE" -ForegroundColor Green -NoNewline
 Write-Host "  -  $($catalog.commands.Count) commandes, $phraseCount phrases, $resolved actions liees, $($needsBinding.Count) a configurer, $($warnings.Count) avertissement(s)"
+Write-Host "     sens explicites : $directedTotal action(s) dirigee(s), $directedBound avec une touche"
 exit 0

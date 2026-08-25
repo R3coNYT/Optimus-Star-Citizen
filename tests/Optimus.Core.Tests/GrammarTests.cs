@@ -1,4 +1,4 @@
-using Optimus.Core.Domain.Commands;
+﻿using Optimus.Core.Domain.Commands;
 using Optimus.Core.Domain.Profiles;
 using Optimus.Core.Intent;
 using Optimus.Core.Loading;
@@ -88,7 +88,8 @@ public sealed class GrammarTests
         CommandCatalog catalog = LoadCatalog();
         VoiceGrammar grammar = VoiceGrammarBuilder.Build(catalog, "Optimus", new VoiceInputSettings());
 
-        HashSet<string> covered = new(grammar.PhraseToCommand.Values, StringComparer.Ordinal);
+        HashSet<string> covered = new(
+            grammar.PhraseToCommand.Values.Select(t => t.CommandId), StringComparer.Ordinal);
 
         List<string> missing = catalog.Commands
             .Where(c => !covered.Contains(c.Id))

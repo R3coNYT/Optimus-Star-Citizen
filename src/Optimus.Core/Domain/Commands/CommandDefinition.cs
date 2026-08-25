@@ -1,4 +1,4 @@
-using Optimus.Core.Domain.Bindings;
+﻿using Optimus.Core.Domain.Bindings;
 
 namespace Optimus.Core.Domain.Commands;
 
@@ -69,6 +69,30 @@ public sealed record ActionStep(
 }
 
 /// <summary>
+/// Sens demandé par le pilote pour une commande à deux états.
+///
+/// Presque toutes les commandes du jeu sont des <b>bascules</b> : une seule touche, qui inverse
+/// l'état. « Éteins les lumières » envoyait donc exactement la même touche qu'« allume les
+/// lumières », le mot étant compris mais la direction perdue.
+///
+/// Star Citizen déclare pourtant des actions dirigées — <c>v_lights_on</c> et <c>v_lights_off</c>
+/// existent — mais <b>ne leur assigne aucune touche</b>. Quand l'une d'elles est configurée, on
+/// s'en sert et le résultat est certain ; sinon on retombe sur la bascule, où l'on ne peut que
+/// se fier à l'état supposé.
+/// </summary>
+public enum CommandPolarity
+{
+    /// <summary>La phrase ne dit pas de sens : « lumières », « mode scan ». On bascule.</summary>
+    Neutral,
+
+    /// <summary>« Allume », « active », « sors », « ouvre ».</summary>
+    On,
+
+    /// <summary>« Éteins », « désactive », « rentre », « ferme ».</summary>
+    Off,
+}
+
+/// <summary>
 /// Définition déclarative d'une commande.
 ///
 /// Aucun champ ne désigne une touche : c'est la garantie structurelle qu'un changement de
@@ -86,11 +110,77 @@ public sealed record CommandDefinition(
     string? Description = null,
     string Source = "builtin")
 {
+    /// <summary>Formulations qui demandent explicitement l'activation.</summary>
+    public IReadOnlyList<string> PhrasesOn { get; init; } = Array.Empty<string>();
+
+    /// <summary>Formulations qui demandent explicitement l'extinction.</summary>
+    public IReadOnlyList<string> PhrasesOff { get; init; } = Array.Empty<string>();
+
+    /// <summary>
+    /// Séquence dirigée vers l'activation, quand le jeu en déclare une. Souvent présente mais
+    /// sans touche assignée : c'est à l'éditeur de keybinds de la rendre utilisable.
+    /// </summary>
+    public IReadOnlyList<ActionStep> ActionsOn { get; init; } = Array.Empty<ActionStep>();
+
+    /// <summary>Séquence dirigée vers l'extinction, mêmes réserves.</summary>
+    public IReadOnlyList<ActionStep> ActionsOff { get; init; } = Array.Empty<ActionStep>();
+
     /// <summary>Vrai si la commande n'envoie rien au jeu (dialogue, lore, requête interne).</summary>
     public bool IsPassive => Actions.Count == 0;
 
-    /// <summary>Identifiants d'action du jeu référencés par la commande.</summary>
-    public IEnumerable<string> ReferencedActionIds =>
-        Actions.Where(a => a.Type == ActionStepType.GameAction && a.ActionId is not null)
-               .Select(a => a.ActionId!);
+    /// <summary>Vrai si le pilote peut en demander explicitement le sens.</summary>
+    public bool HasPolarity => PhrasesOn.Count > 0 || PhrasesOff.Count > 0;
+
+    /// <summary>Toutes les formulations reconnues, tous sens confondus.</summary>
+    public IEnumerable<string> AllPhrases => VoicePhrases.Concat(PhrasesOn).Concat(PhrasesOff);
+
+    /// <summary>Séquence dirigée déclarée pour ce sens, vide s'il n'y en a pas.</summary>
+    public IReadOnlyList<ActionStep> DirectedActions(CommandPolarity polarity) => polarity switch
+    {
+        CommandPolarity.On => ActionsOn,
+        CommandPolarity.Off => ActionsOff,
+        _ => Array.Empty<ActionStep>(),
+    };
+
+    /// <summary>
+    /// Séquence à exécuter pour ce sens.
+    ///
+    /// La séquence dirigée n'est retenue que si <b>toutes</b> ses actions ont une touche : une
+    /// action déclarée par le jeu mais non assignée ne vaut rien, et il est bien préférable de
+    /// retomber sur la bascule que de refuser la commande.
+    /// </summary>
+    public IReadOnlyList<ActionStep> ActionsFor(CommandPolarity polarity, BindingProfile bindings)
+    {
+        ArgumentNullException.ThrowIfNull(bindings);
+
+        IReadOnlyList<ActionStep> directed = DirectedActions(polarity);
+
+        if (directed.Count > 0 && directed.All(step =>
+                step.Type != ActionStepType.GameAction ||
+                step.ActionId is null ||
+                bindings.Resolve(step.ActionId, out _) == BindingLookup.Bound))
+        {
+            return directed;
+        }
+
+        return Actions;
+    }
+
+    /// <summary>
+    /// Actions du jeu de la séquence par défaut.
+    ///
+    /// Volontairement <b>sans</b> les séquences dirigées : celles-ci sont presque toutes sans
+    /// touche, et le garde qui exige un binding rejetterait sinon toute commande qui en déclare
+    /// une. Elles ne sont exigées que lorsqu'elles sont réellement retenues, par
+    /// <see cref="ActionsFor"/>.
+    /// </summary>
+    public IEnumerable<string> ReferencedActionIds => ActionIdsOf(Actions);
+
+    /// <summary>Toutes les actions référencées, tous sens confondus : validation et outillage.</summary>
+    public IEnumerable<string> AllReferencedActionIds =>
+        ActionIdsOf(Actions).Concat(ActionIdsOf(ActionsOn)).Concat(ActionIdsOf(ActionsOff));
+
+    private static IEnumerable<string> ActionIdsOf(IReadOnlyList<ActionStep> steps) =>
+        steps.Where(a => a.Type == ActionStepType.GameAction && a.ActionId is not null)
+             .Select(a => a.ActionId!);
 }

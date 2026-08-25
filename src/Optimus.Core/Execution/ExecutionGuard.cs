@@ -1,4 +1,4 @@
-using Optimus.Core.Domain.Bindings;
+﻿using Optimus.Core.Domain.Bindings;
 using Optimus.Core.Domain.Commands;
 
 namespace Optimus.Core.Execution;
@@ -70,11 +70,16 @@ public sealed class ExecutionGuard
     /// Évalue une commande. <paramref name="confirmed"/> indique que l'utilisateur a déjà
     /// confirmé une action dangereuse.
     /// </summary>
+    /// <param name="steps">
+    /// Séquence réellement retenue. Une commande à polarité peut viser une séquence dirigée
+    /// plutôt que sa bascule ; c'est celle-là qu'il faut exiger liée, pas l'autre.
+    /// </param>
     public GuardDecision Evaluate(
         CommandDefinition command,
         BindingProfile bindings,
         ExecutionEnvironment environment,
-        bool confirmed = false)
+        bool confirmed = false,
+        IReadOnlyList<ActionStep>? steps = null)
     {
         ArgumentNullException.ThrowIfNull(command);
         ArgumentNullException.ThrowIfNull(bindings);
@@ -115,7 +120,12 @@ public sealed class ExecutionGuard
             }
         }
 
-        foreach (string actionId in command.ReferencedActionIds)
+        IEnumerable<string> requiredActions = steps is null
+            ? command.ReferencedActionIds
+            : steps.Where(a => a.Type == ActionStepType.GameAction && a.ActionId is not null)
+                   .Select(a => a.ActionId!);
+
+        foreach (string actionId in requiredActions)
         {
             BindingLookup lookup = bindings.Resolve(actionId, out _);
             switch (lookup)

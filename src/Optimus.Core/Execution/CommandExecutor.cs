@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using Optimus.Core.Abstractions;
 using Optimus.Core.Domain.Bindings;
 using Optimus.Core.Domain.Commands;
@@ -29,6 +29,12 @@ public enum ExecutionStatus
 
     /// <summary>Échec en cours de séquence.</summary>
     Failed,
+
+    /// <summary>
+    /// Rien à faire : la commande est déjà dans l'état demandé, au su d'Optimus. Ce n'est pas un
+    /// échec — aucune touche n'a été envoyée parce qu'aucune n'était utile.
+    /// </summary>
+    NoChangeNeeded,
 }
 
 /// <summary>
@@ -45,9 +51,11 @@ public sealed record ExecutionResult(
     GuardDecision? Guard,
     IReadOnlyList<SequenceStepTrace> Steps,
     double TotalMs,
-    string? Message = null)
+    string? Message = null,
+    CommandPolarity Polarity = CommandPolarity.Neutral)
 {
-    public bool Succeeded => Status is ExecutionStatus.Executed or ExecutionStatus.Simulated or ExecutionStatus.Answered;
+    public bool Succeeded => Status is ExecutionStatus.Executed or ExecutionStatus.Simulated
+        or ExecutionStatus.Answered or ExecutionStatus.NoChangeNeeded;
 
     /// <summary>Rendu façon « PIPELINE TRACE » de docs/09.</summary>
     public string Describe()
@@ -62,7 +70,15 @@ public sealed record ExecutionResult(
 
             if (Intent.Best is not null)
             {
-                builder.AppendLine($"  intent      {Intent.Best.Command.Id}  score {Intent.Best.Score:F2}  ({Intent.Best.Kind})");
+                string sense = Polarity switch
+                {
+                    CommandPolarity.On => "  → activation",
+                    CommandPolarity.Off => "  → extinction",
+                    _ => string.Empty,
+                };
+
+                builder.AppendLine(
+                    $"  intent      {Intent.Best.Command.Id}  score {Intent.Best.Score:F2}  ({Intent.Best.Kind}){sense}");
             }
 
             if (Intent.Candidates.Count > 1)
@@ -105,20 +121,26 @@ public sealed class CommandExecutor
     private readonly FastIntentMatcher _matcher;
     private readonly ExecutionGuard _guard;
     private readonly IInputEngine _engine;
+    private readonly ToggleBelief _belief;
 
     public CommandExecutor(
         CommandCatalog catalog,
         BindingProfile bindings,
         IInputEngine engine,
         FastIntentMatcher? matcher = null,
-        ExecutionGuard? guard = null)
+        ExecutionGuard? guard = null,
+        ToggleBelief? belief = null)
     {
         _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
         _bindings = bindings ?? throw new ArgumentNullException(nameof(bindings));
         _engine = engine ?? throw new ArgumentNullException(nameof(engine));
         _matcher = matcher ?? new FastIntentMatcher(catalog);
         _guard = guard ?? new ExecutionGuard();
+        _belief = belief ?? new ToggleBelief();
     }
+
+    /// <summary>État supposé des bascules. À oublier quand le jeu redémarre.</summary>
+    public ToggleBelief Belief => _belief;
 
     /// <summary>Résout un énoncé puis l'exécute s'il est suffisamment clair.</summary>
     public async Task<ExecutionResult> ExecuteUtteranceAsync(
@@ -154,7 +176,8 @@ public sealed class CommandExecutor
         }
 
         ExecutionResult result = await ExecuteCommandAsync(
-            intent.Best.Command, environment, sequenceOptions, confirmed, traceId, start, cancellationToken)
+            intent.Best.Command, environment, sequenceOptions, confirmed, traceId, start,
+            intent.Best.Polarity, cancellationToken)
             .ConfigureAwait(false);
 
         return result with { Intent = intent };
@@ -168,6 +191,7 @@ public sealed class CommandExecutor
         bool confirmed = false,
         string? traceId = null,
         long? startTimestamp = null,
+        CommandPolarity polarity = CommandPolarity.Neutral,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
@@ -175,12 +199,28 @@ public sealed class CommandExecutor
         traceId ??= NewTraceId();
         long start = startTimestamp ?? Stopwatch.GetTimestamp();
 
-        GuardDecision guard = _guard.Evaluate(command, _bindings, environment, confirmed);
+        // Sequence dirigee si le jeu en declare une ET qu'elle a une touche ; la bascule sinon.
+        IReadOnlyList<ActionStep> steps = command.ActionsFor(polarity, _bindings);
+        bool directed = polarity != CommandPolarity.Neutral
+            && command.DirectedActions(polarity).Count > 0
+            && ReferenceEquals(steps, command.DirectedActions(polarity));
+
+        GuardDecision guard = _guard.Evaluate(command, _bindings, environment, confirmed, steps);
         if (!guard.IsAllowed)
         {
             return new ExecutionResult(
                 traceId, ExecutionStatus.Rejected, null, command, guard,
-                Array.Empty<SequenceStepTrace>(), Elapsed(start), guard.Detail);
+                Array.Empty<SequenceStepTrace>(), Elapsed(start), guard.Detail, polarity);
+        }
+
+        // Une action dirigee est idempotente : la reenvoyer ne peut pas nuire, donc rien a
+        // supposer. C'est seulement sur une bascule qu'un appui de trop fait l'inverse.
+        if (!directed && !command.IsPassive && _belief.IsRedundant(command.Id, polarity))
+        {
+            return new ExecutionResult(
+                traceId, ExecutionStatus.NoChangeNeeded, null, command, guard,
+                Array.Empty<SequenceStepTrace>(), Elapsed(start),
+                $"« {command.Name} » est déjà dans cet état.", polarity);
         }
 
         if (command.IsPassive)
@@ -188,37 +228,39 @@ public sealed class CommandExecutor
             _guard.MarkExecuted(command);
             return new ExecutionResult(
                 traceId, ExecutionStatus.Answered, null, command, guard,
-                Array.Empty<SequenceStepTrace>(), Elapsed(start));
+                Array.Empty<SequenceStepTrace>(), Elapsed(start), null, polarity);
         }
 
         SequenceRunner runner = new(_engine, _bindings);
 
         try
         {
-            IReadOnlyList<SequenceStepTrace> steps = await runner
-                .RunAsync(command.Actions, sequenceOptions, cancellationToken)
+            IReadOnlyList<SequenceStepTrace> traces = await runner
+                .RunAsync(steps, sequenceOptions, cancellationToken)
                 .ConfigureAwait(false);
 
             _guard.MarkExecuted(command);
+            _belief.RecordApplied(command.Id, polarity);
 
             ExecutionStatus status = _engine.IsReal && !environment.SimulationMode
                 ? ExecutionStatus.Executed
                 : ExecutionStatus.Simulated;
 
-            return new ExecutionResult(traceId, status, null, command, guard, steps, Elapsed(start));
+            return new ExecutionResult(
+                traceId, status, null, command, guard, traces, Elapsed(start), null, polarity);
         }
         catch (OperationCanceledException)
         {
             return new ExecutionResult(
                 traceId, ExecutionStatus.Failed, null, command, guard,
                 Array.Empty<SequenceStepTrace>(), Elapsed(start),
-                "Séquence interrompue ; toutes les touches ont été relâchées.");
+                "Séquence interrompue ; toutes les touches ont été relâchées.", polarity);
         }
         catch (InvalidOperationException exception)
         {
             return new ExecutionResult(
                 traceId, ExecutionStatus.Failed, null, command, guard,
-                Array.Empty<SequenceStepTrace>(), Elapsed(start), exception.Message);
+                Array.Empty<SequenceStepTrace>(), Elapsed(start), exception.Message, polarity);
         }
     }
 

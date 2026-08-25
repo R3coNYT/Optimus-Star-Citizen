@@ -215,6 +215,7 @@ public static class Program
         // Optimus propose et attend un « Optimus, confirme ».
         CommandDefinition? pending = null;
         string? pendingUtterance = null;
+        CommandPolarity pendingPolarity = CommandPolarity.Neutral;
         DateTimeOffset pendingUntil = DateTimeOffset.MinValue;
         TimeSpan pendingLifetime = TimeSpan.FromSeconds(12);
 
@@ -255,6 +256,7 @@ public static class Program
                         {
                             pending = candidate;
                             pendingUtterance = recognition.Text;
+                            pendingPolarity = recognition.Polarity;
                             pendingUntil = DateTimeOffset.UtcNow + pendingLifetime;
 
                             await SayAsync(composer, speech, copilot, ["system.propose"], ResponseEvent.Clarify,
@@ -278,12 +280,14 @@ public static class Program
                         {
                             CommandDefinition confirmed = pending!;
                             string? confirmedUtterance = pendingUtterance;
+                            CommandPolarity confirmedPolarity = pendingPolarity;
                             pending = null;
                             pendingUtterance = null;
+                            pendingPolarity = CommandPolarity.Neutral;
 
                             Console.WriteLine($"  confirmé    {confirmed.Name}");
                             await RunCommandAsync(executor, detector, simulation, composer, speech, copilot,
-                                confirmed, real, confirmedUtterance).ConfigureAwait(false);
+                                confirmed, real, confirmedUtterance, confirmedPolarity).ConfigureAwait(false);
                             return;
                         }
 
@@ -344,6 +348,7 @@ public static class Program
         // L'environnement est ré-observé à chaque énoncé : le jeu a pu perdre le focus entre
         // deux commandes, et c'est justement ce que le garde doit voir.
         GameStatus game = real ? detector.Detect() : GameStatus.NotRunning;
+        ForgetBeliefIfGameRestarted(executor, game);
 
         ExecutionEnvironment environment = real
             ? new ExecutionEnvironment(
@@ -411,11 +416,13 @@ public static class Program
         Copilot copilot,
         CommandDefinition command,
         bool real,
-        string? utterance = null)
+        string? utterance = null,
+        CommandPolarity polarity = CommandPolarity.Neutral)
     {
         simulation?.Reset();
 
         GameStatus game = real ? detector.Detect() : GameStatus.NotRunning;
+        ForgetBeliefIfGameRestarted(executor, game);
 
         ExecutionEnvironment environment = real
             ? new ExecutionEnvironment(
@@ -429,7 +436,8 @@ public static class Program
             .ExecuteCommandAsync(
                 command,
                 environment,
-                real ? new SequenceOptions(RealTime: true) : SequenceOptions.Instant)
+                real ? new SequenceOptions(RealTime: true) : SequenceOptions.Instant,
+                polarity: polarity)
             .ConfigureAwait(false);
 
         State.Record(result);
@@ -456,6 +464,9 @@ public static class Program
 
     /// <summary>État de session du copilote, alimenté par chaque exécution.</summary>
     private static readonly CopilotState State = new();
+
+    /// <summary>Processus de jeu observe au dernier appel, pour reperer un redemarrage.</summary>
+    private static int? LastGamePid;
 
     /// <summary>
     /// Compose une réplique et la prononce, après arbitrage des règles de comportement.
@@ -647,4 +658,22 @@ public static class Program
         return null;
     }
 
+    /// <summary>
+    /// Un nouveau processus de jeu, c'est un vaisseau reparti d'un état neuf : ce qu'Optimus
+    /// croyait savoir des bascules ne vaut plus rien, et serait faux plus souvent que juste.
+    /// </summary>
+    private static void ForgetBeliefIfGameRestarted(CommandExecutor executor, GameStatus game)
+    {
+        if (!game.IsRunning)
+        {
+            LastGamePid = null;
+            return;
+        }
+
+        if (game.ProcessId != LastGamePid)
+        {
+            executor.Belief.Forget();
+            LastGamePid = game.ProcessId;
+        }
+    }
 }

@@ -1,7 +1,8 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Runtime.Versioning;
 using System.Speech.Recognition;
 using Optimus.Core.Abstractions;
+using Optimus.Core.Domain.Commands;
 using Optimus.Core.Intent;
 
 namespace Optimus.Infrastructure.Speech;
@@ -145,14 +146,16 @@ public sealed class WindowsGrammarListener : IVoiceCommandListener
 
         string text = e.Result.Text;
         double confidence = e.Result.Confidence;
-        string? commandId = _grammar.Resolve(text);
+        GrammarTarget? target = _grammar.ResolveTarget(text);
+        string? commandId = target?.CommandId;
 
         Recognized?.Invoke(this, new VoiceRecognition(
             text,
             Math.Round(confidence, 3),
             commandId,
             Classify(confidence, commandId),
-            DateTimeOffset.UtcNow));
+            DateTimeOffset.UtcNow,
+            target?.Polarity ?? CommandPolarity.Neutral));
     }
 
     /// <summary>

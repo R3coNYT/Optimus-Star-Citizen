@@ -1,4 +1,5 @@
-﻿using Optimus.Core.Domain.Personality;
+﻿using Optimus.Core.Domain.Commands;
+using Optimus.Core.Domain.Personality;
 using Optimus.Core.Execution;
 
 namespace Optimus.Core.Personality;
@@ -54,6 +55,11 @@ public static class ResponseRouter
             ExecutionStatus.Answered =>
                 new ResponseRequest(Keys(result, "system.success", context), ResponseEvent.Any, variables),
 
+            // Rien envoye parce que rien n'etait utile. Ce n'est pas un echec : le compter comme
+            // tel declencherait « echoue systematiquement » apres trois demandes satisfaites.
+            ExecutionStatus.NoChangeNeeded =>
+                new ResponseRequest(["system.already_in_state"], ResponseEvent.Any, variables),
+
             ExecutionStatus.Unknown =>
                 new ResponseRequest(["system.unknown_command"], ResponseEvent.Unknown, variables),
 
@@ -94,6 +100,19 @@ public static class ResponseRouter
             _ => new ResponseRequest(["system.failed"], ResponseEvent.Fail, variables),
         };
 
+    /// <summary>
+    /// Clé de réplique dirigée : <c>ship.lights.toggle</c> devient <c>ship.lights.on</c>. Le
+    /// suffixe « toggle » ne décrit plus rien une fois le sens connu.
+    /// </summary>
+    private static string DirectedKey(string commandId, CommandPolarity polarity)
+    {
+        string suffix = polarity == CommandPolarity.On ? "on" : "off";
+
+        return commandId.EndsWith(".toggle", StringComparison.Ordinal)
+            ? string.Concat(commandId.AsSpan(0, commandId.Length - "toggle".Length), suffix)
+            : $"{commandId}.{suffix}";
+    }
+
     private static string[] Keys(ExecutionResult result, string fallback, CopilotContext context)
     {
         if (result.Command is null)
@@ -107,6 +126,14 @@ public static class ResponseRouter
         if (result.Command.Id == MasterMode.CommandId)
         {
             return [MasterMode.ResponseKey(context.CombatActive), result.Command.Id, fallback];
+        }
+
+        // Le sens demande prime sur la commande : « Voila de la lumiere » apres une extinction
+        // sonnerait faux. On tente d'abord la cle dirigee, et l'on retombe sur la cle generale
+        // pour toutes les commandes ou ecrire deux jeux de repliques ne vaut pas le detour.
+        if (result.Polarity != CommandPolarity.Neutral)
+        {
+            return [DirectedKey(result.Command.Id, result.Polarity), result.Command.Id, fallback];
         }
 
         return [result.Command.Id, fallback];

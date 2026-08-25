@@ -1,26 +1,37 @@
-using Optimus.Core.Domain.Commands;
+﻿using Optimus.Core.Domain.Commands;
 using Optimus.Core.Domain.Profiles;
 
 namespace Optimus.Core.Intent;
 
 /// <summary>Grammaire prête à être chargée dans un moteur de reconnaissance.</summary>
 /// <param name="Alternatives">Toutes les phrases que le moteur a le droit de reconnaître.</param>
-/// <param name="PhraseToCommand">Correspondance phrase → identifiant de commande.</param>
+/// <param name="PhraseToCommand">Correspondance phrase → commande et sens demandé.</param>
 /// <param name="WakeWordRequired">Le mot d'éveil est-il exigé en tête.</param>
 public sealed record VoiceGrammar(
     IReadOnlyList<string> Alternatives,
-    IReadOnlyDictionary<string, string> PhraseToCommand,
+    IReadOnlyDictionary<string, GrammarTarget> PhraseToCommand,
     bool WakeWordRequired)
 {
     public int Count => Alternatives.Count;
 
     /// <summary>Commande désignée par une phrase reconnue, ou null si elle n'appartient pas à la grammaire.</summary>
-    public string? Resolve(string recognizedText)
+    public string? Resolve(string recognizedText) => ResolveTarget(recognizedText)?.CommandId;
+
+    /// <summary>Commande <b>et sens</b> désignés par une phrase reconnue.</summary>
+    public GrammarTarget? ResolveTarget(string recognizedText)
     {
         string normalized = TextNormalizer.Normalize(recognizedText);
-        return PhraseToCommand.TryGetValue(normalized, out string? commandId) ? commandId : null;
+        return PhraseToCommand.TryGetValue(normalized, out GrammarTarget target) ? target : null;
     }
 }
+
+/// <summary>
+/// Ce qu'une phrase de la grammaire désigne.
+///
+/// La commande ne suffit pas : « allume les lumières » et « éteins les lumières » mènent à la
+/// même, et c'est le sens qui les distingue.
+/// </summary>
+public readonly record struct GrammarTarget(string CommandId, CommandPolarity Polarity);
 
 /// <summary>
 /// Assemble la grammaire d'un copilote à partir du catalogue.
@@ -47,11 +58,11 @@ public static class VoiceGrammarBuilder
         bool wakeRequired = settings.WakeWordRequired;
 
         List<string> alternatives = new();
-        Dictionary<string, string> mapping = new(StringComparer.Ordinal);
+        Dictionary<string, GrammarTarget> mapping = new(StringComparer.Ordinal);
 
         foreach (CommandDefinition command in catalog.Commands)
         {
-            foreach (string phrase in command.VoicePhrases)
+            foreach ((string phrase, CommandPolarity polarity) in Sensed(command))
             {
                 string normalized = TextNormalizer.Normalize(phrase);
                 if (normalized.Length == 0)
@@ -60,19 +71,37 @@ public static class VoiceGrammarBuilder
                 }
 
                 // Avec mot d'éveil : toujours proposé, c'est la forme naturelle.
-                Add($"{normalizedWake} {normalized}", command.Id);
+                Add($"{normalizedWake} {normalized}", command.Id, polarity);
 
                 // Sans mot d'éveil : uniquement quand la touche sert de déclencheur.
                 if (!wakeRequired)
                 {
-                    Add(normalized, command.Id);
+                    Add(normalized, command.Id, polarity);
                 }
             }
         }
 
         return new VoiceGrammar(alternatives, mapping, wakeRequired);
 
-        void Add(string phrase, string commandId)
+        static IEnumerable<(string Phrase, CommandPolarity Polarity)> Sensed(CommandDefinition command)
+        {
+            foreach (string phrase in command.VoicePhrases)
+            {
+                yield return (phrase, CommandPolarity.Neutral);
+            }
+
+            foreach (string phrase in command.PhrasesOn)
+            {
+                yield return (phrase, CommandPolarity.On);
+            }
+
+            foreach (string phrase in command.PhrasesOff)
+            {
+                yield return (phrase, CommandPolarity.Off);
+            }
+        }
+
+        void Add(string phrase, string commandId, CommandPolarity polarity)
         {
             // Une phrase partagée par deux commandes est déjà signalée par le validateur de
             // catalogue ; ici la première l'emporte, sans quoi la grammaire serait ambiguë.
@@ -81,7 +110,7 @@ public static class VoiceGrammarBuilder
                 return;
             }
 
-            mapping[phrase] = commandId;
+            mapping[phrase] = new GrammarTarget(commandId, polarity);
             alternatives.Add(phrase);
         }
     }

@@ -37,6 +37,15 @@
         { "text": "Rien n'a changé. Raccourci absent." }
       ]
     },
+    "system.already_in_state": {
+      "any": [
+        { "text": "C'est déjà le cas, {pilote}." },
+        { "text": "{command} est déjà dans cet état." },
+        { "text": "Rien à changer." },
+        { "text": "Déjà fait." },
+        { "text": "Je le croyais déjà ainsi. Redemandez si je me trompe." }
+      ]
+    },
     "system.game_detected": {
       "any": [
         { "text": "Star Citizen détecté. Je prends mon poste." },
@@ -107,6 +116,112 @@
       ]
     },
 
+    "ship.lights.on": {
+      "success": [
+        { "text": "Éclairage allumé." },
+        { "text": "Et la lumière fut." },
+        { "text": "Feux allumés, {pilote}." },
+        { "text": "Voilà de la lumière." }
+      ]
+    },
+    "ship.lights.off": {
+      "success": [
+        { "text": "Extinction des feux." },
+        { "text": "Lumières coupées." },
+        { "text": "Éclairage éteint, {pilote}." },
+        { "text": "Nous voilà dans le noir." }
+      ]
+    },
+    "ship.shields.on": {
+      "success": [
+        { "text": "Boucliers levés." },
+        { "text": "Protection active, {pilote}." },
+        { "text": "Boucliers en ligne." }
+      ]
+    },
+    "ship.shields.off": {
+      "success": [
+        { "text": "Boucliers coupés." },
+        { "text": "Nous sommes à découvert, {pilote}." },
+        { "text": "Protection désactivée." }
+      ]
+    },
+    "ship.engines.on": {
+      "success": [
+        { "text": "Propulseurs en ligne." },
+        { "text": "Poussée disponible, {pilote}." },
+        { "text": "Moteurs allumés." }
+      ]
+    },
+    "ship.engines.off": {
+      "success": [
+        { "text": "Propulseurs coupés." },
+        { "text": "Moteurs éteints, {pilote}." },
+        { "text": "Plus de poussée." }
+      ]
+    },
+    "ship.weapons.on": {
+      "success": [
+        { "text": "Armes en ligne." },
+        { "text": "Armement actif, {pilote}." }
+      ]
+    },
+    "ship.weapons.off": {
+      "success": [
+        { "text": "Armes coupées." },
+        { "text": "Armement au repos, {pilote}." }
+      ]
+    },
+    "ship.power.on": {
+      "success": [
+        { "text": "Vaisseau sous tension." },
+        { "text": "Circuits alimentés, {pilote}." }
+      ]
+    },
+    "ship.power.off": {
+      "success": [
+        { "text": "Alimentation coupée." },
+        { "text": "Vaisseau hors tension, {pilote}." }
+      ]
+    },
+    "ship.doors.on": {
+      "success": [
+        { "text": "Portes ouvertes, {pilote}." },
+        { "text": "Compartiments déverrouillés." },
+        { "text": "Sas ouverts." }
+      ]
+    },
+    "ship.doors.off": {
+      "success": [
+        { "text": "Portes fermées." },
+        { "text": "Compartiments verrouillés, {pilote}." },
+        { "text": "Sas clos." }
+      ]
+    },
+    "flight.landing_gear.on": {
+      "success": [
+        { "text": "Train sorti." },
+        { "text": "Train d'atterrissage déployé, {pilote}." }
+      ]
+    },
+    "flight.landing_gear.off": {
+      "success": [
+        { "text": "Train rentré." },
+        { "text": "Train replié, {pilote}." }
+      ]
+    },
+    "scan.mode.on": {
+      "success": [
+        { "text": "Mode scan actif." },
+        { "text": "Capteurs en veille active." }
+      ]
+    },
+    "scan.mode.off": {
+      "success": [
+        { "text": "Sortie du mode scan." },
+        { "text": "Capteurs au repos, {pilote}." }
+      ]
+    },
     "ship.doors.toggle": {
       "success": [
         { "text": "Portes ouvertes, {pilote}." },

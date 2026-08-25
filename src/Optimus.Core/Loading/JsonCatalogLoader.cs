@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Optimus.Core.Domain.Bindings;
 using Optimus.Core.Domain.Commands;
 
@@ -93,6 +93,20 @@ public static class JsonCatalogLoader
 
             List<ActionStep> steps = ParseActions(element, path, commandId, issues);
 
+            // Sens explicites. Le jeu declare des actions dirigees pour une partie des bascules
+            // (v_lights_on / v_lights_off) sans leur assigner de touche ; les declarer ici les
+            // rend utilisables des que l'editeur de keybinds en configure une.
+            List<string> phrasesOn = GetStringArray(element, "phrases_on");
+            List<string> phrasesOff = GetStringArray(element, "phrases_off");
+            List<ActionStep> stepsOn = ParseActions(element, path, commandId, issues, "actions_on");
+            List<ActionStep> stepsOff = ParseActions(element, path, commandId, issues, "actions_off");
+
+            foreach (string duplicate in phrasesOn.Intersect(phrasesOff, StringComparer.OrdinalIgnoreCase))
+            {
+                issues.Add(new LoadIssue(path, commandId,
+                    $"La phrase « {duplicate} » demande a la fois l'activation et l'extinction."));
+            }
+
             if (kind == CommandKind.Action && steps.Count == 0)
             {
                 issues.Add(new LoadIssue(path, commandId, "Commande d'action sans étape exécutable, ignorée."));
@@ -109,7 +123,13 @@ public static class JsonCatalogLoader
                 CooldownMs: GetInt(element, "cooldown_ms") ?? 0,
                 Dangerous: GetBool(element, "dangerous") ?? false,
                 Description: GetString(element, "description"),
-                Source: GetString(element, "source") ?? "builtin"));
+                Source: GetString(element, "source") ?? "builtin")
+            {
+                PhrasesOn = phrasesOn,
+                PhrasesOff = phrasesOff,
+                ActionsOn = stepsOn,
+                ActionsOff = stepsOff,
+            });
         }
 
         return new LoadResult<CommandCatalog>(new CommandCatalog(id, name, commands), issues);
@@ -170,11 +190,12 @@ public static class JsonCatalogLoader
     }
 
     private static List<ActionStep> ParseActions(
-        JsonElement command, string path, string commandId, List<LoadIssue> issues)
+        JsonElement command, string path, string commandId, List<LoadIssue> issues,
+        string property = "actions")
     {
         List<ActionStep> steps = new();
 
-        if (!command.TryGetProperty("actions", out JsonElement actions) ||
+        if (!command.TryGetProperty(property, out JsonElement actions) ||
             actions.ValueKind != JsonValueKind.Array)
         {
             return steps;

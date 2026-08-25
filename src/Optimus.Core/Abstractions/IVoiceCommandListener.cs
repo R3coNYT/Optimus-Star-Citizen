@@ -1,3 +1,5 @@
+﻿using Optimus.Core.Domain.Commands;
+
 namespace Optimus.Core.Abstractions;
 
 /// <summary>
@@ -30,12 +32,17 @@ public enum RecognitionOutcome
 /// <param name="CommandId">Commande désignée, si la phrase appartient à la grammaire.</param>
 /// <param name="Outcome">Ce qu'il convient d'en faire.</param>
 /// <param name="RecognizedAt">Instant de la reconnaissance.</param>
+/// <param name="Polarity">
+/// Sens demandé, quand la phrase le dit. « Éteins les lumières » et « allume les lumières »
+/// désignent la même commande : sans cette précision, la seconde ferait office de première.
+/// </param>
 public sealed record VoiceRecognition(
     string Text,
     double Confidence,
     string? CommandId,
     RecognitionOutcome Outcome,
-    DateTimeOffset RecognizedAt)
+    DateTimeOffset RecognizedAt,
+    CommandPolarity Polarity = CommandPolarity.Neutral)
 {
     public bool Accepted => Outcome == RecognitionOutcome.Accepted;
 
