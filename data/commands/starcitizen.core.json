@@ -1,0 +1,562 @@
+{
+  "$schema": "optimus://schemas/commandset-1.json",
+  "id": "starcitizen.core",
+  "name": "Star Citizen - commandes de base",
+  "version": "0.1.0",
+  "game": "star-citizen",
+  "game_version": "4.9",
+  "locale": "fr-FR",
+  "notes": [
+    "Chaque action_id est repris tel quel de defaultProfile.xml : l'import et les migrations",
+    "se font par simple correspondance de nom. La validation croisee est assuree par",
+    "tools/validate-catalog.ps1, qui verifie que chaque action existe dans le profil de binding.",
+    "Une commande dont l'action n'a pas de raccourci reste connue d'Optimus : elle produit",
+    "une reponse explicite invitant a configurer la touche, jamais un echec silencieux."
+  ],
+  "commands": [
+    {
+      "id": "ship.power.toggle",
+      "kind": "action",
+      "name": "Alimentation generale",
+      "category": "power",
+      "voice_phrases": ["allume le vaisseau", "coupe le vaisseau", "alimentation", "mets sous tension", "power"],
+      "actions": [{ "type": "game_action", "action_id": "spaceship_power/v_power_toggle" }],
+      "cooldown_ms": 800
+    },
+    {
+      "id": "ship.engines.toggle",
+      "kind": "action",
+      "name": "Moteurs",
+      "category": "power",
+      "voice_phrases": ["allume les moteurs", "coupe les moteurs", "propulseurs", "demarre les moteurs"],
+      "actions": [{ "type": "game_action", "action_id": "spaceship_power/v_power_toggle_thrusters" }],
+      "cooldown_ms": 800
+    },
+    {
+      "id": "ship.shields.toggle",
+      "kind": "action",
+      "name": "Boucliers",
+      "category": "shields",
+      "voice_phrases": ["allume les boucliers", "coupe les boucliers", "active les boucliers", "monte les boucliers"],
+      "actions": [{ "type": "game_action", "action_id": "spaceship_power/v_power_toggle_shields" }],
+      "cooldown_ms": 800
+    },
+    {
+      "id": "ship.weapons.toggle",
+      "kind": "action",
+      "name": "Armes",
+      "category": "weapons",
+      "voice_phrases": ["allume les armes", "coupe les armes", "active les armes", "armement"],
+      "actions": [{ "type": "game_action", "action_id": "spaceship_power/v_power_toggle_weapons" }],
+      "cooldown_ms": 800
+    },
+    {
+      "id": "ship.flightready",
+      "kind": "action",
+      "name": "Pret au decollage",
+      "category": "ship",
+      "voice_phrases": ["pret au decollage", "flight ready", "prepare le vaisseau", "sequence de demarrage"],
+      "actions": [{ "type": "game_action", "action_id": "spaceship_general/v_flightready" }],
+      "cooldown_ms": 2000
+    },
+    {
+      "id": "ship.lights.toggle",
+      "kind": "action",
+      "name": "Feux du vaisseau",
+      "category": "ship",
+      "voice_phrases": ["allume les lumieres", "eteins les lumieres", "lumieres", "feux", "les phares"],
+      "actions": [{ "type": "game_action", "action_id": "lights_controller/v_lights" }],
+      "cooldown_ms": 600
+    },
+    {
+      "id": "ship.doors.toggle",
+      "kind": "action",
+      "name": "Portes du vaisseau",
+      "category": "ship",
+      "voice_phrases": ["ouvre les portes", "ferme les portes", "ouvre-moi les portes", "les portes", "ouverture des portes", "deverrouille les portes"],
+      "actions": [{ "type": "game_action", "action_id": "spaceship_general/v_toggle_all_doors" }],
+      "cooldown_ms": 1000
+    },
+    {
+      "id": "ship.portlocks.toggle",
+      "kind": "action",
+      "name": "Verrouillage des sas",
+      "category": "ship",
+      "voice_phrases": ["verrouille les sas", "deverrouille les sas", "verrouillage des portes"],
+      "actions": [{ "type": "game_action", "action_id": "spaceship_general/v_toggle_all_portlocks" }],
+      "cooldown_ms": 1000
+    },
+    {
+      "id": "ship.self_destruct",
+      "kind": "action",
+      "name": "Autodestruction",
+      "category": "ship",
+      "voice_phrases": ["autodestruction", "declenche l'autodestruction", "fais sauter le vaisseau"],
+      "actions": [{ "type": "game_action", "action_id": "spaceship_general/v_self_destruct" }],
+      "dangerous": true,
+      "cooldown_ms": 3000
+    },
+    {
+      "id": "ship.eject",
+      "kind": "action",
+      "name": "Ejection",
+      "category": "ship",
+      "voice_phrases": ["ejection", "ejecte-moi", "ejecte"],
+      "actions": [{ "type": "game_action", "action_id": "seat_general/v_eject" }],
+      "dangerous": true,
+      "cooldown_ms": 3000
+    },
+    {
+      "id": "ship.emergency_exit",
+      "kind": "action",
+      "name": "Sortie d'urgence",
+      "category": "ship",
+      "voice_phrases": ["sortie d'urgence", "evacuation"],
+      "actions": [{ "type": "game_action", "action_id": "seat_general/v_emergency_exit" }],
+      "dangerous": true,
+      "cooldown_ms": 3000
+    },
+
+    {
+      "id": "flight.landing_gear.toggle",
+      "kind": "action",
+      "name": "Train d'atterrissage",
+      "category": "landing",
+      "voice_phrases": ["sors le train", "rentre le train", "train d'atterrissage", "mode atterrissage"],
+      "actions": [{ "type": "game_action", "action_id": "spaceship_movement/v_toggle_landing_system" }],
+      "cooldown_ms": 800
+    },
+    {
+      "id": "flight.autoland",
+      "kind": "action",
+      "name": "Atterrissage automatique",
+      "category": "landing",
+      "voice_phrases": ["atterrissage automatique", "pose le vaisseau", "auto landing", "pose-nous"],
+      "actions": [{ "type": "game_action", "action_id": "spaceship_movement/v_autoland" }],
+      "cooldown_ms": 2000
+    },
+    {
+      "id": "flight.atc_request",
+      "kind": "action",
+      "name": "Demande ATC",
+      "category": "landing",
+      "voice_phrases": ["demande l'autorisation d'atterrir", "appelle la tour", "demande atc", "autorisation d'atterrissage"],
+      "actions": [{ "type": "game_action", "action_id": "spaceship_movement/v_atc_request" }],
+      "cooldown_ms": 2000
+    },
+    {
+      "id": "flight.docking_request",
+      "kind": "action",
+      "name": "Demande d'amarrage",
+      "category": "landing",
+      "voice_phrases": ["demande l'amarrage", "amarrage", "docking"],
+      "actions": [{ "type": "game_action", "action_id": "spaceship_docking/v_toggle_docking_request" }],
+      "cooldown_ms": 2000
+    },
+    {
+      "id": "flight.decoupled.toggle",
+      "kind": "action",
+      "name": "Mode decouple",
+      "category": "flight",
+      "voice_phrases": ["mode decouple", "decouple", "passe en decouple", "recouple"],
+      "actions": [{ "type": "game_action", "action_id": "spaceship_movement/v_ifcs_vector_decoupling_toggle" }],
+      "cooldown_ms": 600
+    },
+    {
+      "id": "flight.space_brake",
+      "kind": "action",
+      "name": "Frein spatial",
+      "category": "flight",
+      "voice_phrases": ["freine", "frein spatial", "stop", "arrete-toi"],
+      "actions": [{ "type": "game_action", "action_id": "spaceship_movement/v_space_brake", "mode": "hold", "hold_ms": 1200 }],
+      "cooldown_ms": 500
+    },
+    {
+      "id": "flight.vtol.toggle",
+      "kind": "action",
+      "name": "VTOL",
+      "category": "flight",
+      "voice_phrases": ["vtol", "bascule les nacelles", "mode vtol"],
+      "actions": [{ "type": "game_action", "action_id": "spaceship_movement/v_vtol_toggle" }],
+      "cooldown_ms": 800
+    },
+    {
+      "id": "flight.speed_limiter.up",
+      "kind": "action",
+      "name": "Augmenter le limiteur de vitesse",
+      "category": "flight",
+      "voice_phrases": ["augmente la vitesse", "monte le limiteur", "plus vite"],
+      "actions": [{ "type": "game_action", "action_id": "spaceship_movement/v_ifcs_speed_limiter_increment", "repeat": 3, "interval_ms": 80 }],
+      "cooldown_ms": 500
+    },
+    {
+      "id": "flight.speed_limiter.down",
+      "kind": "action",
+      "name": "Reduire le limiteur de vitesse",
+      "category": "flight",
+      "voice_phrases": ["reduis la vitesse", "baisse le limiteur", "moins vite", "ralentis"],
+      "actions": [{ "type": "game_action", "action_id": "spaceship_movement/v_ifcs_speed_limiter_decrement", "repeat": 3, "interval_ms": 80 }],
+      "cooldown_ms": 500
+    },
+    {
+      "id": "nav.master_mode.cycle",
+      "kind": "action",
+      "name": "Basculer NAV / SCM",
+      "category": "navigation",
+      "voice_phrases": ["mode navigation", "mode combat", "passe en mode combat", "passe en navigation", "change de mode", "mode scm"],
+      "actions": [{ "type": "game_action", "action_id": "spaceship_movement/v_master_mode_cycle_long" }],
+      "cooldown_ms": 1500
+    },
+    {
+      "id": "quantum.engage",
+      "kind": "action",
+      "name": "Engager le quantum",
+      "category": "quantum",
+      "voice_phrases": ["lance le quantum", "saut quantique", "prepare le saut quantique", "engage le quantum", "quantum"],
+      "actions": [{ "type": "game_action", "action_id": "spaceship_quantum/v_toggle_qdrive_engagement" }],
+      "requirements": [{ "type": "game_mode_is", "value": "nav" }],
+      "cooldown_ms": 2000
+    },
+    {
+      "id": "flight.jump_request",
+      "kind": "action",
+      "name": "Point de saut",
+      "category": "navigation",
+      "voice_phrases": ["engage le point de saut", "jump point", "traverse le point de saut"],
+      "actions": [{ "type": "game_action", "action_id": "spaceship_movement/v_toggle_jump_request" }],
+      "cooldown_ms": 2000
+    },
+
+    {
+      "id": "power.engines.increase",
+      "kind": "action",
+      "name": "Plus de puissance moteur",
+      "category": "power",
+      "voice_phrases": ["plus de puissance moteur", "renforce les propulseurs", "priorite aux moteurs"],
+      "actions": [{ "type": "game_action", "action_id": "spaceship_power/v_engineering_assignment_engine_increase", "repeat": 3, "interval_ms": 80 }],
+      "parameters": [{ "name": "amount", "type": "int", "min": 1, "max": 10, "default": 3, "maps_to": "repeat" }],
+      "cooldown_ms": 500
+    },
+    {
+      "id": "power.engines.decrease",
+      "kind": "action",
+      "name": "Moins de puissance moteur",
+      "category": "power",
+      "voice_phrases": ["moins de puissance moteur", "reduis les moteurs"],
+      "actions": [{ "type": "game_action", "action_id": "spaceship_power/v_engineering_assignment_engine_decrease", "repeat": 3, "interval_ms": 80 }],
+      "cooldown_ms": 500
+    },
+    {
+      "id": "power.shields.increase",
+      "kind": "action",
+      "name": "Plus de puissance boucliers",
+      "category": "power",
+      "voice_phrases": ["plus de puissance aux boucliers", "priorite aux boucliers", "renforce la protection"],
+      "actions": [{ "type": "game_action", "action_id": "spaceship_power/v_engineering_assignment_shields_increase", "repeat": 3, "interval_ms": 80 }],
+      "cooldown_ms": 500
+    },
+    {
+      "id": "power.shields.decrease",
+      "kind": "action",
+      "name": "Moins de puissance boucliers",
+      "category": "power",
+      "voice_phrases": ["moins de puissance aux boucliers", "reduis les boucliers"],
+      "actions": [{ "type": "game_action", "action_id": "spaceship_power/v_engineering_assignment_shields_decrease", "repeat": 3, "interval_ms": 80 }],
+      "cooldown_ms": 500
+    },
+    {
+      "id": "power.weapons.increase",
+      "kind": "action",
+      "name": "Plus de puissance armes",
+      "category": "power",
+      "voice_phrases": ["plus de puissance aux armes", "priorite a l armement", "renforce la puissance de feu"],
+      "actions": [{ "type": "game_action", "action_id": "spaceship_power/v_engineering_assignment_weapons_increase", "repeat": 3, "interval_ms": 80 }],
+      "cooldown_ms": 500
+    },
+    {
+      "id": "power.weapons.decrease",
+      "kind": "action",
+      "name": "Moins de puissance armes",
+      "category": "power",
+      "voice_phrases": ["moins de puissance aux armes", "reduis les armes"],
+      "actions": [{ "type": "game_action", "action_id": "spaceship_power/v_engineering_assignment_weapons_decrease", "repeat": 3, "interval_ms": 80 }],
+      "cooldown_ms": 500
+    },
+    {
+      "id": "power.reset",
+      "kind": "action",
+      "name": "Repartition de puissance neutre",
+      "category": "power",
+      "voice_phrases": ["equilibre la puissance", "repartition neutre", "reinitialise la puissance"],
+      "actions": [{ "type": "game_action", "action_id": "spaceship_power/v_engineering_assignment_reset" }],
+      "cooldown_ms": 800
+    },
+    {
+      "id": "power.throttle.max",
+      "kind": "action",
+      "name": "Puissance maximale",
+      "category": "power",
+      "voice_phrases": ["puissance maximale", "plein regime", "toute la puissance"],
+      "actions": [{ "type": "game_action", "action_id": "spaceship_power/v_power_throttle_max" }],
+      "cooldown_ms": 800
+    },
+    {
+      "id": "power.throttle.min",
+      "kind": "action",
+      "name": "Puissance minimale",
+      "category": "power",
+      "voice_phrases": ["puissance minimale", "coupe la puissance", "regime minimum"],
+      "actions": [{ "type": "game_action", "action_id": "spaceship_power/v_power_throttle_min" }],
+      "cooldown_ms": 800
+    },
+
+    {
+      "id": "shields.raise.front",
+      "kind": "action",
+      "name": "Boucliers a l'avant",
+      "category": "shields",
+      "voice_phrases": ["boucliers a l'avant", "mets les boucliers sur l'avant", "renforce l'avant", "protege l'avant"],
+      "actions": [{ "type": "game_action", "action_id": "spaceship_defensive/v_shield_raise_level_forward", "repeat": 2, "interval_ms": 80 }],
+      "cooldown_ms": 500
+    },
+    {
+      "id": "shields.raise.back",
+      "kind": "action",
+      "name": "Boucliers a l'arriere",
+      "category": "shields",
+      "voice_phrases": ["boucliers a l'arriere", "mets les boucliers derriere", "renforce l'arriere", "protege l'arriere"],
+      "actions": [{ "type": "game_action", "action_id": "spaceship_defensive/v_shield_raise_level_back", "repeat": 2, "interval_ms": 80 }],
+      "cooldown_ms": 500
+    },
+    {
+      "id": "shields.raise.left",
+      "kind": "action",
+      "name": "Boucliers a babord",
+      "category": "shields",
+      "voice_phrases": ["boucliers a gauche", "boucliers a babord", "renforce la gauche"],
+      "actions": [{ "type": "game_action", "action_id": "spaceship_defensive/v_shield_raise_level_left", "repeat": 2, "interval_ms": 80 }],
+      "cooldown_ms": 500
+    },
+    {
+      "id": "shields.raise.right",
+      "kind": "action",
+      "name": "Boucliers a tribord",
+      "category": "shields",
+      "voice_phrases": ["boucliers a droite", "boucliers a tribord", "renforce la droite"],
+      "actions": [{ "type": "game_action", "action_id": "spaceship_defensive/v_shield_raise_level_right", "repeat": 2, "interval_ms": 80 }],
+      "cooldown_ms": 500
+    },
+    {
+      "id": "shields.reset",
+      "kind": "action",
+      "name": "Boucliers equilibres",
+      "category": "shields",
+      "voice_phrases": ["equilibre les boucliers", "boucliers neutres", "repartis les boucliers"],
+      "actions": [{ "type": "game_action", "action_id": "spaceship_defensive/v_shield_reset_level" }],
+      "cooldown_ms": 800
+    },
+
+    {
+      "id": "combat.gimbal.toggle",
+      "kind": "action",
+      "name": "Gimbals",
+      "category": "weapons",
+      "voice_phrases": ["gimbal", "bascule les gimbals", "verrouille les canons"],
+      "actions": [{ "type": "game_action", "action_id": "spaceship_weapons/v_weapon_gimbals_state_toggle" }],
+      "cooldown_ms": 600
+    },
+    {
+      "id": "combat.countermeasure.decoy",
+      "kind": "action",
+      "name": "Leurre",
+      "category": "combat",
+      "voice_phrases": ["leurre", "largue un leurre", "contre-mesures", "decoy"],
+      "actions": [{ "type": "game_action", "action_id": "spaceship_defensive/v_weapon_countermeasure_decoy_launch" }],
+      "cooldown_ms": 300
+    },
+    {
+      "id": "combat.countermeasure.noise",
+      "kind": "action",
+      "name": "Brouilleur",
+      "category": "combat",
+      "voice_phrases": ["brouilleur", "largue du chaff", "chaff", "brouille"],
+      "actions": [{ "type": "game_action", "action_id": "spaceship_defensive/v_weapon_countermeasure_noise_launch" }],
+      "cooldown_ms": 300
+    },
+    {
+      "id": "targeting.auto.toggle",
+      "kind": "action",
+      "name": "Ciblage automatique",
+      "category": "targeting",
+      "voice_phrases": ["ciblage automatique", "auto ciblage", "verrouillage automatique"],
+      "actions": [{ "type": "game_action", "action_id": "spaceship_targeting/v_auto_targeting_toggle_long" }],
+      "cooldown_ms": 800
+    },
+    {
+      "id": "targeting.unlock",
+      "kind": "action",
+      "name": "Deverrouiller la cible",
+      "category": "targeting",
+      "voice_phrases": ["deverrouille la cible", "lache la cible", "abandonne le verrouillage"],
+      "actions": [{ "type": "game_action", "action_id": "spaceship_targeting/v_target_unlock" }],
+      "cooldown_ms": 500
+    },
+    {
+      "id": "targeting.remove_pins",
+      "kind": "action",
+      "name": "Retirer les cibles epinglees",
+      "category": "targeting",
+      "voice_phrases": ["retire les epingles", "efface les cibles", "nettoie les cibles"],
+      "actions": [{ "type": "game_action", "action_id": "spaceship_targeting/v_target_remove_all_pins" }],
+      "cooldown_ms": 800
+    },
+
+    {
+      "id": "scan.mode.toggle",
+      "kind": "action",
+      "name": "Mode scan",
+      "category": "scanning",
+      "voice_phrases": ["mode scan", "active le scan", "passe en scan", "scanner"],
+      "actions": [{ "type": "game_action", "action_id": "seat_general/v_toggle_scan_mode" }],
+      "cooldown_ms": 800
+    },
+    {
+      "id": "scan.ping",
+      "kind": "action",
+      "name": "Ping radar",
+      "category": "scanning",
+      "voice_phrases": ["ping", "envoie un ping", "balaye la zone", "sonde"],
+      "actions": [{ "type": "game_action", "action_id": "spaceship_radar/v_invoke_ping", "mode": "hold", "hold_ms": 600 }],
+      "cooldown_ms": 1000
+    },
+    {
+      "id": "mining.mode.toggle",
+      "kind": "action",
+      "name": "Mode minage",
+      "category": "mining",
+      "voice_phrases": ["mode minage", "passe en minage", "active le minage"],
+      "actions": [{ "type": "game_action", "action_id": "seat_general/v_toggle_mining_mode" }],
+      "cooldown_ms": 800
+    },
+    {
+      "id": "salvage.mode.toggle",
+      "kind": "action",
+      "name": "Mode recuperation",
+      "category": "salvage",
+      "voice_phrases": ["mode salvage", "mode recuperation", "passe en salvage"],
+      "actions": [{ "type": "game_action", "action_id": "seat_general/v_toggle_salvage_mode" }],
+      "cooldown_ms": 800
+    },
+
+    {
+      "id": "view.cycle",
+      "kind": "action",
+      "name": "Changer de vue",
+      "category": "camera",
+      "voice_phrases": ["change de vue", "vue suivante", "camera"],
+      "actions": [{ "type": "game_action", "action_id": "spaceship_view/v_view_cycle_fwd" }],
+      "cooldown_ms": 500
+    },
+    {
+      "id": "view.look_behind",
+      "kind": "action",
+      "name": "Regarder derriere",
+      "category": "camera",
+      "voice_phrases": ["regarde derriere", "vue arriere", "qu'est-ce qu'il y a derriere"],
+      "actions": [{ "type": "game_action", "action_id": "seat_general/v_view_look_behind", "mode": "hold", "hold_ms": 1500 }],
+      "cooldown_ms": 800
+    },
+    {
+      "id": "ui.mobiglas",
+      "kind": "action",
+      "name": "mobiGlas",
+      "category": "communication",
+      "voice_phrases": ["mobiglas", "ouvre le mobiglas", "mon mobiglas"],
+      "actions": [{ "type": "game_action", "action_id": "spaceship_hud/mobiglas" }],
+      "cooldown_ms": 800
+    },
+    {
+      "id": "ui.starmap",
+      "kind": "action",
+      "name": "Carte stellaire",
+      "category": "navigation",
+      "voice_phrases": ["carte stellaire", "ouvre la carte", "starmap"],
+      "actions": [{ "type": "game_action", "action_id": "spaceship_hud/v_starmap" }],
+      "cooldown_ms": 800
+    },
+    {
+      "id": "hud.visor_wipe",
+      "kind": "action",
+      "name": "Nettoyer la visiere",
+      "category": "immersion",
+      "voice_phrases": ["nettoie la visiere", "essuie la visiere", "visiere"],
+      "actions": [{ "type": "game_action", "action_id": "spaceship_hud/visor_wipe" }],
+      "cooldown_ms": 1000
+    },
+
+    {
+      "id": "system.status",
+      "kind": "query",
+      "name": "Rapport systeme",
+      "category": "system",
+      "voice_phrases": ["rapport systeme", "etat des systemes", "fais un rapport", "statut", "comment on va"],
+      "actions": [],
+      "cooldown_ms": 1000
+    },
+    {
+      "id": "system.simulation.toggle",
+      "kind": "query",
+      "name": "Basculer le mode simulation",
+      "category": "system",
+      "voice_phrases": ["mode simulation", "active la simulation", "coupe la simulation"],
+      "actions": [],
+      "cooldown_ms": 1000
+    },
+    {
+      "id": "system.mute",
+      "kind": "query",
+      "name": "Se taire",
+      "category": "system",
+      "voice_phrases": ["tais-toi", "silence", "plus un mot", "chut"],
+      "actions": [],
+      "cooldown_ms": 500
+    },
+    {
+      "id": "system.repeat",
+      "kind": "query",
+      "name": "Repeter",
+      "category": "system",
+      "voice_phrases": ["repete", "qu'est-ce que tu as dit", "redis-le"],
+      "actions": [],
+      "cooldown_ms": 500
+    },
+    {
+      "id": "system.cancel",
+      "kind": "query",
+      "name": "Annuler",
+      "category": "system",
+      "voice_phrases": ["annule", "laisse tomber", "oublie ca", "rien du tout"],
+      "actions": [],
+      "cooldown_ms": 300
+    },
+
+    {
+      "id": "dialogue.acknowledge",
+      "kind": "dialogue",
+      "name": "Accuse de reception",
+      "category": "immersion",
+      "voice_phrases": ["merci", "bien joue", "parfait", "impeccable"],
+      "actions": [],
+      "cooldown_ms": 2000
+    },
+    {
+      "id": "dialogue.reaction",
+      "kind": "dialogue",
+      "name": "Reaction a un evenement",
+      "category": "immersion",
+      "voice_phrases": ["tu as vu ca", "c'etait quoi ca", "on a failli y passer", "ca chauffe"],
+      "actions": [],
+      "cooldown_ms": 2000
+    }
+  ]
+}
