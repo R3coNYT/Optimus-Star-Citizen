@@ -1,4 +1,4 @@
-namespace Optimus.Core.Domain.Bindings;
+﻿namespace Optimus.Core.Domain.Bindings;
 
 /// <summary>Association entre une action du jeu et une entrée physique.</summary>
 /// <param name="ActionId">Identifiant calqué sur Star Citizen : <c>actionmap/action</c>.</param>
@@ -72,6 +72,36 @@ public sealed class BindingProfile
     public string? GameBuild { get; }
 
     public int BoundCount => _bindings.Count;
+
+    /// <summary>
+    /// Profil recomposé avec les touches choisies par le pilote.
+    ///
+    /// C'est le « défauts ⊕ deltas » à l'œuvre : le profil du jeu reste intact — donc
+    /// remplaçable à chaque mise à jour — et les choix du pilote se posent par-dessus. Une
+    /// action jusque-là sans touche quitte la liste des non liées : c'est tout l'objet de
+    /// l'opération, faire passer les portes du vaisseau de « aucun raccourci » à exécutable.
+    /// </summary>
+    public BindingProfile WithOverrides(IEnumerable<Binding> overrides)
+    {
+        ArgumentNullException.ThrowIfNull(overrides);
+
+        List<Binding> applied = overrides.ToList();
+        if (applied.Count == 0)
+        {
+            return this;
+        }
+
+        Dictionary<string, Binding> merged = new(_bindings, StringComparer.OrdinalIgnoreCase);
+        HashSet<string> stillUnbound = new(_unbound, StringComparer.OrdinalIgnoreCase);
+
+        foreach (Binding binding in applied)
+        {
+            merged[binding.ActionId] = binding;
+            stillUnbound.Remove(binding.ActionId);
+        }
+
+        return new BindingProfile(Id, Name, GameVersion, GameBuild, merged.Values, stillUnbound);
+    }
 
     public int UnboundCount => _unbound.Count;
 

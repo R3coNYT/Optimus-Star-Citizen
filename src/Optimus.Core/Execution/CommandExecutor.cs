@@ -220,7 +220,7 @@ public sealed class CommandExecutor
             return new ExecutionResult(
                 traceId, ExecutionStatus.NoChangeNeeded, null, command, guard,
                 Array.Empty<SequenceStepTrace>(), Elapsed(start),
-                $"« {command.Name} » est déjà dans cet état.", polarity);
+                $"« {command.Name} » : rien à changer.", polarity);
         }
 
         if (command.IsPassive)

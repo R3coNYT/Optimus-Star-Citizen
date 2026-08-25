@@ -40,7 +40,7 @@
     "system.already_in_state": {
       "any": [
         { "text": "C'est déjà le cas, {pilote}." },
-        { "text": "{command} est déjà dans cet état." },
+        { "text": "{command} : rien à changer." },
         { "text": "Rien à changer." },
         { "text": "Déjà fait." },
         { "text": "Je le croyais déjà ainsi. Redemandez si je me trompe." }

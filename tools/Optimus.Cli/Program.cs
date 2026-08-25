@@ -1,4 +1,5 @@
 ﻿using Optimus.Core.Abstractions;
+using Optimus.Core.Bindings;
 using Optimus.Core.Domain.Bindings;
 using Optimus.Core.Domain.Commands;
 using Optimus.Core.Domain.Copilots;
@@ -41,6 +42,11 @@ public static class Program
         bool status = args.Contains("--status", StringComparer.OrdinalIgnoreCase);
         bool silent = args.Contains("--silent", StringComparer.OrdinalIgnoreCase);
         bool listVoices = args.Contains("--voices", StringComparer.OrdinalIgnoreCase);
+        bool showBindings = args.Contains("--bindings", StringComparer.OrdinalIgnoreCase);
+        string? bindTarget = OptionValue(args, "--bind");
+        string? importLayout = OptionValue(args, "--import-layout");
+        bool exportLayout = args.Contains("--export-layout", StringComparer.OrdinalIgnoreCase);
+        string? exportPath = OptionValue(args, "--export-layout");
         string[] rest = args.Where(a => !a.StartsWith("--", StringComparison.Ordinal)).ToArray();
 
         string? repoRoot = FindRepositoryRoot(AppContext.BaseDirectory);
@@ -64,6 +70,16 @@ public static class Program
 
         LoadResult<CommandCatalog> catalog = JsonCatalogLoader.LoadCatalog(catalogPath);
         LoadResult<BindingProfile> profile = JsonCatalogLoader.LoadBindingProfile(profilePath);
+
+        // Les touches choisies par le pilote se posent par-dessus le profil du jeu, qui reste
+        // intact et donc remplacable a chaque mise a jour (« defauts + deltas »).
+        string overlayPath = BindingOverlay.DefaultPath();
+        BindingOverlay overlay = BindingOverlay.Load(overlayPath);
+
+        if (overlay.Count > 0)
+        {
+            profile = profile with { Value = profile.Value.WithOverrides(BindingEditor.ToBindings(overlay)) };
+        }
         LoadResult<UserProfile> user = ProfileLoader.Load(Path.Combine(repoRoot, "data", "profiles", "default.json"));
         LoadResult<Copilot> copilot = CopilotLoader.Load(
             Path.Combine(repoRoot, "data", "copilots", user.Value.PreferredCopilot));
@@ -91,6 +107,33 @@ public static class Program
         if (status)
         {
             PrintGameDetail(game);
+            return 0;
+        }
+
+        // L'editeur de keybinds n'a besoin ni de voix ni de micro : il se traite avant que
+        // quoi que ce soit de couteux ne demarre.
+        if (showBindings || bindTarget is not null || importLayout is not null || exportLayout)
+        {
+            IReadOnlyList<ActionSlot> slots = BindingEditor.Inventory(catalog.Value, profile.Value, overlay);
+
+            if (importLayout is not null)
+            {
+                return BindingEditor.ImportLayout(importLayout, slots, overlay, overlayPath);
+            }
+
+            if (bindTarget is not null)
+            {
+                return await BindingEditor.AssignAsync(bindTarget, slots, overlay, overlayPath)
+                    .ConfigureAwait(false);
+            }
+
+            if (exportLayout)
+            {
+                return BindingEditor.ExportLayout(
+                    overlay, exportPath ?? Path.Combine(Environment.CurrentDirectory, "optimus.xml"));
+            }
+
+            BindingEditor.PrintInventory(slots, overlay);
             return 0;
         }
 
@@ -675,5 +718,33 @@ public static class Program
             executor.Belief.Forget();
             LastGamePid = game.ProcessId;
         }
+    }
+
+    /// <summary>
+    /// Valeur d'une option, ecrite « --option valeur » ou « --option=valeur ».
+    /// Retourne une chaine vide quand l'option est presente sans valeur, et <c>null</c> quand
+    /// elle est absente : les deux cas ne veulent pas dire la meme chose.
+    /// </summary>
+    private static string? OptionValue(string[] args, string name)
+    {
+        for (int i = 0; i < args.Length; i++)
+        {
+            string argument = args[i];
+
+            if (argument.StartsWith($"{name}=", StringComparison.OrdinalIgnoreCase))
+            {
+                return argument[(name.Length + 1)..];
+            }
+
+            if (!string.Equals(argument, name, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            bool hasValue = i + 1 < args.Length && !args[i + 1].StartsWith("--", StringComparison.Ordinal);
+            return hasValue ? args[i + 1] : null;
+        }
+
+        return null;
     }
 }

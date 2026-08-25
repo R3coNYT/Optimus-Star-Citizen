@@ -1,4 +1,4 @@
-namespace Optimus.Infrastructure.Input;
+﻿namespace Optimus.Infrastructure.Input;
 
 /// <summary>Touche physique : son make code du jeu de scancodes 1, et son éventuel préfixe étendu.</summary>
 /// <param name="Name">Nom canonique, en position clavier US.</param>
@@ -46,6 +46,34 @@ public static class ScanCodeMap
     /// <summary>Noms reconnus, triés — utile à l'interface de capture et aux messages d'erreur.</summary>
     public static IReadOnlyList<string> KnownNames() =>
         ByName.Keys.Order(StringComparer.OrdinalIgnoreCase).ToList();
+
+    private static readonly Dictionary<(ushort Value, bool Extended), string> ByCode = BuildReverse();
+
+    /// <summary>
+    /// Nom canonique d'un scancode observé.
+    ///
+    /// Indispensable à la capture de touche : un hook bas niveau livre le <b>scancode</b>, et
+    /// c'est bien celui-là qu'il faut lire. Passer par le code virtuel donnerait « A » quand le
+    /// pilote AZERTY presse la touche marquée A — alors que Star Citizen la nomme « q », par sa
+    /// position. La capture et l'injection doivent parler la même langue, sans quoi Optimus
+    /// enregistrerait une touche et en presserait une autre.
+    /// </summary>
+    public static string? NameOf(ushort scanCode, bool extended) =>
+        ByCode.TryGetValue((scanCode, extended), out string? name) ? name : null;
+
+    private static Dictionary<(ushort, bool), string> BuildReverse()
+    {
+        Dictionary<(ushort, bool), string> reverse = new();
+
+        // Les alias partagent leur scancode avec leur cible ; le premier nom rencontré dans
+        // l'ordre alphabetique gagne, ce qui rend la capture reproductible.
+        foreach (KeyValuePair<string, ScanCode> entry in ByName.OrderBy(e => e.Key, StringComparer.Ordinal))
+        {
+            reverse.TryAdd((entry.Value.Value, entry.Value.Extended), entry.Value.Name);
+        }
+
+        return reverse;
+    }
 
     private static Dictionary<string, ScanCode> BuildTable()
     {
