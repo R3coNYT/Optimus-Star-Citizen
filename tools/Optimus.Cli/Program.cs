@@ -623,6 +623,7 @@ public static class Program
         Console.WriteLine("+--------------------------------------------------------------+");
         Console.WriteLine($"|  OPTIMUS - banc d'essai du moteur  [{(real ? "MODE RÉEL " : "simulation")}]              |");
         Console.WriteLine("+--------------------------------------------------------------+");
+        Console.WriteLine($"binaire       : {BuildStamp()}");
         Console.WriteLine($"copilote      : {copilot.Value.Name} · {copilot.Value.Voice.VoiceId ?? "voix par défaut"}" +
                           $" · débit {copilot.Value.EffectiveRate:F2}");
         Console.WriteLine($"personnalité  : {copilot.Value.Responses.EntryCount} entrées, " +
@@ -734,6 +735,36 @@ public static class Program
             executor.Belief.Forget();
             LastGamePid = game.ProcessId;
         }
+    }
+
+    /// <summary>
+    /// Version et date de compilation du binaire.
+    ///
+    /// Affiche en tete parce que le paquet se recopie a la main d'une machine a l'autre : sans
+    /// ce reperage, rien ne distingue a l'oeil une version de la precedente, et l'on cherche
+    /// pendant dix minutes pourquoi une option « ajoutee » reste introuvable.
+    /// </summary>
+    private static string BuildStamp()
+    {
+        System.Reflection.Assembly assembly = typeof(Program).Assembly;
+
+        string version = assembly.GetName().Version?.ToString(3) ?? "0.0.0";
+        string built = "date inconnue";
+
+        try
+        {
+            string location = assembly.Location;
+            if (!string.IsNullOrEmpty(location) && File.Exists(location))
+            {
+                built = File.GetLastWriteTime(location).ToString("yyyy-MM-dd HH:mm");
+            }
+        }
+        catch (IOException)
+        {
+            // Le repere est un confort : son absence ne doit jamais empecher le demarrage.
+        }
+
+        return $"{version} · compilé le {built}";
     }
 
     /// <summary>
