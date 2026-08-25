@@ -176,8 +176,20 @@ internal static class BindingEditor
         Console.WriteLine();
         Console.WriteLine("  Pressez la touche à assigner. Échap pour renoncer.");
 
-        using KeyCapture capture = new();
-        InputSpec? captured = await capture.CaptureAsync(TimeSpan.FromSeconds(20)).ConfigureAwait(false);
+        InputSpec? captured;
+
+        try
+        {
+            using KeyCapture capture = new();
+            captured = await capture.CaptureAsync(TimeSpan.FromSeconds(20)).ConfigureAwait(false);
+        }
+        catch (InvalidOperationException exception)
+        {
+            // Erreur d'usage, pas defaut du programme : une trace de pile n'apprendrait rien.
+            Console.Error.WriteLine();
+            Console.Error.WriteLine($"  {exception.Message}");
+            return 1;
+        }
 
         if (captured is null)
         {

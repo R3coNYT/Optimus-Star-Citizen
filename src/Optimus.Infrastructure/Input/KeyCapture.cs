@@ -1,4 +1,4 @@
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 using Optimus.Core.Domain.Bindings;
 
 namespace Optimus.Infrastructure.Input;
@@ -12,28 +12,57 @@ namespace Optimus.Infrastructure.Input;
 /// virtuel ferait enregistrer à Optimus une touche pour en presser une autre — l'assignation
 /// paraîtrait juste et ne marcherait pas.
 ///
-/// Le hook bas niveau est enveloppé avec les précautions de D22 : délégué maintenu en vie,
-/// désinstallation garantie, et aucune exception laissée traverser le code natif.
+/// La lecture passe par le <b>tampon d'entrée de la console</b>, dont les enregistrements
+/// portent déjà <c>wVirtualScanCode</c>. La première version employait un hook bas niveau
+/// <c>WH_KEYBOARD_LL</c> : il fonctionnait, mais interceptait les frappes de <i>toutes</i> les
+/// applications pour lire une seule touche destinée à celle-ci — disproportionné, et c'est la
+/// signature même d'un enregistreur de frappe. La première publication qui en contenait un s'est
+/// fait bloquer par Smart App Control (risque R16), là où les précédentes passaient.
+///
+/// Le tampon de console ne reçoit que ce qui est adressé à Optimus. Rien à désinstaller, rien à
+/// laisser traîner si le processus meurt : le périmètre est le bon, et la lecture est exacte.
 /// </summary>
 public sealed partial class KeyCapture : IDisposable
 {
-    private const int WhKeyboardLl = 13;
-    private const int HcAction = 0;
-    private const int WmKeydown = 0x0100;
-    private const int WmSyskeydown = 0x0104;
+    private const int StdInputHandle = -10;
+    private const uint EnableLineInput = 0x0002;
+    private const uint EnableEchoInput = 0x0004;
+    private const ushort KeyEvent = 0x0001;
+    private const uint EnhancedKey = 0x0100;
+    private const uint WaitObject0 = 0;
 
-    private readonly LowLevelKeyboardProc _callback;
-    private readonly TaskCompletionSource<InputSpec?> _completion =
-        new(TaskCreationOptions.RunContinuationsAsynchronously);
+    // Les modificateurs sont annoncés par l'enregistrement lui-même : nul besoin d'interroger
+    // l'état global du clavier.
+    private const uint RightAltPressed = 0x0001;
+    private const uint LeftAltPressed = 0x0002;
+    private const uint RightCtrlPressed = 0x0004;
+    private const uint LeftCtrlPressed = 0x0008;
+    private const uint ShiftPressed = 0x0010;
 
-    private nint _hook;
+    private readonly nint _input = GetStdHandle(StdInputHandle);
+    private readonly uint _previousMode;
+    private readonly bool _modeChanged;
+    private readonly bool _isConsole;
     private bool _disposed;
 
     public KeyCapture()
     {
-        // Conserve la reference : un delegue collecte pendant que le hook est installe fait
-        // tomber le processus dans le code natif, sans trace exploitable (vecu au spike S0-1).
-        _callback = OnKeyboardEvent;
+        if (_input == 0 || _input == -1)
+        {
+            return;
+        }
+
+        // Entree redirigee : ReadConsoleInput echouera a chaque tour. Le savoir tout de suite
+        // evite de tourner a vide jusqu'a l'expiration du delai, et permet de le dire.
+        _isConsole = GetConsoleMode(_input, out _previousMode);
+        if (!_isConsole)
+        {
+            return;
+        }
+
+        // Sans ces deux drapeaux, la console attend une ligne entière et fait l'écho de la
+        // frappe. On garde ENABLE_PROCESSED_INPUT : Ctrl+C doit rester une sortie de secours.
+        _modeChanged = SetConsoleMode(_input, _previousMode & ~(EnableLineInput | EnableEchoInput));
     }
 
     /// <summary>Touches qui annulent la capture au lieu d'être assignées.</summary>
@@ -46,107 +75,110 @@ public sealed partial class KeyCapture : IDisposable
     /// Attend une touche. Retourne <c>null</c> si le pilote appuie sur Échap ou si le délai
     /// expire — l'abandon doit rester possible, une capture qu'on ne peut pas quitter est un piège.
     /// </summary>
-    public async Task<InputSpec?> CaptureAsync(TimeSpan timeout, CancellationToken cancellationToken = default)
+    public Task<InputSpec?> CaptureAsync(TimeSpan timeout, CancellationToken cancellationToken = default)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
 
-        _hook = SetWindowsHookExW(WhKeyboardLl, _callback, GetModuleHandleW(null), 0);
-
-        if (_hook == 0)
+        if (_input == 0 || _input == -1 || !_isConsole)
         {
             throw new InvalidOperationException(
-                $"Installation du hook clavier impossible (erreur {Marshal.GetLastWin32Error()}).");
+                "La capture de touche exige un terminal interactif : l'entrée est redirigée. "
+                + "Lancez « --bind » directement dans une console, sans tube ni redirection.");
         }
 
-        try
-        {
-            using CancellationTokenSource timer = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            timer.CancelAfter(timeout);
-
-            using (timer.Token.Register(() => _completion.TrySetResult(null)))
-            {
-                // Le hook bas niveau exige une boucle de messages sur le thread qui l'installe.
-                while (!_completion.Task.IsCompleted)
-                {
-                    while (PeekMessageW(out Msg message, 0, 0, 0, 0x0001))
-                    {
-                        _ = TranslateMessage(ref message);
-                        _ = DispatchMessageW(ref message);
-                    }
-
-                    await Task.Delay(10, CancellationToken.None).ConfigureAwait(false);
-                }
-            }
-
-            return await _completion.Task.ConfigureAwait(false);
-        }
-        finally
-        {
-            if (_hook != 0)
-            {
-                _ = UnhookWindowsHookEx(_hook);
-                _hook = 0;
-            }
-        }
+        // La lecture est bloquante : elle appartient à un thread dédié, jamais au pool.
+        return Task.Factory.StartNew(
+            () => Capture(timeout, cancellationToken),
+            cancellationToken,
+            TaskCreationOptions.LongRunning,
+            TaskScheduler.Default);
     }
 
-    private nint OnKeyboardEvent(int code, nint wParam, nint lParam)
+    private InputSpec? Capture(TimeSpan timeout, CancellationToken cancellationToken)
     {
-        try
+        // Ce que le pilote a tapé avant d'arriver ici ne le concerne pas.
+        _ = FlushConsoleInputBuffer(_input);
+
+        DateTimeOffset deadline = DateTimeOffset.UtcNow + timeout;
+
+        while (!cancellationToken.IsCancellationRequested)
         {
-            if (code == HcAction && (wParam == WmKeydown || wParam == WmSyskeydown))
+            TimeSpan remaining = deadline - DateTimeOffset.UtcNow;
+            if (remaining <= TimeSpan.Zero)
             {
-                KbdLlHookStruct data = Marshal.PtrToStructure<KbdLlHookStruct>(lParam);
-                bool extended = (data.Flags & 0x01) != 0;
-                string? name = ScanCodeMap.NameOf((ushort)data.ScanCode, extended);
-
-                if (name is not null && !IsModifierKey(name))
-                {
-                    if (Cancels.Contains(name))
-                    {
-                        _completion.TrySetResult(null);
-                    }
-                    else
-                    {
-                        _completion.TrySetResult(new InputSpec(name, ReadModifiers()));
-                    }
-                }
+                return null;
             }
-        }
-        catch (Exception)
-        {
-            // Une exception qui traverse un callback natif tue le processus. Rien ne justifie
-            // d'emporter Optimus parce qu'une touche exotique n'a pas su etre nommee.
-            _completion.TrySetResult(null);
+
+            // Un réveil régulier plutôt qu'une attente unique : l'annulation doit être entendue.
+            uint slice = (uint)Math.Min(200, Math.Max(1, remaining.TotalMilliseconds));
+
+            if (WaitForSingleObject(_input, slice) != WaitObject0)
+            {
+                continue;
+            }
+
+            if (!ReadConsoleInputW(_input, out InputRecord record, 1, out uint read) || read == 0)
+            {
+                continue;
+            }
+
+            if (record.EventType != KeyEvent || record.KeyEvent.KeyDown == 0)
+            {
+                continue;
+            }
+
+            ushort scanCode = record.KeyEvent.VirtualScanCode;
+            if (scanCode == 0)
+            {
+                continue;
+            }
+
+            bool extended = (record.KeyEvent.ControlKeyState & EnhancedKey) != 0;
+            string? name = ScanCodeMap.NameOf(scanCode, extended);
+
+            if (name is null || IsModifierKey(name))
+            {
+                continue;
+            }
+
+            return Cancels.Contains(name)
+                ? null
+                : new InputSpec(name, ReadModifiers(record.KeyEvent.ControlKeyState));
         }
 
-        return CallNextHookEx(0, code, wParam, lParam);
+        return null;
     }
 
-    /// <summary>
-    /// Modificateurs enfoncés au moment de la frappe.
-    ///
-    /// Ceux-ci se lisent par code virtuel sans risque : on demande « Ctrl gauche est-il
-    /// enfoncé », ce qui ne dépend d'aucune disposition.
-    /// </summary>
-    private static List<string> ReadModifiers()
+    private static List<string> ReadModifiers(uint state)
     {
         List<string> modifiers = new();
 
-        void Check(int virtualKey, string name)
+        if ((state & LeftAltPressed) != 0)
         {
-            if ((GetAsyncKeyState(virtualKey) & 0x8000) != 0)
-            {
-                modifiers.Add(name);
-            }
+            modifiers.Add("LALT");
         }
 
-        Check(0xA0, "LSHIFT");
-        Check(0xA1, "RSHIFT");
-        Check(0xA2, "LCTRL");
-        Check(0xA3, "RCTRL");
-        Check(0xA4, "LALT");
-        Check(0xA5, "RALT");
+        if ((state & RightAltPressed) != 0)
+        {
+            modifiers.Add("RALT");
+        }
+
+        if ((state & LeftCtrlPressed) != 0)
+        {
+            modifiers.Add("LCTRL");
+        }
+
+        if ((state & RightCtrlPressed) != 0)
+        {
+            modifiers.Add("RCTRL");
+        }
+
+        // La console ne distingue pas les deux Maj. On retient la gauche, forme que Star Citizen
+        // écrit aussi bien : mieux vaut une approximation nommée qu'un silence.
+        if ((state & ShiftPressed) != 0)
+        {
+            modifiers.Add("LSHIFT");
+        }
 
         return modifiers;
     }
@@ -163,63 +195,59 @@ public sealed partial class KeyCapture : IDisposable
 
         _disposed = true;
 
-        if (_hook != 0)
+        if (_modeChanged)
         {
-            _ = UnhookWindowsHookEx(_hook);
-            _hook = 0;
+            _ = SetConsoleMode(_input, _previousMode);
         }
-
-        _completion.TrySetResult(null);
     }
 
-    private delegate nint LowLevelKeyboardProc(int code, nint wParam, nint lParam);
-
+    /// <summary>
+    /// Reflet exact de <c>KEY_EVENT_RECORD</c>.
+    ///
+    /// Champs volontairement bruts — <c>int</c> pour un booleen, <c>ushort</c> pour un caractere —
+    /// afin que la structure reste blittable : le generateur de <c>LibraryImport</c> exige de
+    /// pouvoir la passer sans marshaling, et c'est aussi ce qu'il y a de plus rapide.
+    /// </summary>
     [StructLayout(LayoutKind.Sequential)]
-    private struct KbdLlHookStruct
+    private struct KeyEventRecord
     {
-        public uint VirtualKey;
-        public uint ScanCode;
-        public uint Flags;
-        public uint Time;
-        public nuint ExtraInfo;
+        public int KeyDown;
+        public ushort RepeatCount;
+        public ushort VirtualKeyCode;
+        public ushort VirtualScanCode;
+        public ushort Character;
+        public uint ControlKeyState;
     }
 
-    [StructLayout(LayoutKind.Sequential)]
-    private struct Msg
+    [StructLayout(LayoutKind.Explicit)]
+    private struct InputRecord
     {
-        public nint Hwnd;
-        public uint Message;
-        public nuint WParam;
-        public nint LParam;
-        public uint Time;
-        public int PointX;
-        public int PointY;
+        [FieldOffset(0)]
+        public ushort EventType;
+
+        [FieldOffset(4)]
+        public KeyEventRecord KeyEvent;
     }
 
-    [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
-    private static extern nint SetWindowsHookExW(int hookId, LowLevelKeyboardProc callback, nint module, uint threadId);
+    [LibraryImport("kernel32.dll")]
+    private static partial nint GetStdHandle(int handle);
 
-    [LibraryImport("user32.dll")]
+    [LibraryImport("kernel32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
-    private static partial bool UnhookWindowsHookEx(nint hook);
+    private static partial bool GetConsoleMode(nint handle, out uint mode);
 
-    [LibraryImport("user32.dll")]
-    private static partial nint CallNextHookEx(nint hook, int code, nint wParam, nint lParam);
-
-    [LibraryImport("kernel32.dll", StringMarshalling = StringMarshalling.Utf16)]
-    private static partial nint GetModuleHandleW(string? name);
-
-    [LibraryImport("user32.dll")]
-    private static partial short GetAsyncKeyState(int virtualKey);
-
-    [LibraryImport("user32.dll")]
+    [LibraryImport("kernel32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
-    private static partial bool PeekMessageW(out Msg message, nint hwnd, uint filterMin, uint filterMax, uint remove);
+    private static partial bool SetConsoleMode(nint handle, uint mode);
 
-    [LibraryImport("user32.dll")]
+    [LibraryImport("kernel32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
-    private static partial bool TranslateMessage(ref Msg message);
+    private static partial bool FlushConsoleInputBuffer(nint handle);
 
-    [LibraryImport("user32.dll")]
-    private static partial nint DispatchMessageW(ref Msg message);
+    [LibraryImport("kernel32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool ReadConsoleInputW(nint handle, out InputRecord record, uint length, out uint read);
+
+    [LibraryImport("kernel32.dll")]
+    private static partial uint WaitForSingleObject(nint handle, uint milliseconds);
 }
