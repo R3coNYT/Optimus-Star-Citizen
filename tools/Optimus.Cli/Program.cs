@@ -44,6 +44,7 @@ public static class Program
         bool listVoices = args.Contains("--voices", StringComparer.OrdinalIgnoreCase);
         bool showBindings = args.Contains("--bindings", StringComparer.OrdinalIgnoreCase);
         string? bindTarget = OptionValue(args, "--bind");
+        bool importRequested = args.Contains("--import-layout", StringComparer.OrdinalIgnoreCase);
         string? importLayout = OptionValue(args, "--import-layout");
         bool exportLayout = args.Contains("--export-layout", StringComparer.OrdinalIgnoreCase);
         string? exportPath = OptionValue(args, "--export-layout");
@@ -112,13 +113,18 @@ public static class Program
 
         // L'editeur de keybinds n'a besoin ni de voix ni de micro : il se traite avant que
         // quoi que ce soit de couteux ne demarre.
-        if (showBindings || bindTarget is not null || importLayout is not null || exportLayout)
+        if (showBindings || bindTarget is not null || importRequested || exportLayout)
         {
             IReadOnlyList<ActionSlot> slots = BindingEditor.Inventory(catalog.Value, profile.Value, overlay);
 
-            if (importLayout is not null)
+            // Le jeu range ses profils tres loin dans son arborescence. Quand il tourne, on sait
+            // ou : autant s'en servir plutot que de demander au pilote un chemin qu'il devrait
+            // aller chercher a la main.
+            string? mappings = StarCitizenDetector.ResolveMappingsDirectory(game.ExecutablePath);
+
+            if (importRequested)
             {
-                return BindingEditor.ImportLayout(importLayout, slots, overlay, overlayPath);
+                return BindingEditor.ImportLayout(importLayout, slots, overlay, overlayPath, mappings);
             }
 
             if (bindTarget is not null)
@@ -129,11 +135,17 @@ public static class Program
 
             if (exportLayout)
             {
-                return BindingEditor.ExportLayout(
-                    overlay, exportPath ?? Path.Combine(Environment.CurrentDirectory, "optimus.xml"));
+                bool inGameFolder = exportPath is null && mappings is not null && Directory.Exists(mappings);
+
+                string target = exportPath
+                    ?? (inGameFolder
+                        ? Path.Combine(mappings!, "optimus.xml")
+                        : Path.Combine(Environment.CurrentDirectory, "optimus.xml"));
+
+                return BindingEditor.ExportLayout(overlay, target, inGameFolder);
             }
 
-            BindingEditor.PrintInventory(slots, overlay);
+            BindingEditor.PrintInventory(slots, overlay, mappings);
             return 0;
         }
 

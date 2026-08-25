@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Security.Principal;
@@ -55,6 +55,20 @@ public sealed partial class StarCitizenDetector : IGameDetector
         DirectoryInfo? bin = Directory.GetParent(executablePath);
         return bin?.Parent?.FullName;
     }
+
+    /// <summary>
+    /// Dossier des profils de commandes du jeu
+    /// (<c>…\LIVE\USER\Client\0\Controls\Mappings</c>).
+    ///
+    /// C'est là que Star Citizen dépose ses exports et va chercher ce que <c>pp_RebindKeys</c>
+    /// doit charger. Le trouver seul épargne au pilote une copie manuelle dans une arborescence
+    /// qu'il n'a aucune raison de connaître par cœur — et c'est exactement ce genre de friction
+    /// qui fait qu'une fonction reste inutilisée.
+    /// </summary>
+    public static string? ResolveMappingsDirectory(string? executablePath) =>
+        ResolveChannelDirectory(executablePath) is string channel
+            ? Path.Combine(channel, "USER", "Client", "0", "Controls", "Mappings")
+            : null;
 
     private static Process? FindProcess()
     {

@@ -82,7 +82,8 @@ internal static class BindingEditor
     }
 
     /// <summary>Affiche l'inventaire, en séparant ce qui bloque de ce qui améliore.</summary>
-    public static void PrintInventory(IReadOnlyList<ActionSlot> slots, BindingOverlay overlay)
+    public static void PrintInventory(
+        IReadOnlyList<ActionSlot> slots, BindingOverlay overlay, string? mappingsDirectory = null)
     {
         ActionSlot[] missing = slots.Where(s => s.Status != BindingLookup.Bound).ToArray();
         ActionSlot[] blocking = missing.Where(s => s.Need == ActionNeed.Primary).ToArray();
@@ -127,6 +128,12 @@ internal static class BindingEditor
             {
                 Console.WriteLine($"    CONFLIT : {input} sert à la fois à {first} et à {second}");
             }
+        }
+
+        if (mappingsDirectory is not null && Directory.Exists(mappingsDirectory))
+        {
+            Console.WriteLine();
+            Console.WriteLine($"  profils du jeu : {mappingsDirectory}");
         }
 
         Console.WriteLine();
@@ -213,14 +220,30 @@ internal static class BindingEditor
 
     /// <summary>Reprend les réglages d'un fichier de mappage exporté du jeu.</summary>
     public static int ImportLayout(
-        string path,
+        string? path,
         IReadOnlyList<ActionSlot> slots,
         BindingOverlay overlay,
-        string overlayPath)
+        string overlayPath,
+        string? mappingsDirectory)
     {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            path = NewestLayout(mappingsDirectory);
+
+            if (path is null)
+            {
+                PrintWhereLayoutsLive(mappingsDirectory);
+                return 1;
+            }
+
+            Console.WriteLine();
+            Console.WriteLine($"  trouvé    {path}");
+        }
+
         if (!File.Exists(path))
         {
             Console.Error.WriteLine($"Fichier introuvable : {path}");
+            PrintWhereLayoutsLive(mappingsDirectory);
             return 1;
         }
 
@@ -275,7 +298,7 @@ internal static class BindingEditor
     ///
     /// C'est la moitié manquante : sans elle, une touche assignée dans Optimus part dans le vide.
     /// </summary>
-    public static int ExportLayout(BindingOverlay overlay, string path)
+    public static int ExportLayout(BindingOverlay overlay, string path, bool inGameFolder)
     {
         BindingAssignment[] manual = overlay.Assignments
             .Where(a => a.Origin == AssignmentOrigin.Manual)
@@ -296,16 +319,74 @@ internal static class BindingEditor
         Console.WriteLine();
         Console.WriteLine($"  écrit     {path}  ({manual.Length} assignation(s))");
         Console.WriteLine();
-        Console.WriteLine("  Pour que le jeu en tienne compte :");
-        Console.WriteLine("    1. copiez ce fichier dans");
-        Console.WriteLine("       <Star Citizen>\\LIVE\\USER\\Client\\0\\Controls\\Mappings\\");
-        Console.WriteLine("    2. dans le jeu, console (²) puis : pp_RebindKeys optimus");
-        Console.WriteLine("       ou Options > Keybindings > Control Profiles > optimus");
+        if (inGameFolder)
+        {
+            Console.WriteLine("  Le fichier est déjà dans le dossier du jeu. Il ne reste qu'à le charger :");
+            Console.WriteLine("    dans Star Citizen, console (²) puis : pp_RebindKeys optimus");
+            Console.WriteLine("    ou Options > Keybindings > Control Profiles > optimus");
+        }
+        else
+        {
+            Console.WriteLine("  Pour que le jeu en tienne compte :");
+            Console.WriteLine("    1. copiez ce fichier dans");
+            Console.WriteLine(@"       <Star Citizen>\LIVE\USER\Client\0\Controls\Mappings\");
+            Console.WriteLine("    2. dans le jeu, console (²) puis : pp_RebindKeys optimus");
+            Console.WriteLine("       ou Options > Keybindings > Control Profiles > optimus");
+        }
+
         Console.WriteLine();
         Console.WriteLine("  Ce fichier ne contient que vos assignations : tout le reste garde");
         Console.WriteLine("  les touches par défaut du jeu.");
 
         return 0;
+    }
+
+
+    /// <summary>Export de profil le plus récent trouvé dans le dossier du jeu.</summary>
+    private static string? NewestLayout(string? mappingsDirectory)
+    {
+        if (string.IsNullOrWhiteSpace(mappingsDirectory) || !Directory.Exists(mappingsDirectory))
+        {
+            return null;
+        }
+
+        return Directory.EnumerateFiles(mappingsDirectory, "layout_*.xml")
+            .OrderByDescending(File.GetLastWriteTimeUtc)
+            .FirstOrDefault();
+    }
+
+    /// <summary>
+    /// Explique où le jeu range ses profils, et comment en produire un.
+    ///
+    /// Sans cela, « fichier introuvable » laisse le pilote sans la moindre piste : le dossier
+    /// est enfoui, et l'export ne se fait pas au même endroit que les réglages.
+    /// </summary>
+    private static void PrintWhereLayoutsLive(string? mappingsDirectory)
+    {
+        Console.WriteLine();
+
+        if (mappingsDirectory is null)
+        {
+            Console.WriteLine("  Star Citizen n'étant pas lancé, je ne sais pas où il est installé.");
+            Console.WriteLine("  Lancez le jeu, ou indiquez le fichier : --import-layout <chemin>");
+        }
+        else if (!Directory.Exists(mappingsDirectory))
+        {
+            Console.WriteLine($"  Dossier des profils absent : {mappingsDirectory}");
+            Console.WriteLine("  Il n'apparaît qu'après un premier export depuis le jeu.");
+        }
+        else
+        {
+            Console.WriteLine($"  Aucun « layout_*.xml » dans {mappingsDirectory}");
+        }
+
+        Console.WriteLine();
+        Console.WriteLine("  Pour produire un export depuis Star Citizen :");
+        Console.WriteLine("    Options > Keybindings > Control Profiles > Save control settings");
+        Console.WriteLine("    ou, dans la console (²) : pp_RebindKeys export mesreglages");
+        Console.WriteLine();
+        Console.WriteLine("  Cet export ne contient que ce que vous avez changé : c'est voulu, et");
+        Console.WriteLine("  c'est exactement ce dont Optimus a besoin.");
     }
 
     /// <summary>Traduit la couche utilisateur en surcharges applicables au profil.</summary>
