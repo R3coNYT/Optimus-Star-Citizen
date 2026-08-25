@@ -43,6 +43,7 @@ public static class Program
         bool silent = args.Contains("--silent", StringComparer.OrdinalIgnoreCase);
         bool listVoices = args.Contains("--voices", StringComparer.OrdinalIgnoreCase);
         bool showBindings = args.Contains("--bindings", StringComparer.OrdinalIgnoreCase);
+        bool bindRequested = args.Contains("--bind", StringComparer.OrdinalIgnoreCase);
         string? bindTarget = OptionValue(args, "--bind");
         bool importRequested = args.Contains("--import-layout", StringComparer.OrdinalIgnoreCase);
         string? importLayout = OptionValue(args, "--import-layout");
@@ -113,7 +114,7 @@ public static class Program
 
         // L'editeur de keybinds n'a besoin ni de voix ni de micro : il se traite avant que
         // quoi que ce soit de couteux ne demarre.
-        if (showBindings || bindTarget is not null || importRequested || exportLayout)
+        if (showBindings || bindRequested || importRequested || exportLayout)
         {
             IReadOnlyList<ActionSlot> slots = BindingEditor.Inventory(catalog.Value, profile.Value, overlay);
 
@@ -127,10 +128,13 @@ public static class Program
                 return BindingEditor.ImportLayout(importLayout, slots, overlay, overlayPath, mappings);
             }
 
-            if (bindTarget is not null)
+            if (bindRequested)
             {
-                return await BindingEditor.AssignAsync(bindTarget, slots, overlay, overlayPath)
-                    .ConfigureAwait(false);
+                // « --bind » sans cible passe tout en revue : vingt et une actions a configurer
+                // une par une, c'est vingt et une invocations que personne ne fera.
+                return bindTarget is null
+                    ? await BindingEditor.AssignAllAsync(slots, overlay, overlayPath).ConfigureAwait(false)
+                    : await BindingEditor.AssignAsync(bindTarget, slots, overlay, overlayPath).ConfigureAwait(false);
             }
 
             if (exportLayout)

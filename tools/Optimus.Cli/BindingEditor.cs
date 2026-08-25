@@ -146,7 +146,8 @@ internal static class BindingEditor
         }
 
         Console.WriteLine();
-        Console.WriteLine("  --bind <action|commande>   assigner une touche en la pressant");
+        Console.WriteLine("  --bind                     passer en revue tout ce qui manque");
+        Console.WriteLine("  --bind <action|commande>   assigner une seule touche");
         Console.WriteLine("  --import-layout <fichier>  reprendre vos réglages exportés du jeu");
         Console.WriteLine("  --export-layout            produire le fichier à charger dans le jeu");
     }
@@ -233,6 +234,94 @@ internal static class BindingEditor
         Console.WriteLine("  IMPORTANT : Optimus enverra cette touche, mais Star Citizen ne lui obéira");
         Console.WriteLine("  que s'il la connaît de son côté. Lancez « --export-layout » puis chargez le");
         Console.WriteLine("  fichier produit dans le jeu, sans quoi la frappe partira dans le vide.");
+
+        return 0;
+    }
+
+
+    /// <summary>
+    /// Passe en revue tout ce qui n'a pas de touche, l'un après l'autre.
+    ///
+    /// Vingt et une actions à configurer, c'est vingt et une invocations séparées — le genre de
+    /// corvée qu'on remet indéfiniment. Les bloquantes viennent d'abord : ce sont les seules qui
+    /// empêchent une commande de fonctionner, les sens explicites ne font qu'améliorer.
+    /// </summary>
+    public static async Task<int> AssignAllAsync(
+        IReadOnlyList<ActionSlot> slots,
+        BindingOverlay overlay,
+        string overlayPath)
+    {
+        ActionSlot[] pending = slots.Where(s => s.Status != BindingLookup.Bound).ToArray();
+
+        if (pending.Length == 0)
+        {
+            Console.WriteLine();
+            Console.WriteLine("  Tout est configuré : rien à assigner.");
+            return 0;
+        }
+
+        Console.WriteLine();
+        Console.WriteLine($"  {pending.Length} action(s) sans touche.");
+        Console.WriteLine("  Pressez la touche voulue, ou Échap pour passer à la suivante.");
+        Console.WriteLine("  Ctrl+C pour arrêter là : ce qui est déjà assigné reste enregistré.");
+
+        int assigned = 0;
+        int skipped = 0;
+
+        foreach (ActionSlot slot in pending)
+        {
+            string kind = slot.Need == ActionNeed.Primary ? "BLOQUANTE" : "sens explicite";
+
+            Console.WriteLine();
+            Console.WriteLine($"  [{assigned + skipped + 1}/{pending.Length}] {slot.CommandName}   ({kind})");
+            Console.WriteLine($"        {slot.ActionId}");
+            Console.Write("        touche : ");
+
+            InputSpec? captured;
+
+            try
+            {
+                using KeyCapture capture = new();
+                captured = await capture.CaptureAsync(TimeSpan.FromMinutes(2)).ConfigureAwait(false);
+            }
+            catch (InvalidOperationException exception)
+            {
+                Console.Error.WriteLine();
+                Console.Error.WriteLine($"  {exception.Message}");
+                return 1;
+            }
+
+            if (captured is null)
+            {
+                Console.WriteLine("passée");
+                skipped++;
+                continue;
+            }
+
+            // Une touche deja prise ailleurs se signale sans rien refuser : Star Citizen lui-meme
+            // partage des touches entre contextes, et le pilote sait ce qu'il fait.
+            string combination = BindingOverlay.Combination(captured);
+            BindingAssignment? clash = overlay.Assignments.FirstOrDefault(
+                a => BindingOverlay.Combination(a.Input) == combination);
+
+            overlay.Assign(slot.ActionId, captured, AssignmentOrigin.Manual);
+            overlay.Save(overlayPath);
+            assigned++;
+
+            Console.WriteLine(clash is null
+                ? $"{captured}"
+                : $"{captured}   (déjà utilisée par {clash.ActionId})");
+        }
+
+        Console.WriteLine();
+        Console.WriteLine($"  {assigned} assignée(s), {skipped} passée(s).");
+        Console.WriteLine($"  écrit     {overlayPath}");
+
+        if (assigned > 0)
+        {
+            Console.WriteLine();
+            Console.WriteLine("  Reste à les faire connaître au jeu : --export-layout");
+        }
 
         return 0;
     }
