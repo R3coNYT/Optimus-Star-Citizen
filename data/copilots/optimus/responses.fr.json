@@ -6,7 +6,11 @@
     "trahit le plus vite un automate. Les variantes marquees d'un requires ne sont eligibles",
     "que pour les personnalites qui s'y pretent - un copilote militaire ne dira jamais celles",
     "qui demandent du sarcasme.",
-    "{pilote} est remplace par une forme d'adresse tiree au sort dans le lexique."
+    "{pilote} est remplace par une forme d'adresse tiree au sort dans le lexique.",
+    "DECOR (D32) : les repliques de system.status enoncent des releves qu'Optimus ne mesure",
+    "pas, faute de telemetrie. C'est assume tant que cela reste de l'ambiance. Des qu'un",
+    "IGameStateProvider existera, ce sont les PREMIERS textes a reecrire : un chiffre faux",
+    "enonce avec assurance vaut moins que le silence."
   ],
   "entries": {
     "system.success": {
