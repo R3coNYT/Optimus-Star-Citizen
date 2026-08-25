@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+
+    <!--
+      Cible Windows explicite : cet outil pilote SendInput, les hooks bas niveau et waveIn.
+      Le déclarer évite que l'analyseur de compatibilité signale à juste titre des appels
+      Windows sous une cible multiplateforme - on corrige la déclaration, pas le diagnostic.
+    -->
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <RootNamespace>Optimus.Spike</RootNamespace>
+    <AssemblyName>Optimus.Spike.InputTest</AssemblyName>
+    <Platforms>x64</Platforms>
+    <PlatformTarget>x64</PlatformTarget>
+
+    <!--
+      Ces sources sont volontairement limitées à C# 5 : elles doivent aussi pouvoir être
+      compilées à la volée par le compilateur intégré à Windows (PowerShell + Add-Type),
+      afin que le spike soit exécutable sans installer le SDK .NET. Voir README.md.
+      Si le compilateur refuse LangVersion 5, on peut passer à `latest` sans rien casser,
+      mais alors run-spike.ps1 ne fonctionnera plus en mode sans SDK.
+    -->
+    <LangVersion>5</LangVersion>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+</Project>
