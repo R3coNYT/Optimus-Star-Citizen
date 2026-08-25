@@ -1,1 +1,73 @@
-# Optimus-Star-Citizen
+# OPTIMUS
+
+**Copilote vocal IA pour Star Citizen.** Application Windows locale : Optimus écoute, comprend,
+exécute les actions du jeu via *tes* raccourcis, et répond avec une voix et une personnalité
+configurables.
+
+```
+voix → STT local → intent → validation → binding local → clavier local → Star Citizen
+                                    ↑
+                        LLM optionnel (jamais requis, jamais aux commandes)
+```
+
+## Statut
+
+**Moteur en cours, exécutable en simulation.** Les spikes de risque sont passés (`docs/13`) :
+l'injection scancode est validée dans le jeu, les 627 bindings réels de Star Citizen 4.9 sont
+importés, et le pipeline `énoncé → intention → garde → binding → entrées` tourne de bout en bout
+sans micro, sans clavier et sans le jeu.
+
+```bash
+dotnet run --project tools/Optimus.Cli -- "Optimus, allume les lumieres"
+```
+
+```
+trace f06bb79f · Simulated · 13.5 ms
+  énoncé      « Optimus allume les lumieres »
+  normalisé   « allume les lumieres »
+  intent      ship.lights.toggle  score 1.00  (Exact)
+  garde       Allowed
+  étape 0     lights_controller/v_lights → L
+```
+
+Sans argument, le programme passe en mode interactif ; `?` liste les commandes et leurs touches,
+`--status` détaille la détection du jeu. `dotnet test` exécute la suite contre les données réelles
+du dépôt.
+
+**La simulation est le mode par défaut** : aucune touche ne part tant que `--real` n'est pas
+demandé explicitement. Le mode réel exige que Star Citizen soit lancé, au premier plan, et refuse
+de démarrer si le jeu est élevé alors qu'Optimus ne l'est pas — Windows filtrerait les entrées
+sans rien dire.
+
+```bash
+dotnet run --project tools/Optimus.Cli -- --real "Optimus, allume les lumieres"
+```
+
+## Architecture
+
+| Projet | Cible | Rôle |
+|---|---|---|
+| `Optimus.Core` | `net8.0` **neutre** | Domaine, intentions, exécution, simulation. Aucune API système : testable partout. |
+| `Optimus.Infrastructure` | `net8.0-windows` | `SendInput` en scancodes, table de touches, détection du jeu. |
+| `Optimus.Cli` | `net8.0-windows` | Banc d'essai du moteur. |
+
+## Principes
+
+- **Local d'abord** : fonctionne hors ligne, sans compte, sans coût d'API.
+- **Zéro keybind en dur** : les touches sont importées de Star Citizen et éditables.
+- **L'IA propose, le moteur dispose** : le LLM ne peut émettre qu'un intent d'une liste blanche.
+- **Isolation par machine** : une commande n'agit que sur le PC qui l'a reçue.
+- **Autonome** : aucune dépendance à VoiceAttack.
+- **Un copilote est une donnée** : personnalité, voix, capacités et commandes sont des fichiers.
+
+## Ce qu'Optimus ne fera pas
+
+Pas d'automatisation continue du gameplay (visée, farming, macros en boucle), pas de contrôle
+d'une machine tierce, pas de télémétrie sans consentement. Un énoncé vocal = une action
+délibérée du joueur.
+
+## Documentation
+
+Voir [docs/00-INDEX.md](docs/00-INDEX.md) — 14 documents couvrant l'analyse, l'architecture, la
+stack, les modèles de données, le moteur de commandes, la personnalité, le pipeline vocal,
+l'interface, la roadmap, les risques et la structure du projet.
