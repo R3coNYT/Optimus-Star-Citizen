@@ -1,4 +1,4 @@
-using Optimus.Core.Domain.Personality;
+﻿using Optimus.Core.Domain.Personality;
 using Optimus.Core.Execution;
 
 namespace Optimus.Core.Personality;
@@ -25,7 +25,12 @@ public sealed record ResponseRequest(
 /// </summary>
 public static class ResponseRouter
 {
-    public static ResponseRequest? Route(ExecutionResult result)
+    /// <param name="context">
+    /// Situation courante, consultée pour les commandes dont la réplique en dépend. Le mode de
+    /// vol en est le seul cas : une même commande y mène dans les deux sens, et « Armes chaudes »
+    /// ne vaut que dans un sens.
+    /// </param>
+    public static ResponseRequest? Route(ExecutionResult result, CopilotContext context = default)
     {
         ArgumentNullException.ThrowIfNull(result);
 
@@ -44,10 +49,10 @@ public static class ResponseRouter
         return result.Status switch
         {
             ExecutionStatus.Executed or ExecutionStatus.Simulated =>
-                new ResponseRequest(Keys(result, "system.success"), ResponseEvent.Success, variables),
+                new ResponseRequest(Keys(result, "system.success", context), ResponseEvent.Success, variables),
 
             ExecutionStatus.Answered =>
-                new ResponseRequest(Keys(result, "system.success"), ResponseEvent.Any, variables),
+                new ResponseRequest(Keys(result, "system.success", context), ResponseEvent.Any, variables),
 
             ExecutionStatus.Unknown =>
                 new ResponseRequest(["system.unknown_command"], ResponseEvent.Unknown, variables),
@@ -89,6 +94,21 @@ public static class ResponseRouter
             _ => new ResponseRequest(["system.failed"], ResponseEvent.Fail, variables),
         };
 
-    private static string[] Keys(ExecutionResult result, string fallback) =>
-        result.Command is null ? [fallback] : [result.Command.Id, fallback];
+    private static string[] Keys(ExecutionResult result, string fallback, CopilotContext context)
+    {
+        if (result.Command is null)
+        {
+            return [fallback];
+        }
+
+        // Le mode de vol se commute par une commande unique, mais s'annonce dans les deux sens :
+        // « Armes chaudes » en entrant en combat, « Retour en navigation » en sortant. Sans cette
+        // clé, les deux entrées écrites pour cela ne servaient jamais.
+        if (result.Command.Id == MasterMode.CommandId)
+        {
+            return [MasterMode.ResponseKey(context.CombatActive), result.Command.Id, fallback];
+        }
+
+        return [result.Command.Id, fallback];
+    }
 }

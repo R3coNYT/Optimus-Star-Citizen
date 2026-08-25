@@ -151,7 +151,17 @@ public sealed class FastIntentMatcher
 
         if (best.Score >= ExecuteThreshold)
         {
-            decision = best.Score - runnerUp >= AmbiguityMargin
+            // Une correspondance exacte n'est pas ambigue : l'enonce figure litteralement dans le
+            // catalogue, associe a cette commande. « mode scan » et « mode scm » se ressemblent
+            // assez pour que le second sorte a 0,91 - la marge d'ecart bloquait alors une phrase
+            // pourtant reconnue mot pour mot, et « mode scan » ne s'est jamais executee.
+            //
+            // Le doute ne subsiste que si DEUX commandes revendiquent le meme enonce exact : c'est
+            // un defaut du catalogue, et il doit se voir plutot que se resoudre au hasard.
+            bool exactAndAlone = best.Kind == MatchKind.Exact
+                && (candidates.Count < 2 || candidates[1].Kind != MatchKind.Exact);
+
+            decision = exactAndAlone || best.Score - runnerUp >= AmbiguityMargin
                 ? IntentDecision.Execute
                 : IntentDecision.Disambiguate;
         }

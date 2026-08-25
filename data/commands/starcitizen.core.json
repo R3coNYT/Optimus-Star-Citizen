@@ -17,7 +17,7 @@
     {
       "id": "ship.power.toggle",
       "kind": "action",
-      "name": "Alimentation generale",
+      "name": "Alimentation générale",
       "category": "power",
       "voice_phrases": ["allume le vaisseau", "coupe le vaisseau", "alimentation", "mets sous tension", "power"],
       "actions": [{ "type": "game_action", "action_id": "spaceship_power/v_power_toggle" }],
@@ -53,7 +53,7 @@
     {
       "id": "ship.flightready",
       "kind": "action",
-      "name": "Pret au decollage",
+      "name": "Prêt au décollage",
       "category": "ship",
       "voice_phrases": ["pret au decollage", "flight ready", "prepare le vaisseau", "sequence de demarrage"],
       "actions": [{ "type": "game_action", "action_id": "spaceship_general/v_flightready" }],
@@ -99,7 +99,7 @@
     {
       "id": "ship.eject",
       "kind": "action",
-      "name": "Ejection",
+      "name": "Éjection",
       "category": "ship",
       "voice_phrases": ["ejection", "ejecte-moi", "ejecte"],
       "actions": [{ "type": "game_action", "action_id": "seat_general/v_eject" }],
@@ -156,7 +156,7 @@
     {
       "id": "flight.decoupled.toggle",
       "kind": "action",
-      "name": "Mode decouple",
+      "name": "Mode découplé",
       "category": "flight",
       "voice_phrases": ["mode decouple", "decouple", "passe en decouple", "recouple"],
       "actions": [{ "type": "game_action", "action_id": "spaceship_movement/v_ifcs_vector_decoupling_toggle" }],
@@ -192,7 +192,7 @@
     {
       "id": "flight.speed_limiter.down",
       "kind": "action",
-      "name": "Reduire le limiteur de vitesse",
+      "name": "Réduire le limiteur de vitesse",
       "category": "flight",
       "voice_phrases": ["reduis la vitesse", "baisse le limiteur", "moins vite", "ralentis"],
       "actions": [{ "type": "game_action", "action_id": "spaceship_movement/v_ifcs_speed_limiter_decrement", "repeat": 3, "interval_ms": 80 }],
@@ -201,7 +201,7 @@
     {
       "id": "nav.master_mode.cycle",
       "kind": "action",
-      "name": "Basculer NAV / SCM",
+      "name": "Basculer entre NAV et SCM",
       "category": "navigation",
       "voice_phrases": ["mode navigation", "mode combat", "passe en mode combat", "passe en navigation", "change de mode", "mode scm"],
       "actions": [{ "type": "game_action", "action_id": "spaceship_movement/v_master_mode_cycle_long" }],
@@ -285,7 +285,7 @@
     {
       "id": "power.reset",
       "kind": "action",
-      "name": "Repartition de puissance neutre",
+      "name": "Répartition de puissance neutre",
       "category": "power",
       "voice_phrases": ["equilibre la puissance", "repartition neutre", "reinitialise la puissance"],
       "actions": [{ "type": "game_action", "action_id": "spaceship_power/v_engineering_assignment_reset" }],
@@ -313,7 +313,7 @@
     {
       "id": "shields.raise.front",
       "kind": "action",
-      "name": "Boucliers a l'avant",
+      "name": "Boucliers à l'avant",
       "category": "shields",
       "voice_phrases": ["boucliers a l'avant", "mets les boucliers sur l'avant", "renforce l'avant", "protege l'avant"],
       "actions": [{ "type": "game_action", "action_id": "spaceship_defensive/v_shield_raise_level_forward", "repeat": 2, "interval_ms": 80 }],
@@ -322,7 +322,7 @@
     {
       "id": "shields.raise.back",
       "kind": "action",
-      "name": "Boucliers a l'arriere",
+      "name": "Boucliers à l'arrière",
       "category": "shields",
       "voice_phrases": ["boucliers a l'arriere", "mets les boucliers derriere", "renforce l'arriere", "protege l'arriere"],
       "actions": [{ "type": "game_action", "action_id": "spaceship_defensive/v_shield_raise_level_back", "repeat": 2, "interval_ms": 80 }],
@@ -331,7 +331,7 @@
     {
       "id": "shields.raise.left",
       "kind": "action",
-      "name": "Boucliers a babord",
+      "name": "Boucliers à bâbord",
       "category": "shields",
       "voice_phrases": ["boucliers a gauche", "boucliers a babord", "renforce la gauche"],
       "actions": [{ "type": "game_action", "action_id": "spaceship_defensive/v_shield_raise_level_left", "repeat": 2, "interval_ms": 80 }],
@@ -340,7 +340,7 @@
     {
       "id": "shields.raise.right",
       "kind": "action",
-      "name": "Boucliers a tribord",
+      "name": "Boucliers à tribord",
       "category": "shields",
       "voice_phrases": ["boucliers a droite", "boucliers a tribord", "renforce la droite"],
       "actions": [{ "type": "game_action", "action_id": "spaceship_defensive/v_shield_raise_level_right", "repeat": 2, "interval_ms": 80 }],
@@ -349,7 +349,7 @@
     {
       "id": "shields.reset",
       "kind": "action",
-      "name": "Boucliers equilibres",
+      "name": "Boucliers équilibrés",
       "category": "shields",
       "voice_phrases": ["equilibre les boucliers", "boucliers neutres", "repartis les boucliers"],
       "actions": [{ "type": "game_action", "action_id": "spaceship_defensive/v_shield_reset_level" }],
@@ -395,7 +395,7 @@
     {
       "id": "targeting.unlock",
       "kind": "action",
-      "name": "Deverrouiller la cible",
+      "name": "Déverrouiller la cible",
       "category": "targeting",
       "voice_phrases": ["deverrouille la cible", "lache la cible", "abandonne le verrouillage"],
       "actions": [{ "type": "game_action", "action_id": "spaceship_targeting/v_target_unlock" }],
@@ -404,7 +404,7 @@
     {
       "id": "targeting.remove_pins",
       "kind": "action",
-      "name": "Retirer les cibles epinglees",
+      "name": "Retirer les cibles épinglées",
       "category": "targeting",
       "voice_phrases": ["retire les epingles", "efface les cibles", "nettoie les cibles"],
       "actions": [{ "type": "game_action", "action_id": "spaceship_targeting/v_target_remove_all_pins" }],
@@ -441,7 +441,7 @@
     {
       "id": "salvage.mode.toggle",
       "kind": "action",
-      "name": "Mode recuperation",
+      "name": "Mode récupération",
       "category": "salvage",
       "voice_phrases": ["mode salvage", "mode recuperation", "passe en salvage"],
       "actions": [{ "type": "game_action", "action_id": "seat_general/v_toggle_salvage_mode" }],
@@ -460,7 +460,7 @@
     {
       "id": "view.look_behind",
       "kind": "action",
-      "name": "Regarder derriere",
+      "name": "Regarder derrière",
       "category": "camera",
       "voice_phrases": ["regarde derriere", "vue arriere", "qu'est-ce qu'il y a derriere"],
       "actions": [{ "type": "game_action", "action_id": "seat_general/v_view_look_behind", "mode": "hold", "hold_ms": 1500 }],
@@ -487,7 +487,7 @@
     {
       "id": "hud.visor_wipe",
       "kind": "action",
-      "name": "Nettoyer la visiere",
+      "name": "Nettoyer la visière",
       "category": "immersion",
       "voice_phrases": ["nettoie la visiere", "essuie la visiere", "visiere"],
       "actions": [{ "type": "game_action", "action_id": "spaceship_hud/visor_wipe" }],
@@ -497,7 +497,7 @@
     {
       "id": "system.status",
       "kind": "query",
-      "name": "Rapport systeme",
+      "name": "Rapport système",
       "category": "system",
       "voice_phrases": ["rapport systeme", "etat des systemes", "fais un rapport", "statut"],
       "actions": [],
@@ -524,7 +524,7 @@
     {
       "id": "system.repeat",
       "kind": "query",
-      "name": "Repeter",
+      "name": "Répéter",
       "category": "system",
       "voice_phrases": ["repete", "qu'est-ce que tu as dit", "redis-le"],
       "actions": [],
@@ -579,7 +579,7 @@
     {
       "id": "dialogue.acknowledge",
       "kind": "dialogue",
-      "name": "Accuse de reception",
+      "name": "Accusé de réception",
       "category": "immersion",
       "voice_phrases": ["merci", "bien joue", "parfait", "impeccable"],
       "actions": [],
@@ -588,7 +588,7 @@
     {
       "id": "dialogue.reaction",
       "kind": "dialogue",
-      "name": "Reaction a un evenement",
+      "name": "Réaction à un événement",
       "category": "immersion",
       "voice_phrases": ["tu as vu ca", "c'etait quoi ca", "on a failli y passer", "ca chauffe"],
       "actions": [],

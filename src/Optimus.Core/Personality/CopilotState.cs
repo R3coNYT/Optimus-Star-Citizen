@@ -1,4 +1,4 @@
-using Optimus.Core.Domain.Personality;
+﻿using Optimus.Core.Domain.Personality;
 using Optimus.Core.Execution;
 
 namespace Optimus.Core.Personality;
@@ -41,6 +41,24 @@ public sealed class CopilotState
 
     /// <summary>Force le mode de combat, quand on le connaît vraiment.</summary>
     public void SetCombat(bool active) => CombatActive = active;
+
+    /// <summary>
+    /// Aligne le mode déclaré sur ce que le pilote vient de dire, plutôt que de basculer à
+    /// l'aveugle : voir <see cref="MasterMode"/> pour la raison. Retourne l'état atteint.
+    /// </summary>
+    public bool ApplyMasterMode(string? normalizedUtterance)
+    {
+        if (MasterMode.Intended(normalizedUtterance) is bool target)
+        {
+            SetCombat(target);
+        }
+        else
+        {
+            ToggleCombat();
+        }
+
+        return CombatActive;
+    }
 
     /// <summary>
     /// Enregistre l'issue d'une exécution.

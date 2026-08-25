@@ -1,4 +1,4 @@
-using Optimus.Core.Abstractions;
+﻿using Optimus.Core.Abstractions;
 using Optimus.Core.Domain.Bindings;
 using Optimus.Core.Domain.Commands;
 using Optimus.Core.Domain.Copilots;
@@ -214,6 +214,7 @@ public static class Program
         // une question inconnue — aucun seuil ne peut donc les séparer. Plutôt que de refuser,
         // Optimus propose et attend un « Optimus, confirme ».
         CommandDefinition? pending = null;
+        string? pendingUtterance = null;
         DateTimeOffset pendingUntil = DateTimeOffset.MinValue;
         TimeSpan pendingLifetime = TimeSpan.FromSeconds(12);
 
@@ -253,6 +254,7 @@ public static class Program
                             candidate is not null)
                         {
                             pending = candidate;
+                            pendingUtterance = recognition.Text;
                             pendingUntil = DateTimeOffset.UtcNow + pendingLifetime;
 
                             await SayAsync(composer, speech, copilot, ["system.propose"], ResponseEvent.Clarify,
@@ -275,11 +277,13 @@ public static class Program
                         if (recognition.CommandId == "system.confirm" && pendingAlive)
                         {
                             CommandDefinition confirmed = pending!;
+                            string? confirmedUtterance = pendingUtterance;
                             pending = null;
+                            pendingUtterance = null;
 
                             Console.WriteLine($"  confirmé    {confirmed.Name}");
                             await RunCommandAsync(executor, detector, simulation, composer, speech, copilot,
-                                confirmed, real).ConfigureAwait(false);
+                                confirmed, real, confirmedUtterance).ConfigureAwait(false);
                             return;
                         }
 
@@ -361,9 +365,9 @@ public static class Program
 
         // Bascule declarative du mode de combat : faute de telemetrie, Optimus se fie a ce que
         // le pilote lui annonce. Un IGameStateProvider prendra le relais le jour venu.
-        if (result.Command?.Id == "nav.master_mode.cycle" && result.Succeeded)
+        if (result.Command?.Id == MasterMode.CommandId && result.Succeeded)
         {
-            bool combat = State.ToggleCombat();
+            bool combat = State.ApplyMasterMode(result.Intent?.NormalizedText);
             Console.WriteLine($"  contexte    mode {(combat ? "COMBAT" : "navigation")}");
         }
 
@@ -386,7 +390,7 @@ public static class Program
 
         // La parole vient APRES l'action, jamais avant : une synthese lente doit degrader le
         // confort, jamais la reactivite du jeu (docs/09).
-        ResponseRequest? request = ResponseRouter.Route(result);
+        ResponseRequest? request = ResponseRouter.Route(result, State.Snapshot());
 
         if (request is not null)
         {
@@ -406,7 +410,8 @@ public static class Program
         ITextToSpeechProvider speech,
         Copilot copilot,
         CommandDefinition command,
-        bool real)
+        bool real,
+        string? utterance = null)
     {
         simulation?.Reset();
 
@@ -428,9 +433,18 @@ public static class Program
             .ConfigureAwait(false);
 
         State.Record(result);
+
+        // Meme bascule declarative que sur le chemin direct : une commande confirmee apres
+        // proposition doit compter autant qu'une commande comprise du premier coup.
+        if (command.Id == MasterMode.CommandId && result.Succeeded)
+        {
+            bool combat = State.ApplyMasterMode(utterance);
+            Console.WriteLine($"  contexte    mode {(combat ? "COMBAT" : "navigation")}");
+        }
+
         Console.WriteLine(result.Describe());
 
-        ResponseRequest? request = ResponseRouter.Route(result);
+        ResponseRequest? request = ResponseRouter.Route(result, State.Snapshot());
         if (request is not null)
         {
             await SayAsync(composer, speech, copilot, request.Keys, request.Event, request.Variables)

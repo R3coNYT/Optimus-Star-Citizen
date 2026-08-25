@@ -27,7 +27,10 @@
       "fail": [
         { "text": "Troisième échec. Le raccourci de {command} n'est pas configuré." },
         { "text": "Cela ne passera pas tant que {command} n'aura pas de touche assignée." },
-        { "text": "{command} échoue systématiquement. Vérifiez sa configuration." }
+        { "text": "{command} échoue systématiquement. Vérifiez sa configuration." },
+        { "text": "Toujours aucune touche assignée." },
+        { "text": "Même cause, {pilote}. Touche manquante." },
+        { "text": "Rien n'a changé. Raccourci absent." }
       ]
     },
     "system.game_detected": {
