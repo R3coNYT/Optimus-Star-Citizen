@@ -24,14 +24,20 @@ public sealed class WindowsGrammarListener : IVoiceCommandListener
     private readonly VoiceGrammar _grammar;
     private readonly Grammar _loadedGrammar;
     private readonly double _confidenceThreshold;
+    private readonly double _noiseFloor;
     private bool _listening;
     private bool _active = true;
     private bool _disposed;
 
     /// <param name="grammar">Grammaire assemblée depuis le catalogue.</param>
-    /// <param name="confidenceThreshold">Seuil d'acceptation. 0,40 mesuré au spike S0-6 (D29).</param>
+    /// <param name="confidenceThreshold">Seuil d'exécution. 0,65 mesuré au micro (D29).</param>
+    /// <param name="noiseFloor">Plancher sous lequel on considère qu'il s'agit de bruit.</param>
     /// <param name="culture">Langue du moteur.</param>
-    public WindowsGrammarListener(VoiceGrammar grammar, double confidenceThreshold = 0.40, string culture = "fr-FR")
+    public WindowsGrammarListener(
+        VoiceGrammar grammar,
+        double confidenceThreshold = 0.65,
+        double noiseFloor = 0.35,
+        string culture = "fr-FR")
     {
         ArgumentNullException.ThrowIfNull(grammar);
 
@@ -42,6 +48,7 @@ public sealed class WindowsGrammarListener : IVoiceCommandListener
 
         _grammar = grammar;
         _confidenceThreshold = confidenceThreshold;
+        _noiseFloor = Math.Min(noiseFloor, confidenceThreshold);
 
         RecognizerInfo recognizer = FindRecognizer(culture)
             ?? throw new InvalidOperationException(
@@ -144,8 +151,27 @@ public sealed class WindowsGrammarListener : IVoiceCommandListener
             text,
             Math.Round(confidence, 3),
             commandId,
-            Accepted: confidence >= _confidenceThreshold && commandId is not null,
+            Classify(confidence, commandId),
             DateTimeOffset.UtcNow));
+    }
+
+    /// <summary>
+    /// Range une reconnaissance dans l'une des trois issues.
+    ///
+    /// Mesures au micro du 2026-08-25 : bruit ambiant 0,00–0,06 · question hors catalogue
+    /// 0,51–0,57 · vraies commandes 0,75–0,93. La séparation est franche, à condition de ne pas
+    /// confondre les deux dernières bandes — ce que faisait un seuil unique à 0,40.
+    /// </summary>
+    private RecognitionOutcome Classify(double confidence, string? commandId)
+    {
+        if (confidence < _noiseFloor || commandId is null)
+        {
+            return RecognitionOutcome.Noise;
+        }
+
+        return confidence >= _confidenceThreshold
+            ? RecognitionOutcome.Accepted
+            : RecognitionOutcome.Unclear;
     }
 
     /// <summary>
@@ -168,7 +194,7 @@ public sealed class WindowsGrammarListener : IVoiceCommandListener
             text,
             Math.Round(e.Result?.Confidence ?? 0, 3),
             CommandId: null,
-            Accepted: false,
+            RecognitionOutcome.Noise,
             DateTimeOffset.UtcNow));
     }
 

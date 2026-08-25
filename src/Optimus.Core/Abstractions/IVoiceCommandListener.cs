@@ -1,20 +1,50 @@
 namespace Optimus.Core.Abstractions;
 
+/// <summary>
+/// Ce qu'il convient de faire d'une reconnaissance.
+///
+/// Trois issues plutôt que deux, parce qu'un moteur à grammaire ne sait pas dire « je ne
+/// connais pas cette phrase » : il rend toujours sa meilleure alternative avec une confiance.
+/// Distinguer le bruit d'une interpellation mal comprise est donc à notre charge, et c'est
+/// cette distinction qui évite à la fois de bavarder sur du bruit et d'exécuter une commande
+/// que personne n'a demandée.
+/// </summary>
+public enum RecognitionOutcome
+{
+    /// <summary>Sous le plancher de bruit : on ne réagit pas.</summary>
+    Noise,
+
+    /// <summary>
+    /// Le copilote a été interpellé mais la commande n'est pas sûre. Il doit le dire — et,
+    /// à terme, transmettre l'énoncé à l'étage conversationnel (décision D28).
+    /// </summary>
+    Unclear,
+
+    /// <summary>Commande reconnue avec assez de confiance pour être exécutée.</summary>
+    Accepted,
+}
+
 /// <summary>Ce que le moteur d'écoute a entendu.</summary>
 /// <param name="Text">Phrase reconnue, telle qu'elle figure dans la grammaire.</param>
 /// <param name="Confidence">Confiance du moteur, de 0 à 1.</param>
 /// <param name="CommandId">Commande désignée, si la phrase appartient à la grammaire.</param>
-/// <param name="Accepted">La confiance atteint-elle le seuil configuré.</param>
+/// <param name="Outcome">Ce qu'il convient d'en faire.</param>
 /// <param name="RecognizedAt">Instant de la reconnaissance.</param>
 public sealed record VoiceRecognition(
     string Text,
     double Confidence,
     string? CommandId,
-    bool Accepted,
+    RecognitionOutcome Outcome,
     DateTimeOffset RecognizedAt)
 {
-    public override string ToString() =>
-        $"« {Text} » conf {Confidence:F2}{(Accepted ? string.Empty : " (sous le seuil)")}";
+    public bool Accepted => Outcome == RecognitionOutcome.Accepted;
+
+    public override string ToString() => $"« {Text} » conf {Confidence:F2}" + Outcome switch
+    {
+        RecognitionOutcome.Noise => " (bruit)",
+        RecognitionOutcome.Unclear => " (interpellé, mais pas compris)",
+        _ => string.Empty,
+    };
 }
 
 /// <summary>

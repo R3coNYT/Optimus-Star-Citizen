@@ -108,7 +108,8 @@ public sealed class GrammarTests
         Assert.Equal(ListeningMode.AlwaysOn, profile.Value.VoiceInput.Mode);
         Assert.Equal("INSERT", profile.Value.VoiceInput.PushToTalkKey);
         Assert.True(profile.Value.VoiceInput.WakeWordRequired);
-        Assert.Equal(0.40, profile.Value.VoiceInput.ConfidenceThreshold, 3);
+        Assert.Equal(0.65, profile.Value.VoiceInput.ConfidenceThreshold, 3);
+        Assert.Equal(0.35, profile.Value.VoiceInput.NoiseFloor, 3);
     }
 
     [Fact]

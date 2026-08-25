@@ -2,6 +2,7 @@ using Optimus.Core.Abstractions;
 using Optimus.Core.Domain.Bindings;
 using Optimus.Core.Domain.Commands;
 using Optimus.Core.Domain.Copilots;
+using Optimus.Core.Domain.Personality;
 using Optimus.Core.Domain.Profiles;
 using Optimus.Core.Execution;
 using Optimus.Core.Intent;
@@ -172,12 +173,14 @@ public static class Program
         VoiceInputSettings settings = user.VoiceInput;
         VoiceGrammar grammar = VoiceGrammarBuilder.Build(catalog, copilot.WakeWord, settings);
 
-        await using WindowsGrammarListener listener = new(grammar, settings.ConfidenceThreshold, copilot.Language);
+        await using WindowsGrammarListener listener = new(
+            grammar, settings.ConfidenceThreshold, settings.NoiseFloor, copilot.Language);
 
         Console.WriteLine($"moteur        : {listener.RecognizerName}");
         Console.WriteLine($"grammaire     : {grammar.Count} alternatives" +
                           $"{(grammar.WakeWordRequired ? $", « {copilot.WakeWord} » obligatoire" : ", mot d'éveil facultatif")}");
-        Console.WriteLine($"seuil         : {settings.ConfidenceThreshold:F2}");
+        Console.WriteLine($"seuils        : bruit sous {settings.NoiseFloor:F2}" +
+                          $" · exécution à partir de {settings.ConfidenceThreshold:F2}");
         Console.WriteLine();
 
         using PushToTalkWatcher? pushToTalk = settings.Mode == ListeningMode.PushToTalk
@@ -217,28 +220,38 @@ public static class Program
 
             try
             {
-                if (recognition.CommandId is null)
+                switch (recognition.Outcome)
                 {
-                    // Parole entendue hors grammaire : le cas normal en ecoute permanente.
-                    if (!string.IsNullOrWhiteSpace(recognition.Text))
-                    {
-                        Console.WriteLine($"  (ignoré) {recognition}");
-                    }
+                    case RecognitionOutcome.Noise:
+                        // Bruit ambiant ou parole hors grammaire : le cas de loin le plus
+                        // frequent en ecoute permanente, et le seul ou se taire est la bonne
+                        // reponse.
+                        if (!string.IsNullOrWhiteSpace(recognition.Text))
+                        {
+                            Console.WriteLine($"  (ignoré) {recognition}");
+                        }
 
-                    return;
+                        return;
+
+                    case RecognitionOutcome.Unclear:
+                        // On a bien ete interpelle, sans commande sure a la cle. Se taire ici
+                        // serait un echec silencieux ; deviner serait pire.
+                        Console.WriteLine();
+                        Console.WriteLine($"  entendu     {recognition}");
+
+                        await SayAsync(composer, speech, copilot,
+                            ["system.unknown_command"], ResponseEvent.Unknown).ConfigureAwait(false);
+                        return;
+
+                    case RecognitionOutcome.Accepted:
+                    default:
+                        Console.WriteLine();
+                        Console.WriteLine($"  entendu     {recognition}");
+
+                        await RunAsync(executor, detector, simulation, composer, speech, copilot,
+                            recognition.Text, real).ConfigureAwait(false);
+                        return;
                 }
-
-                Console.WriteLine();
-                Console.WriteLine($"  entendu     {recognition}");
-
-                if (!recognition.Accepted)
-                {
-                    Console.WriteLine("  rejeté      confiance sous le seuil");
-                    return;
-                }
-
-                await RunAsync(executor, detector, simulation, composer, speech, copilot,
-                    recognition.Text, real).ConfigureAwait(false);
             }
             finally
             {
@@ -320,19 +333,34 @@ public static class Program
 
         if (request is not null)
         {
-            ComposedResponse? spoken = composer.ComposeFirst(request.Keys, request.Event, request.Variables);
-
-            if (spoken is not null)
-            {
-                Console.WriteLine($"  {copilot.Name,-11} « {spoken.Text} »   ({spoken.CandidateCount} variantes possibles)");
-
-                await speech.SpeakAsync(
-                    new SpeechRequest(spoken.Text, copilot.Voice.VoiceId, copilot.EffectiveRate, copilot.Voice.Volume))
-                    .ConfigureAwait(false);
-            }
+            await SayAsync(composer, speech, copilot, request.Keys, request.Event, request.Variables)
+                .ConfigureAwait(false);
         }
 
         Console.WriteLine();
+    }
+
+    /// <summary>Compose une réplique et la prononce.</summary>
+    private static async Task SayAsync(
+        ResponseComposer composer,
+        ITextToSpeechProvider speech,
+        Copilot copilot,
+        IReadOnlyList<string> keys,
+        ResponseEvent responseEvent,
+        IReadOnlyDictionary<string, string>? variables = null)
+    {
+        ComposedResponse? spoken = composer.ComposeFirst(keys, responseEvent, variables);
+
+        if (spoken is null)
+        {
+            return;
+        }
+
+        Console.WriteLine($"  {copilot.Name,-11} « {spoken.Text} »   ({spoken.CandidateCount} variantes possibles)");
+
+        await speech.SpeakAsync(
+            new SpeechRequest(spoken.Text, copilot.Voice.VoiceId, copilot.EffectiveRate, copilot.Voice.Volume))
+            .ConfigureAwait(false);
     }
 
     /// <summary>

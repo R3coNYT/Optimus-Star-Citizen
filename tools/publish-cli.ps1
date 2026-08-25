@@ -122,13 +122,18 @@ if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
 
+# Tout data\, et non une liste choisie : oublier data\copilots a livre un Optimus sans
+# personnalite ni voix, qui demarrait sans erreur en annoncant « 0 entrees, 0 variantes ».
+# Une liste blanche se perime des qu'on ajoute un dossier ; copier la racine, non.
 Write-Step 'Copie des données'
-foreach ($relative in @('data\commands', 'data\bindings')) {
-    $source = Join-Path $repoRoot $relative
-    $destination = Join-Path $OutputDir $relative
-    New-Item -ItemType Directory -Path $destination -Force | Out-Null
-    Copy-Item -Path (Join-Path $source '*') -Destination $destination -Recurse -Force
-    Write-Ok $relative
+$dataSource = Join-Path $repoRoot 'data'
+$dataDestination = Join-Path $OutputDir 'data'
+New-Item -ItemType Directory -Path $dataDestination -Force | Out-Null
+Copy-Item -Path (Join-Path $dataSource '*') -Destination $dataDestination -Recurse -Force
+
+foreach ($folder in (Get-ChildItem -LiteralPath $dataDestination -Directory)) {
+    $count = @(Get-ChildItem -LiteralPath $folder.FullName -Recurse -File).Count
+    Write-Ok ("data\{0,-12} {1} fichier(s)" -f $folder.Name, $count)
 }
 
 $size = [math]::Round(((Get-ChildItem -LiteralPath $OutputDir -Recurse -File | Measure-Object Length -Sum).Sum / 1MB), 1)

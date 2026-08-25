@@ -36,14 +36,29 @@ public enum ListeningMode
 /// répéter « Optimus » n'apporte rien qu'une syllabe de latence.
 /// </param>
 /// <param name="ConfidenceThreshold">
-/// Confiance minimale pour accepter une reconnaissance. 0,40 mesuré au spike S0-6 (D29).
+/// Confiance minimale pour <b>exécuter</b> une commande.
+///
+/// 0,65 d'après les mesures au micro du 2026-08-25 : les vraies commandes s'y situent entre
+/// 0,75 et 0,93, tandis qu'une question hors catalogue (« Optimus, qui es-tu ? ») culmine à
+/// 0,57. La valeur précédente de 0,40, tirée d'un banc sur fichiers, était trop basse — l'audio
+/// enregistré produit des confiances plus faibles que le micro en direct.
+/// </param>
+/// <param name="NoiseFloor">
+/// En dessous : du bruit, on se tait.
+///
+/// Un moteur à grammaire ne peut pas répondre « je ne connais pas cette phrase » : il rend
+/// toujours sa meilleure alternative, assortie d'une confiance. Le bruit ambiant produit ainsi
+/// des correspondances à 0,00–0,06. Entre ce plancher et le seuil d'exécution se trouve la zone
+/// utile : on <b>a</b> été interpellé, mais on n'a pas compris — et c'est là que le copilote
+/// doit le dire plutôt que de deviner.
 /// </param>
 /// <param name="InputDeviceId">Périphérique de capture. Null = celui du système.</param>
 public sealed record VoiceInputSettings(
     ListeningMode Mode = ListeningMode.AlwaysOn,
     string PushToTalkKey = "INSERT",
     bool RequireWakeWordInPushToTalk = false,
-    double ConfidenceThreshold = 0.40,
+    double ConfidenceThreshold = 0.65,
+    double NoiseFloor = 0.35,
     string? InputDeviceId = null)
 {
     /// <summary>

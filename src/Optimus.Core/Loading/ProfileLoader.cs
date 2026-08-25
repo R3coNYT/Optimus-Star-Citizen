@@ -61,7 +61,8 @@ public static class ProfileLoader
                 mode,
                 GetString(voice, "push_to_talk_key") ?? "INSERT",
                 GetBool(voice, "require_wake_word_in_push_to_talk") ?? false,
-                GetDouble(voice, "confidence_threshold") ?? 0.40,
+                GetDouble(voice, "confidence_threshold") ?? 0.65,
+                GetDouble(voice, "noise_floor") ?? 0.35,
                 GetString(voice, "input_device_id"));
         }
 
