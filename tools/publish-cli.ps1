@@ -141,6 +141,30 @@ foreach ($folder in (Get-ChildItem -LiteralPath $dataDestination -Directory)) {
 # jeu, d'ou tools/diagnose-app-control.ps1 pour la traiter la-bas (risque R16).
 Get-ChildItem -LiteralPath $OutputDir -Recurse -File | Unblock-File -ErrorAction SilentlyContinue
 
+# Repere de version lisible sans rien lancer. Le paquet se recopie a la main d'une machine a
+# l'autre, et rien ne distingue a l'oeil un dossier de sa version precedente : plusieurs fois
+# une option venait d'etre ajoutee sans etre dans le paquet copie, et le symptome n'en disait
+# rien. Ce fichier se lit dans l'explorateur, avant meme d'ouvrir un terminal.
+$cliDll = Join-Path $OutputDir 'Optimus.Cli.dll'
+$builtAt = if (Test-Path -LiteralPath $cliDll) {
+    (Get-Item -LiteralPath $cliDll).LastWriteTime.ToString('yyyy-MM-dd HH:mm')
+} else { 'inconnu' }
+
+$commit = try { (& git -C $repoRoot rev-parse --short HEAD 2>$null) } catch { $null }
+if (-not $commit) { $commit = 'hors depot' }
+
+$versionLines = @(
+    "Optimus - banc d'essai du moteur",
+    "compile le : $builtAt",
+    "commit     : $commit",
+    "",
+    "Ce repere doit correspondre a la ligne « binaire » affichee au lancement.",
+    "S'ils different, le dossier copie n'est pas celui qui vient d'etre publie."
+)
+Set-Content -LiteralPath (Join-Path $OutputDir 'VERSION.txt') -Value $versionLines -Encoding utf8
+Write-Ok "VERSION.txt : compile le $builtAt (commit $commit)"
+
+
 $size = [math]::Round(((Get-ChildItem -LiteralPath $OutputDir -Recurse -File | Measure-Object Length -Sum).Sum / 1MB), 1)
 
 Write-Host ''
