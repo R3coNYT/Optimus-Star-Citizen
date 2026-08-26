@@ -177,10 +177,14 @@
       "name": "Demande ATC",
       "category": "landing",
       "voice_phrases": [
-        "demande l'autorisation d'atterrir",
-        "appelle la tour",
+        "demande l'autorisation",
         "demande atc",
-        "autorisation d'atterrissage"
+        "appelle la tour",
+        "contacte la tour",
+        "demande l'autorisation d'atterrir",
+        "autorisation d'atterrissage",
+        "demande l'autorisation de décoller",
+        "autorisation de décollage"
       ],
       "actions": [{"type": "game_action", "action_id": "spaceship_movement/v_atc_request"}],
       "cooldown_ms": 2000
@@ -724,6 +728,8 @@
         {"type": "command", "command_id": "ship.lights.toggle", "polarity": "on"},
         {"type": "wait", "ms": 300},
         {"type": "command", "command_id": "ship.doors.toggle", "polarity": "off", "require_directed": true},
+        {"type": "wait", "ms": 400},
+        {"type": "command", "command_id": "flight.atc_request"},
         {"type": "say", "response_key": "macro.preflight.done"}
       ],
       "cooldown_ms": 4000

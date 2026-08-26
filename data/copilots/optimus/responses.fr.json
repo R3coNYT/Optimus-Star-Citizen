@@ -45,8 +45,9 @@
     },
     "macro.preflight.done": {
       "any": [
-        { "text": "Vaisseau paré. À vous les commandes." },
-        { "text": "Tous les systèmes en ligne, {pilote}." }
+        { "text": "Vaisseau paré, autorisation demandée." },
+        { "text": "Systèmes en ligne. J'appelle la tour, {pilote}." },
+        { "text": "Prêt au décollage. À vous les commandes." }
       ]
     },
     "macro.landing.begin": {
