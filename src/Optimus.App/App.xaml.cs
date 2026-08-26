@@ -188,10 +188,14 @@ public partial class App : Application
 
         try
         {
-            string location = assembly.Location;
-            if (!string.IsNullOrEmpty(location) && File.Exists(location))
+            // Le chemin du processus, et non celui de l'assembly : publie en fichier unique,
+            // `Assembly.Location` rend une chaine vide (IL3000), et le repere de date
+            // disparaitrait justement dans la version qu'on distribue.
+            string? executable = Environment.ProcessPath;
+
+            if (!string.IsNullOrEmpty(executable) && File.Exists(executable))
             {
-                return $"{number} (compilé le {File.GetLastWriteTime(location):yyyy-MM-dd HH:mm})";
+                return $"{number} (compilé le {File.GetLastWriteTime(executable):yyyy-MM-dd HH:mm})";
             }
         }
         catch (IOException)

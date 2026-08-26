@@ -1,4 +1,6 @@
 ﻿using Optimus.Core.Abstractions;
+using Optimus.Core.Ai;
+using Optimus.Infrastructure.Ai;
 using Optimus.Core.Bindings;
 using Optimus.Core.Diagnostics;
 using Optimus.Core.Domain.Bindings;
@@ -46,6 +48,7 @@ public sealed class OptimusRuntime : IAsyncDisposable
     private readonly SemaphoreSlim _processing = new(1, 1);
     private readonly string _overlayPath;
 
+    private ILanguageModel? _model;
     private IInputEngine _engine;
     private CommandExecutor _executor;
     private WindowsGrammarListener? _listener;
@@ -85,6 +88,16 @@ public sealed class OptimusRuntime : IAsyncDisposable
 
         Simulation = new SimulatedInputEngine();
         SimulationMode = user.SimulationMode;
+
+        // L'etage conversationnel n'est monte que s'il est demande. Sans lui, rien ne change et
+        // rien ne part sur le reseau : c'est l'exigence §84, et le defaut.
+        AiSettings ai = user.Ai ?? AiSettings.Disabled;
+
+        if (ai.Enabled)
+        {
+            _model = new HttpLanguageModel(ai);
+            Conversation = new ConversationTier(_model, ai);
+        }
 
         _engine = SimulationMode ? Simulation : new SendInputEngine();
         _executor = BuildExecutor();
@@ -130,6 +143,17 @@ public sealed class OptimusRuntime : IAsyncDisposable
 
     /// <summary>Ce qu'Optimus a entendu sans agir.</summary>
     public UnderstandingLog Understanding { get; private init; } = new();
+
+    /// <summary>
+    /// L'étage conversationnel, ou <c>null</c> s'il n'est pas demandé.
+    ///
+    /// Nul dans le cas nominal, et c'est voulu : tout le reste doit continuer de fonctionner
+    /// sans lui, hors ligne, sans le moindre appel réseau (§84).
+    /// </summary>
+    public ConversationTier? Conversation { get; private set; }
+
+    /// <summary>Vrai si l'étage conversationnel est monté.</summary>
+    public bool HasConversation => Conversation is not null;
 
     /// <summary>Profil du jeu seul, sans les choix du pilote. Sert à savoir ce qui manque.</summary>
     public BindingProfile DefaultBindings { get; }
@@ -654,6 +678,22 @@ public sealed class OptimusRuntime : IAsyncDisposable
             StateChanged?.Invoke(this, EventArgs.Empty);
         }
 
+        // Le chemin rapide n'a rien su faire de cet enonce. C'est ICI, et pas avant, que
+        // l'etage conversationnel intervient : le chemin rapide est deterministe, teste et
+        // instantane, la ou un modele est lent, variable et faillible. Lui donner la main plus
+        // tot echangerait de la fiabilite contre de la souplesse.
+        if (result.Status == ExecutionStatus.Unknown
+            && Conversation is not null
+            && result.Intent?.RawText is string spoken)
+        {
+            ExecutionResult? escalated = await EscalateAsync(spoken, recognition).ConfigureAwait(false);
+
+            if (escalated is not null)
+            {
+                return;
+            }
+        }
+
         // Non compris ou ambigu : on le note pour que le pilote puisse y attacher sa tournure.
         if (result.Status is ExecutionStatus.Unknown or ExecutionStatus.NeedsClarification)
         {
@@ -682,6 +722,85 @@ public sealed class OptimusRuntime : IAsyncDisposable
         }
 
         Report(new SessionActivity(recognition, result, said, applied));
+    }
+
+    /// <summary>
+    /// Demande au modèle ce qu'il faut faire d'un énoncé incompris.
+    ///
+    /// Trois issues, et une seule mène à une exécution : une commande <b>du catalogue</b>, qui
+    /// repart alors par le chemin normal — même garde, même temporisation, même confirmation
+    /// pour ce qui est dangereux. Le modèle n'a pas de voie réservée.
+    ///
+    /// Retourne <c>null</c> si rien n'a pu être tiré de la proposition, auquel cas l'appelant
+    /// reprend son cours habituel.
+    /// </summary>
+    private async Task<ExecutionResult?> EscalateAsync(
+        string utterance, VoiceRecognition? recognition)
+    {
+        AiOutcome outcome;
+
+        try
+        {
+            outcome = await Conversation!
+                .ResolveAsync(utterance, Catalog, Copilot)
+                .ConfigureAwait(false);
+        }
+        catch (Exception exception)
+        {
+            // Un etage facultatif ne fait pas tomber le reste.
+            DiagnosticLog.Warn("étage conversationnel indisponible", exception.Message);
+            return null;
+        }
+
+        DiagnosticLog.Info(
+            $"modèle · {outcome.Decision.Kind}",
+            $"{outcome.ElapsedMs:F0} ms · {Conversation.ModelId} · {outcome.Decision.Reasoning}");
+
+        switch (outcome.Decision.Kind)
+        {
+            case AiDecisionKind.Command when outcome.Decision.CommandId is string id
+                && Catalog.TryGet(id, out CommandDefinition? command) && command is not null:
+                {
+                    // Repasse par l'execution ordinaire : la garde s'applique, la temporisation
+                    // aussi, et une commande dangereuse demandera sa confirmation.
+                    ExecutionResult result = await RunCommandAsync(
+                        command, outcome.Decision.Polarity).ConfigureAwait(false);
+
+                    return result;
+                }
+
+            case AiDecisionKind.Conversation when outcome.Decision.Reply is string reply:
+                {
+                    await SpeakAsync(reply).ConfigureAwait(false);
+                    Report(new SessionActivity(recognition, null, reply, []));
+                    return null;
+                }
+
+            case AiDecisionKind.Clarification when outcome.Decision.Question is string question:
+                {
+                    await SpeakAsync(question).ConfigureAwait(false);
+                    Report(new SessionActivity(recognition, null, question, []));
+                    return null;
+                }
+
+            default:
+                return null;
+        }
+    }
+
+    /// <summary>Prononce un texte libre, sans passer par le catalogue de répliques.</summary>
+    private async Task SpeakAsync(string text)
+    {
+        try
+        {
+            await Speech.SpeakAsync(new SpeechRequest(
+                text, Copilot.Voice.VoiceId, Copilot.EffectiveRate, Copilot.Voice.Volume))
+                .ConfigureAwait(false);
+        }
+        catch (Exception exception)
+        {
+            DiagnosticLog.Error("synthèse impossible", exception);
+        }
     }
 
     /// <summary>
@@ -830,6 +949,11 @@ public sealed class OptimusRuntime : IAsyncDisposable
             // Perdre le journal de comprehension est facheux, pas grave : il se reconstruit en
             // volant. Empecher la fermeture pour cela serait absurde.
             DiagnosticLog.Warn("journal de compréhension non enregistré", exception.Message);
+        }
+
+        if (_model is not null)
+        {
+            await _model.DisposeAsync().ConfigureAwait(false);
         }
 
         await Speech.DisposeAsync().ConfigureAwait(false);

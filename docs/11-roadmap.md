@@ -95,7 +95,7 @@ suit est la file d'attente convenue avec le pilote, dans l'ordre.
 | # | Chantier | Pourquoi maintenant | État |
 |---|---|---|---|
 | **1** | **Alias sur ce qui n'a pas été compris** | Un écran qui liste ce qu'Optimus a entendu sans agir, et permet d'y attacher la formulation réellement employée. Le travail de calibration — accents (D39), seuils (D29), formulations — devient cumulatif au lieu de dépendre d'une passe de développement à chaque fois. C'est la seule fonction qui améliore les autres. | **fait le 2026-08-26** |
-| **2** | **Étage conversationnel (LLM)** | « Qu'est-ce que tu penses de ce vaisseau ? » obtient aujourd'hui une réplique de catalogue. Le LLM ne rendra **jamais qu'une intention validée contre la liste blanche, jamais une touche** (§73, §75) et reste **facultatif** (§84) : tout continue de fonctionner hors ligne sans lui. | à faire |
+| **2** | **Étage conversationnel (LLM)** | « Qu'est-ce que tu penses de ce vaisseau ? » obtenait une réplique de catalogue. Le modèle ne rend **jamais qu'une intention validée contre la liste blanche, jamais une touche** (§73, §75) et reste **facultatif** (§84) : désactivé par défaut, tout continue de fonctionner hors ligne sans lui. | **fait le 2026-08-26** — voir la réserve ci-dessous |
 | **3** | **Conditions dans les macros** | `si` et `répéter`. Le moteur de séquence ne sait qu'enchaîner ; une macro ne peut ni s'adapter ni boucler. Dépend en partie d'un état de jeu fiable, donc des actions dirigées (D41) plutôt que d'une télémétrie. | à faire |
 | **4** | **Voix neurale locale (Piper)** | Le jour où Microsoft Paul lasse. Mesuré au spike S0-5 : les voix Windows suffisent en latence, l'enjeu est le timbre. Reste local, aucun service distant. | à faire |
 | **5** | **Profils de binding** | Chasse / Minage / Cargo, avec bascule à chaud. Les touches diffèrent selon ce qu'on pilote, et tout recharger à la main est une friction certaine. | à faire |
@@ -105,6 +105,8 @@ suit est la file d'attente convenue avec le pilote, dans l'ordre.
 | **9** | **Multi-copilotes** | Le modèle le prévoit depuis l'origine ; seul Optimus est livré. CRUD, duplication, import et export. | à faire |
 | **10** | **HOTAS et périphériques** | Manette, palonnier, Stream Deck. Change la façon de déclencher, pas ce qui est déclenché. | à faire |
 | **11** | **Overlay in-game** | HUD transparent : état, dernière commande, confirmations. **Incertitude réelle** : l'interaction avec l'anti-triche reste à valider avant d'y engager quoi que ce soit. | à faire |
+
+**Réserve sur le chantier 2.** L'étage est en place et éprouvé, mais **la conversation libre à la voix n'est pas encore atteignable**. La grammaire est fermée (D28, D30) : un énoncé hors catalogue ne parvient jamais à Optimus sous forme de texte — le moteur rend la formulation connue la plus proche, assortie d'une faible confiance, jamais ce qui a été dit. Le modèle sert donc aujourd'hui deux entrées : le champ « essayer un énoncé », et les énoncés vocaux ressortis en `Unknown`. Parler librement à son copilote demande l'étage de parole libre (Whisper, D28 phase B), qui n'est pas encore monté.
 
 **Hors file, mais ouvert** : la signature de code (R16). Sans conséquence tant qu'Optimus reste
 sur le poste de son auteur — bloquant dès qu'il faut le diffuser.

@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Optimus.Core.Domain.Profiles;
 
 namespace Optimus.Core.Loading;
@@ -20,7 +20,8 @@ public sealed record UserProfile(
     string KillSwitchKey = "CTRL+ALT+PAUSE",
     bool SimulationMode = false,
     bool RequireGameForeground = true,
-    bool ConfirmDangerous = true)
+    bool ConfirmDangerous = true,
+    Ai.AiSettings? Ai = null)
 {
     public static UserProfile Default { get; } =
         new("default", "Pilote", "optimus", VoiceInputSettings.Default);
@@ -74,7 +75,8 @@ public static class ProfileLoader
             GetString(root, "hotkeys", "kill_switch") ?? "CTRL+ALT+PAUSE",
             GetBool(root, "safety", "simulation_mode") ?? false,
             GetBool(root, "safety", "require_game_foreground") ?? true,
-            GetBool(root, "safety", "confirm_dangerous") ?? true);
+            GetBool(root, "safety", "confirm_dangerous") ?? true,
+            ReadAi(root));
 
         return new LoadResult<UserProfile>(profile, issues);
     }
@@ -87,6 +89,32 @@ public static class ProfileLoader
     {
         issues.Add(new LoadIssue(path, "voice_input.mode", $"Mode « {raw} » inconnu, écoute permanente appliquée."));
         return ListeningMode.AlwaysOn;
+    }
+
+    /// <summary>
+    /// Réglages de l'étage conversationnel.
+    ///
+    /// Absent du fichier vaut désactivé : c'est l'exigence §84, et le comportement par défaut
+    /// doit être celui qui ne dépend de rien.
+    /// </summary>
+    private static Ai.AiSettings ReadAi(JsonElement root)
+    {
+        if (!root.TryGetProperty("ai", out JsonElement ai) || ai.ValueKind != JsonValueKind.Object)
+        {
+            return Ai.AiSettings.Disabled;
+        }
+
+        int budget = ai.TryGetProperty("call_budget", out JsonElement value)
+                     && value.ValueKind == JsonValueKind.Number
+            ? value.GetInt32()
+            : 200;
+
+        return new Ai.AiSettings(
+            GetBool(ai, "enabled") ?? false,
+            GetString(ai, "provider") ?? "ollama",
+            GetString(ai, "endpoint") ?? "http://localhost:11434",
+            GetString(ai, "model") ?? "llama3.1",
+            budget);
     }
 
     private static string? GetString(JsonElement element, string property) =>

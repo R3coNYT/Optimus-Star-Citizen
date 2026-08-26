@@ -29,6 +29,24 @@
     "toggle_simulation": "CTRL+ALT+S"
   },
 
+  "ai": {
+    "notes": [
+      "Etage conversationnel, DESACTIVE par defaut (§84) : tout fonctionne sans lui, hors ligne,",
+      "sans le moindre appel reseau. Il n'intervient qu'apres l'echec du chemin rapide.",
+      "provider = ollama : le modele tourne sur cette machine, Optimus reste entierement local.",
+      "provider = openai : tout service parlant le dialecte OpenAI (LM Studio, llama.cpp, vLLM...).",
+      "La cle eventuelle passe par la variable d'environnement OPTIMUS_AI_KEY, jamais par ce",
+      "fichier - il se copie sur une cle USB.",
+      "Le modele ne voit JAMAIS une touche : il ne recoit que des identifiants de commande, et",
+      "sa reponse traverse cinq verrous avant que quoi que ce soit ne s'execute (docs/07.5)."
+    ],
+    "enabled": false,
+    "provider": "ollama",
+    "endpoint": "http://localhost:11434",
+    "model": "llama3.1",
+    "call_budget": 200
+  },
+
   "safety": {
     "simulation_mode": false,
     "require_game_foreground": true,

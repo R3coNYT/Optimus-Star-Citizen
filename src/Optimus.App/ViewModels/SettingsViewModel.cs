@@ -1,8 +1,9 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Windows;
 using Optimus.App.Input;
 using Optimus.App.Mvvm;
 using Optimus.Core.Abstractions;
+using Optimus.Core.Ai;
 using Optimus.Core.Domain.Copilots;
 using Optimus.Core.Domain.Personality;
 using Optimus.Core.Domain.Profiles;
@@ -41,6 +42,12 @@ public sealed class SettingsViewModel : ObservableObject
     private int _verbosity;
     private int _calmness;
     private int _warmth;
+    private bool _aiEnabled;
+    private string _aiProvider = "ollama";
+    private string _aiEndpoint = string.Empty;
+    private string _aiModel = string.Empty;
+    private int _aiBudget = 200;
+    private string _aiProbe = string.Empty;
     private bool _dirty;
 
     public SettingsViewModel(OptimusRuntime runtime, Action<string, string?, ActivityLevel> log)
@@ -52,6 +59,7 @@ public sealed class SettingsViewModel : ObservableObject
         RevertCommand = new RelayCommand(Revert, () => IsDirty);
         CaptureKeyCommand = new AsyncRelayCommand(CaptureKeyAsync, () => PushToTalk);
         TestVoiceCommand = new AsyncRelayCommand(TestVoiceAsync);
+        ProbeAiCommand = new AsyncRelayCommand(ProbeAiAsync, () => AiEnabled);
 
         Revert();
     }
@@ -63,6 +71,9 @@ public sealed class SettingsViewModel : ObservableObject
     public AsyncRelayCommand CaptureKeyCommand { get; }
 
     public AsyncRelayCommand TestVoiceCommand { get; }
+
+    /// <summary>Vérifie que le fournisseur répond, sans consommer de jetons.</summary>
+    public AsyncRelayCommand ProbeAiCommand { get; }
 
     public ObservableCollection<string> Voices { get; } = new();
 
@@ -195,6 +206,74 @@ public sealed class SettingsViewModel : ObservableObject
         set => Track(ref _volume, Math.Round(value, 2));
     }
 
+    public bool AiEnabled
+    {
+        get => _aiEnabled;
+        set
+        {
+            if (Track(ref _aiEnabled, value))
+            {
+                ProbeAiCommand.RaiseCanExecuteChanged();
+                Raise(nameof(AiExplanation));
+            }
+        }
+    }
+
+    /// <summary>
+    /// Ce que l'activation implique vraiment.
+    ///
+    /// Le dire ici plutôt que dans une documentation que personne n'ouvre : la différence entre
+    /// un modèle local et un service distant n'est pas une préférence technique, c'est la
+    /// question de savoir si ce qu'on dit à son copilote quitte la machine.
+    /// </summary>
+    public string AiExplanation => !AiEnabled
+        ? "Désactivé. Optimus fonctionne entièrement hors ligne : le catalogue et la grammaire "
+          + "suffisent, et rien ne part sur le réseau."
+        : AiProvider.Equals("ollama", StringComparison.OrdinalIgnoreCase)
+            ? "Le modèle tourne sur cette machine. Ce que vous dites ne la quitte pas. "
+              + "N'intervient qu'après l'échec du chemin rapide, et ne peut désigner qu'une "
+              + "commande du catalogue — jamais une touche."
+            : "Service distant : les énoncés qu'Optimus n'a pas compris lui seront envoyés. "
+              + "La clé éventuelle passe par la variable d'environnement OPTIMUS_AI_KEY, "
+              + "jamais par un fichier de configuration.";
+
+    public string AiProvider
+    {
+        get => _aiProvider;
+        set
+        {
+            if (Track(ref _aiProvider, value))
+            {
+                Raise(nameof(AiExplanation));
+            }
+        }
+    }
+
+    public string AiEndpoint
+    {
+        get => _aiEndpoint;
+        set => Track(ref _aiEndpoint, value);
+    }
+
+    public string AiModel
+    {
+        get => _aiModel;
+        set => Track(ref _aiModel, value);
+    }
+
+    public int AiBudget
+    {
+        get => _aiBudget;
+        set => Track(ref _aiBudget, value);
+    }
+
+    /// <summary>Résultat du dernier essai de connexion.</summary>
+    public string AiProbe
+    {
+        get => _aiProbe;
+        private set => Set(ref _aiProbe, value);
+    }
+
     public int Humor
     {
         get => _humor;
@@ -302,6 +381,14 @@ public sealed class SettingsViewModel : ObservableObject
         _rate = voice.Rate;
         _volume = voice.Volume;
 
+        AiSettings ai = _runtime.User.Ai ?? AiSettings.Disabled;
+        _aiEnabled = ai.Enabled;
+        _aiProvider = ai.Provider;
+        _aiEndpoint = ai.Endpoint;
+        _aiModel = ai.Model;
+        _aiBudget = ai.CallBudget;
+        _aiProbe = string.Empty;
+
         _humor = traits.Humor;
         _sarcasm = traits.Sarcasm;
         _formality = traits.Formality;
@@ -347,6 +434,9 @@ public sealed class SettingsViewModel : ObservableObject
             WakeWord.Trim());
 
         SettingsWriter.SaveTraits(_runtime.PersonalityPath, CurrentTraits());
+
+        SettingsWriter.SaveAi(_runtime.ProfilePath, new AiSettings(
+            AiEnabled, AiProvider.Trim(), AiEndpoint.Trim(), AiModel.Trim(), Math.Max(1, AiBudget)));
 
         await _runtime.ReloadSettingsAsync().ConfigureAwait(true);
 
@@ -396,6 +486,28 @@ public sealed class SettingsViewModel : ObservableObject
             .ConfigureAwait(true);
     }
 
+    /// <summary>
+    /// Vérifie que le fournisseur répond, avant d'en dépendre.
+    ///
+    /// Une interrogation qui ne consomme rien : mieux vaut découvrir maintenant qu'Ollama n'est
+    /// pas lancé qu'en plein vol, quand Optimus se contentera de ne pas comprendre.
+    /// </summary>
+    private async Task ProbeAiAsync()
+    {
+        AiProbe = "Essai en cours…";
+
+        AiSettings settings = new(
+            true, AiProvider.Trim(), AiEndpoint.Trim(), AiModel.Trim(), Math.Max(1, AiBudget));
+
+        await using Optimus.Infrastructure.Ai.HttpLanguageModel model = new(settings);
+
+        bool reachable = await model.IsReachableAsync().ConfigureAwait(true);
+
+        AiProbe = reachable
+            ? $"Le fournisseur répond. Vérifiez que « {settings.Model} » y est bien installé."
+            : $"Aucune réponse de {settings.Endpoint}. Le service est-il lancé ?";
+    }
+
     private PersonalityTraits CurrentTraits() =>
         _runtime.Copilot.Personality.Traits with
         {
@@ -440,6 +552,8 @@ public sealed class SettingsViewModel : ObservableObject
             nameof(NoiseFloor), nameof(ThresholdExplanation), nameof(VoiceId), nameof(Rate),
             nameof(Volume), nameof(Humor), nameof(Sarcasm), nameof(Formality), nameof(Verbosity),
             nameof(Calmness), nameof(Warmth), nameof(Preview), nameof(VerbosityEffect),
+            nameof(AiEnabled), nameof(AiProvider), nameof(AiEndpoint), nameof(AiModel),
+            nameof(AiBudget), nameof(AiExplanation), nameof(AiProbe),
         })
         {
             Raise(property);

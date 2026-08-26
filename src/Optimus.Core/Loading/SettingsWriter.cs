@@ -51,6 +51,24 @@ public static class SettingsWriter
         });
     }
 
+    /// <summary>Écrit les réglages de l'étage conversationnel.</summary>
+    public static void SaveAi(string profilePath, Ai.AiSettings settings)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(profilePath);
+        ArgumentNullException.ThrowIfNull(settings);
+
+        Patch(profilePath, root =>
+        {
+            JsonObject ai = Section(root, "ai");
+
+            ai["enabled"] = settings.Enabled;
+            ai["provider"] = settings.Provider;
+            ai["endpoint"] = settings.Endpoint;
+            ai["model"] = settings.Model;
+            ai["call_budget"] = settings.CallBudget;
+        });
+    }
+
     /// <summary>Écrit la voix et le mot d'éveil dans la fiche du copilote.</summary>
     public static void SaveCopilotVoice(string copilotPath, VoiceConfig voice, string wakeWord)
     {
@@ -106,8 +124,11 @@ public static class SettingsWriter
 
         change(root);
 
+        // Le saut de ligne final n'est pas une coquetterie : sans lui, git signale le fichier
+        // comme modifie a chaque ecriture, et le diff d'un reglage change se lit deux fois moins
+        // bien qu'il ne le devrait.
         string temporary = path + ".tmp";
-        File.WriteAllText(temporary, root.ToJsonString(Format));
+        File.WriteAllText(temporary, root.ToJsonString(Format) + Environment.NewLine);
         File.Move(temporary, path, overwrite: true);
     }
 

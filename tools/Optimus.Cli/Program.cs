@@ -653,6 +653,15 @@ public static class Program
         Console.WriteLine($"bindings      : {profile.Value.BoundCount} actions liées, {profile.Value.UnboundCount} sans touche" +
                           $"  (jeu {profile.Value.GameVersion}, build {profile.Value.GameBuild})");
         Console.WriteLine($"scancodes     : {ScanCodeMap.Count} touches connues");
+
+        // Ce banc monte son propre executeur, pas `OptimusRuntime` : l'escalade vers le modele
+        // n'existe donc pas ici, meme quand l'etage est configure. Le dire, plutot que d'afficher
+        // un reglage qui laisserait croire qu'un enonce inconnu part au modele depuis le banc.
+        Optimus.Core.Ai.AiSettings ai = user.Value.Ai ?? Optimus.Core.Ai.AiSettings.Disabled;
+
+        Console.WriteLine($"étage LLM     : {(ai.Enabled
+            ? $"{ai.Provider}:{ai.Model} sur {ai.Endpoint} — configuré, mais non sollicité par ce banc"
+            : "désactivé — tout reste hors ligne")}");
         Console.WriteLine($"Star Citizen  : {game}");
 
         foreach (LoadIssue issue in catalog.Issues.Concat(profile.Issues).Concat(copilot.Issues).Concat(user.Issues))
@@ -772,10 +781,14 @@ public static class Program
 
         try
         {
-            string location = assembly.Location;
-            if (!string.IsNullOrEmpty(location) && File.Exists(location))
+            // Le chemin du processus, et non celui de l'assembly : publie en fichier unique,
+            // `Assembly.Location` rend une chaine vide (IL3000), et le repere de date
+            // disparaitrait justement dans la version qu'on distribue.
+            string? executable = Environment.ProcessPath;
+
+            if (!string.IsNullOrEmpty(executable) && File.Exists(executable))
             {
-                built = File.GetLastWriteTime(location).ToString("yyyy-MM-dd HH:mm");
+                built = File.GetLastWriteTime(executable).ToString("yyyy-MM-dd HH:mm");
             }
         }
         catch (IOException)

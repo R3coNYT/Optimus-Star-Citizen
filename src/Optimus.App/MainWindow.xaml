@@ -432,6 +432,56 @@
               <StackPanel Grid.Column="1" Margin="8,0,0,0">
                 <Border Style="{StaticResource Card}">
                   <StackPanel>
+                    <TextBlock Text="ÉTAGE CONVERSATIONNEL" Style="{StaticResource Label}" />
+                    <CheckBox IsChecked="{Binding AiEnabled}"
+                              Content="Faire appel à un modèle quand rien n'est compris" />
+                    <TextBlock Text="{Binding AiExplanation}" Style="{StaticResource Hint}" />
+
+                    <Grid Margin="0,12,0,0" IsEnabled="{Binding AiEnabled}">
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="130" />
+                        <ColumnDefinition Width="*" />
+                      </Grid.ColumnDefinitions>
+                      <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                      </Grid.RowDefinitions>
+
+                      <TextBlock Grid.Row="0" Grid.Column="0" Text="Fournisseur"
+                                 Style="{StaticResource Hint}" Margin="0,0,8,0" VerticalAlignment="Center" />
+                      <ComboBox Grid.Row="0" Grid.Column="1" SelectedValue="{Binding AiProvider}"
+                                SelectedValuePath="Content">
+                        <ComboBoxItem Content="ollama" />
+                        <ComboBoxItem Content="openai" />
+                      </ComboBox>
+
+                      <TextBlock Grid.Row="1" Grid.Column="0" Text="Adresse"
+                                 Style="{StaticResource Hint}" Margin="0,10,8,0" VerticalAlignment="Center" />
+                      <TextBox Grid.Row="1" Grid.Column="1" Margin="0,10,0,0"
+                               Text="{Binding AiEndpoint, UpdateSourceTrigger=PropertyChanged}" />
+
+                      <TextBlock Grid.Row="2" Grid.Column="0" Text="Modèle"
+                                 Style="{StaticResource Hint}" Margin="0,10,8,0" VerticalAlignment="Center" />
+                      <TextBox Grid.Row="2" Grid.Column="1" Margin="0,10,0,0"
+                               Text="{Binding AiModel, UpdateSourceTrigger=PropertyChanged}" />
+
+                      <TextBlock Grid.Row="3" Grid.Column="0" Text="Appels max"
+                                 Style="{StaticResource Hint}" Margin="0,10,8,0" VerticalAlignment="Center" />
+                      <TextBox Grid.Row="3" Grid.Column="1" Margin="0,10,0,0"
+                               Text="{Binding AiBudget, UpdateSourceTrigger=PropertyChanged}" />
+                    </Grid>
+
+                    <Button Content="Vérifier la connexion" Command="{Binding ProbeAiCommand}"
+                            Margin="0,12,0,0" HorizontalAlignment="Left" />
+                    <TextBlock Text="{Binding AiProbe}" Style="{StaticResource Hint}"
+                               Foreground="{StaticResource Warn}" />
+                  </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource Card}">
+                  <StackPanel>
                     <TextBlock Text="CARACTÈRE" Style="{StaticResource Label}" />
 
                     <TextBlock Margin="0,6,0,0" FontSize="12">
