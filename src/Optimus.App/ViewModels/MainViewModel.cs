@@ -640,7 +640,11 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
 
         if (result.Steps.Count > 0)
         {
-            parts.Add(string.Join(" · ", result.Steps.Select(s => s.ToString())));
+            // Le ToString() d'un record affiche « SequenceStepTrace { Index = 0, Description =
+            // ..., DurationMs = 18,4852 } » : un vidage de debogueur, pas une ligne de journal.
+            // Ce qui compte est l'action, la touche et la duree.
+            parts.Add(string.Join(" · ", result.Steps.Select(
+                step => $"{step.Description} ({step.DurationMs:F1} ms)")));
         }
         else if (result.Message is not null)
         {
