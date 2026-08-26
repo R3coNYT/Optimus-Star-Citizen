@@ -178,6 +178,14 @@ $commit = try { (& git -C $repoRoot rev-parse --short HEAD 2>$null) } catch { $n
 if (-not $commit) { $commit = 'hors depot' }
 
 $versionLines = @(
+    "COMMENT LANCER",
+    "--------------",
+    "Double-cliquez sur Lancer-Optimus.cmd.",
+    "",
+    "Pas sur Optimus.App.exe : Windows le bloque une fois sur deux (Smart App Control",
+    "refuse les binaires sans reputation, et chaque mise a jour en produit un nouveau).",
+    "Le .cmd lance exactement le meme programme via dotnet.exe, signe Microsoft.",
+    "",
     "Optimus - application",
     "compile le : $builtAt",
     "commit     : $commit",
