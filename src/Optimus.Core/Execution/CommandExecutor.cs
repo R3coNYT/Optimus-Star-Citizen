@@ -209,10 +209,13 @@ public sealed class CommandExecutor
         // quatrieme pas manque de raccourci jouerait les trois premiers et laisserait le
         // vaisseau dans un etat que personne n'a demande.
         IReadOnlyList<ActionStep> steps;
+        IReadOnlyList<string> skipped;
 
         try
         {
-            steps = MacroExpander.Expand(command, _catalog, _bindings, polarity);
+            MacroExpansion plan = MacroExpander.Plan(command, _catalog, _bindings, polarity);
+            steps = plan.Steps;
+            skipped = plan.Skipped;
         }
         catch (InvalidOperationException exception)
         {
@@ -270,6 +273,20 @@ public sealed class CommandExecutor
             // Une macro qui s'annonce elle-meme n'a pas besoin qu'on la felicite ensuite :
             // entendre « Vaisseau pare » puis « Conforme » sonne comme deux copilotes.
             bool narrated = steps.Any(step => step.Type == ActionStepType.Say);
+
+            // Un pas ecarte se voit dans la trace. Une macro qui sauterait une etape en silence
+            // laisserait croire qu'elle a tout fait - c'est justement ce dont on veut se premunir.
+            if (skipped.Count > 0)
+            {
+                List<SequenceStepTrace> withSkips = new(traces);
+
+                foreach (string reason in skipped)
+                {
+                    withSkips.Add(new SequenceStepTrace(withSkips.Count, $"écarté — {reason}", 0));
+                }
+
+                traces = withSkips;
+            }
 
             return new ExecutionResult(
                 traceId, status, null, command, guard, traces, Elapsed(start), null, polarity, narrated);

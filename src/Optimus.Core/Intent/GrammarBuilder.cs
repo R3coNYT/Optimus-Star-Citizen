@@ -70,13 +70,23 @@ public static class VoiceGrammarBuilder
                     continue;
                 }
 
-                // Avec mot d'éveil : toujours proposé, c'est la forme naturelle.
-                Add($"{normalizedWake} {normalized}", command.Id, polarity);
+                // Le moteur reçoit la phrase ACCENTUÉE, la table de correspondance garde la
+                // forme normalisée.
+                //
+                // Un moteur à grammaire dérive la prononciation attendue du texte qu'on lui
+                // donne : « prepare le decollage » se modélise « pre-pare le de-collage », deux
+                // syllabes fausses en français. Mesuré sur le poste de jeu — 0,41 à 0,67 de
+                // confiance, contre 0,87 et plus pour les commandes dont les accents comptent
+                // moins. Le rapprochement, lui, reste insensible aux accents : c'est la
+                // normalisation qui s'en charge, et elle intervient après la reconnaissance.
+                string spoken = phrase.Trim();
+
+                Add($"{wakeWord} {spoken}", $"{normalizedWake} {normalized}", command.Id, polarity);
 
                 // Sans mot d'éveil : uniquement quand la touche sert de déclencheur.
                 if (!wakeRequired)
                 {
-                    Add(normalized, command.Id, polarity);
+                    Add(spoken, normalized, command.Id, polarity);
                 }
             }
         }
@@ -101,17 +111,17 @@ public static class VoiceGrammarBuilder
             }
         }
 
-        void Add(string phrase, string commandId, CommandPolarity polarity)
+        void Add(string spoken, string key, string commandId, CommandPolarity polarity)
         {
             // Une phrase partagée par deux commandes est déjà signalée par le validateur de
             // catalogue ; ici la première l'emporte, sans quoi la grammaire serait ambiguë.
-            if (mapping.ContainsKey(phrase))
+            if (mapping.ContainsKey(key))
             {
                 return;
             }
 
-            mapping[phrase] = new GrammarTarget(commandId, polarity);
-            alternatives.Add(phrase);
+            mapping[key] = new GrammarTarget(commandId, polarity);
+            alternatives.Add(spoken);
         }
     }
 }

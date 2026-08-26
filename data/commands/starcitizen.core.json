@@ -21,7 +21,7 @@
       "category": "power",
       "voice_phrases": ["alimentation", "power"],
       "phrases_on": ["allume le vaisseau", "mets sous tension", "active alimentation"],
-      "phrases_off": ["coupe le vaisseau", "eteins le vaisseau", "coupe alimentation", "mets hors tension"],
+      "phrases_off": ["coupe le vaisseau", "éteins le vaisseau", "coupe alimentation", "mets hors tension"],
       "actions": [{"type": "game_action", "action_id": "spaceship_power/v_power_toggle"}],
       "actions_on": [{"type": "game_action", "action_id": "spaceship_power/v_power_set_on"}],
       "actions_off": [{"type": "game_action", "action_id": "spaceship_power/v_power_set_off"}],
@@ -33,8 +33,8 @@
       "name": "Moteurs",
       "category": "power",
       "voice_phrases": ["propulseurs", "moteurs"],
-      "phrases_on": ["allume les moteurs", "demarre les moteurs", "active les moteurs"],
-      "phrases_off": ["coupe les moteurs", "eteins les moteurs", "desactive les moteurs", "arrete les moteurs"],
+      "phrases_on": ["allume les moteurs", "démarre les moteurs", "active les moteurs"],
+      "phrases_off": ["coupe les moteurs", "éteins les moteurs", "désactive les moteurs", "arrête les moteurs"],
       "actions": [{"type": "game_action", "action_id": "spaceship_power/v_power_toggle_thrusters"}],
       "actions_on": [{"type": "game_action", "action_id": "spaceship_power/v_power_set_thrusters_on"}],
       "actions_off": [{"type": "game_action", "action_id": "spaceship_power/v_power_set_thrusters_off"}],
@@ -49,8 +49,8 @@
       "phrases_on": ["allume les boucliers", "active les boucliers", "monte les boucliers"],
       "phrases_off": [
         "coupe les boucliers",
-        "eteins les boucliers",
-        "desactive les boucliers",
+        "éteins les boucliers",
+        "désactive les boucliers",
         "baisse les boucliers"
       ],
       "actions": [{"type": "game_action", "action_id": "spaceship_power/v_power_toggle_shields"}],
@@ -65,7 +65,7 @@
       "category": "weapons",
       "voice_phrases": ["armement", "armes"],
       "phrases_on": ["allume les armes", "active les armes", "sors les armes"],
-      "phrases_off": ["coupe les armes", "eteins les armes", "desactive les armes", "range les armes"],
+      "phrases_off": ["coupe les armes", "éteins les armes", "désactive les armes", "range les armes"],
       "actions": [{"type": "game_action", "action_id": "spaceship_power/v_power_toggle_weapons"}],
       "actions_on": [{"type": "game_action", "action_id": "spaceship_power/v_power_set_weapons_on"}],
       "actions_off": [{"type": "game_action", "action_id": "spaceship_power/v_power_set_weapons_off"}],
@@ -76,7 +76,7 @@
       "kind": "action",
       "name": "Prêt au décollage",
       "category": "ship",
-      "voice_phrases": ["pret au decollage", "flight ready", "prepare le vaisseau", "sequence de demarrage"],
+      "voice_phrases": ["prêt au décollage", "flight ready", "prépare le vaisseau", "séquence de démarrage"],
       "actions": [{"type": "game_action", "action_id": "spaceship_general/v_flightready"}],
       "cooldown_ms": 2000
     },
@@ -85,14 +85,14 @@
       "kind": "action",
       "name": "Feux du vaisseau",
       "category": "ship",
-      "voice_phrases": ["lumieres", "feux", "les phares"],
-      "phrases_on": ["allume les lumieres", "allume la lumiere", "active les lumieres", "allume les phares"],
+      "voice_phrases": ["lumières", "feux", "les phares"],
+      "phrases_on": ["allume les lumières", "allume la lumière", "active les lumières", "allume les phares"],
       "phrases_off": [
-        "eteins les lumieres",
-        "eteins la lumiere",
-        "desactive les lumieres",
-        "coupe les lumieres",
-        "eteins les phares"
+        "éteins les lumières",
+        "éteins la lumière",
+        "désactive les lumières",
+        "coupe les lumières",
+        "éteins les phares"
       ],
       "actions": [{"type": "game_action", "action_id": "lights_controller/v_lights"}],
       "actions_on": [{"type": "game_action", "action_id": "lights_controller/v_lights_on"}],
@@ -105,7 +105,7 @@
       "name": "Portes du vaisseau",
       "category": "ship",
       "voice_phrases": ["les portes", "ouverture des portes"],
-      "phrases_on": ["ouvre les portes", "ouvre-moi les portes", "deverrouille les portes"],
+      "phrases_on": ["ouvre les portes", "ouvre-moi les portes", "déverrouille les portes"],
       "phrases_off": ["ferme les portes", "ferme-moi les portes", "verrouille les portes"],
       "actions": [{"type": "game_action", "action_id": "spaceship_general/v_toggle_all_doors"}],
       "cooldown_ms": 1000
@@ -117,7 +117,7 @@
       "category": "ship",
       "voice_phrases": ["verrouillage des portes"],
       "phrases_on": ["verrouille les sas"],
-      "phrases_off": ["deverrouille les sas"],
+      "phrases_off": ["déverrouille les sas"],
       "actions": [{"type": "game_action", "action_id": "spaceship_general/v_toggle_all_portlocks"}],
       "cooldown_ms": 1000
     },
@@ -136,7 +136,7 @@
       "kind": "action",
       "name": "Éjection",
       "category": "ship",
-      "voice_phrases": ["ejection", "ejecte-moi", "ejecte"],
+      "voice_phrases": ["éjection", "ejecte-moi", "éjecte"],
       "actions": [{"type": "game_action", "action_id": "seat_general/v_eject"}],
       "dangerous": true,
       "cooldown_ms": 3000
@@ -157,7 +157,7 @@
       "name": "Train d'atterrissage",
       "category": "landing",
       "voice_phrases": ["train d'atterrissage", "mode atterrissage"],
-      "phrases_on": ["sors le train", "deploie le train"],
+      "phrases_on": ["sors le train", "déploie le train"],
       "phrases_off": ["rentre le train", "replie le train"],
       "actions": [{"type": "game_action", "action_id": "spaceship_movement/v_toggle_landing_system"}],
       "cooldown_ms": 800
@@ -199,9 +199,9 @@
       "kind": "action",
       "name": "Mode découplé",
       "category": "flight",
-      "voice_phrases": ["mode decouple", "decouple"],
-      "phrases_on": ["passe en decouple", "active le decouple"],
-      "phrases_off": ["recouple", "desactive le decouple", "repasse en couple"],
+      "voice_phrases": ["mode découplé", "découplé"],
+      "phrases_on": ["passe en découplé", "active le découplé"],
+      "phrases_off": ["recouple", "désactive le découplé", "repasse en couple"],
       "actions": [{"type": "game_action", "action_id": "spaceship_movement/v_ifcs_vector_decoupling_toggle"}],
       "actions_on": [{"type": "game_action", "action_id": "spaceship_movement/v_ifcs_vector_decoupling_on"}],
       "actions_off": [{"type": "game_action", "action_id": "spaceship_movement/v_ifcs_vector_decoupling_off"}],
@@ -225,7 +225,7 @@
       "category": "flight",
       "voice_phrases": ["vtol", "mode vtol"],
       "phrases_on": ["active le vtol", "sors les nacelles", "bascule les nacelles"],
-      "phrases_off": ["desactive le vtol", "rentre les nacelles"],
+      "phrases_off": ["désactive le vtol", "rentre les nacelles"],
       "actions": [{"type": "game_action", "action_id": "spaceship_movement/v_vtol_toggle"}],
       "actions_on": [{"type": "game_action", "action_id": "spaceship_movement/v_vtol_on"}],
       "actions_off": [{"type": "game_action", "action_id": "spaceship_movement/v_vtol_off"}],
@@ -247,7 +247,7 @@
       "kind": "action",
       "name": "Réduire le limiteur de vitesse",
       "category": "flight",
-      "voice_phrases": ["reduis la vitesse", "baisse le limiteur", "moins vite", "ralentis"],
+      "voice_phrases": ["réduis la vitesse", "baisse le limiteur", "moins vite", "ralentis"],
       "actions": [
         {"type": "game_action", "action_id": "spaceship_movement/v_ifcs_speed_limiter_decrement", "repeat": 3, "interval_ms": 80}
       ],
@@ -277,7 +277,7 @@
       "voice_phrases": [
         "lance le quantum",
         "saut quantique",
-        "prepare le saut quantique",
+        "prépare le saut quantique",
         "engage le quantum",
         "quantum"
       ],
@@ -299,7 +299,7 @@
       "kind": "action",
       "name": "Plus de puissance moteur",
       "category": "power",
-      "voice_phrases": ["plus de puissance moteur", "renforce les propulseurs", "priorite aux moteurs"],
+      "voice_phrases": ["plus de puissance moteur", "renforce les propulseurs", "priorité aux moteurs"],
       "actions": [
         {"type": "game_action", "action_id": "spaceship_power/v_engineering_assignment_engine_increase", "repeat": 3, "interval_ms": 80}
       ],
@@ -311,7 +311,7 @@
       "kind": "action",
       "name": "Moins de puissance moteur",
       "category": "power",
-      "voice_phrases": ["moins de puissance moteur", "reduis les moteurs"],
+      "voice_phrases": ["moins de puissance moteur", "réduis les moteurs"],
       "actions": [
         {"type": "game_action", "action_id": "spaceship_power/v_engineering_assignment_engine_decrease", "repeat": 3, "interval_ms": 80}
       ],
@@ -322,7 +322,7 @@
       "kind": "action",
       "name": "Plus de puissance boucliers",
       "category": "power",
-      "voice_phrases": ["plus de puissance aux boucliers", "priorite aux boucliers", "renforce la protection"],
+      "voice_phrases": ["plus de puissance aux boucliers", "priorité aux boucliers", "renforce la protection"],
       "actions": [
         {"type": "game_action", "action_id": "spaceship_power/v_engineering_assignment_shields_increase", "repeat": 3, "interval_ms": 80}
       ],
@@ -333,7 +333,7 @@
       "kind": "action",
       "name": "Moins de puissance boucliers",
       "category": "power",
-      "voice_phrases": ["moins de puissance aux boucliers", "reduis les boucliers"],
+      "voice_phrases": ["moins de puissance aux boucliers", "réduis les boucliers"],
       "actions": [
         {"type": "game_action", "action_id": "spaceship_power/v_engineering_assignment_shields_decrease", "repeat": 3, "interval_ms": 80}
       ],
@@ -344,7 +344,7 @@
       "kind": "action",
       "name": "Plus de puissance armes",
       "category": "power",
-      "voice_phrases": ["plus de puissance aux armes", "priorite a l armement", "renforce la puissance de feu"],
+      "voice_phrases": ["plus de puissance aux armes", "priorité a l armement", "renforce la puissance de feu"],
       "actions": [
         {"type": "game_action", "action_id": "spaceship_power/v_engineering_assignment_weapons_increase", "repeat": 3, "interval_ms": 80}
       ],
@@ -355,7 +355,7 @@
       "kind": "action",
       "name": "Moins de puissance armes",
       "category": "power",
-      "voice_phrases": ["moins de puissance aux armes", "reduis les armes"],
+      "voice_phrases": ["moins de puissance aux armes", "réduis les armes"],
       "actions": [
         {"type": "game_action", "action_id": "spaceship_power/v_engineering_assignment_weapons_decrease", "repeat": 3, "interval_ms": 80}
       ],
@@ -366,7 +366,7 @@
       "kind": "action",
       "name": "Répartition de puissance neutre",
       "category": "power",
-      "voice_phrases": ["equilibre la puissance", "repartition neutre", "reinitialise la puissance"],
+      "voice_phrases": ["équilibre la puissance", "repartition neutre", "reinitialise la puissance"],
       "actions": [{"type": "game_action", "action_id": "spaceship_power/v_engineering_assignment_reset"}],
       "cooldown_ms": 800
     },
@@ -411,7 +411,7 @@
       "category": "shields",
       "voice_phrases": [
         "boucliers a l'arriere",
-        "mets les boucliers derriere",
+        "mets les boucliers derrière",
         "renforce l'arriere",
         "protege l'arriere"
       ],
@@ -447,7 +447,7 @@
       "kind": "action",
       "name": "Boucliers équilibrés",
       "category": "shields",
-      "voice_phrases": ["equilibre les boucliers", "boucliers neutres", "repartis les boucliers"],
+      "voice_phrases": ["équilibre les boucliers", "boucliers neutres", "repartis les boucliers"],
       "actions": [{"type": "game_action", "action_id": "spaceship_defensive/v_shield_reset_level"}],
       "cooldown_ms": 800
     },
@@ -458,7 +458,7 @@
       "category": "weapons",
       "voice_phrases": ["gimbal", "bascule les gimbals"],
       "phrases_on": ["active les gimbals"],
-      "phrases_off": ["desactive les gimbals", "verrouille les canons"],
+      "phrases_off": ["désactive les gimbals", "verrouille les canons"],
       "actions": [{"type": "game_action", "action_id": "spaceship_weapons/v_weapon_gimbals_state_toggle"}],
       "cooldown_ms": 600
     },
@@ -491,7 +491,7 @@
       "category": "targeting",
       "voice_phrases": ["ciblage automatique", "auto ciblage"],
       "phrases_on": ["active le ciblage automatique", "verrouillage automatique"],
-      "phrases_off": ["desactive le ciblage automatique", "coupe le ciblage automatique"],
+      "phrases_off": ["désactive le ciblage automatique", "coupe le ciblage automatique"],
       "actions": [{"type": "game_action", "action_id": "spaceship_targeting/v_auto_targeting_toggle_long"}],
       "actions_on": [{"type": "game_action", "action_id": "spaceship_targeting/v_auto_targeting_enable_short"}],
       "actions_off": [{"type": "game_action", "action_id": "spaceship_targeting/v_auto_targeting_disable_short"}],
@@ -502,7 +502,7 @@
       "kind": "action",
       "name": "Déverrouiller la cible",
       "category": "targeting",
-      "voice_phrases": ["deverrouille la cible", "lache la cible", "abandonne le verrouillage"],
+      "voice_phrases": ["déverrouille la cible", "lache la cible", "abandonne le verrouillage"],
       "actions": [{"type": "game_action", "action_id": "spaceship_targeting/v_target_unlock"}],
       "cooldown_ms": 500
     },
@@ -511,7 +511,7 @@
       "kind": "action",
       "name": "Retirer les cibles épinglées",
       "category": "targeting",
-      "voice_phrases": ["retire les epingles", "efface les cibles", "nettoie les cibles"],
+      "voice_phrases": ["retire les épingles", "efface les cibles", "nettoie les cibles"],
       "actions": [{"type": "game_action", "action_id": "spaceship_targeting/v_target_remove_all_pins"}],
       "cooldown_ms": 800
     },
@@ -522,7 +522,7 @@
       "category": "scanning",
       "voice_phrases": ["mode scan", "scanner"],
       "phrases_on": ["active le scan", "passe en scan"],
-      "phrases_off": ["desactive le scan", "quitte le scan", "sors du scan", "coupe le scan"],
+      "phrases_off": ["désactive le scan", "quitte le scan", "sors du scan", "coupe le scan"],
       "actions": [{"type": "game_action", "action_id": "seat_general/v_toggle_scan_mode"}],
       "cooldown_ms": 800
     },
@@ -544,7 +544,7 @@
       "category": "mining",
       "voice_phrases": ["mode minage"],
       "phrases_on": ["active le minage", "passe en minage"],
-      "phrases_off": ["desactive le minage", "quitte le minage", "sors du minage"],
+      "phrases_off": ["désactive le minage", "quitte le minage", "sors du minage"],
       "actions": [{"type": "game_action", "action_id": "seat_general/v_toggle_mining_mode"}],
       "cooldown_ms": 800
     },
@@ -553,9 +553,9 @@
       "kind": "action",
       "name": "Mode récupération",
       "category": "salvage",
-      "voice_phrases": ["mode salvage", "mode recuperation"],
-      "phrases_on": ["active la recuperation", "passe en salvage"],
-      "phrases_off": ["desactive la recuperation", "quitte le salvage"],
+      "voice_phrases": ["mode salvage", "mode récupération"],
+      "phrases_on": ["active la récupération", "passe en salvage"],
+      "phrases_off": ["désactive la récupération", "quitte le salvage"],
       "actions": [{"type": "game_action", "action_id": "seat_general/v_toggle_salvage_mode"}],
       "cooldown_ms": 800
     },
@@ -573,7 +573,7 @@
       "kind": "action",
       "name": "Regarder derrière",
       "category": "camera",
-      "voice_phrases": ["regarde derriere", "vue arriere", "qu'est-ce qu'il y a derriere"],
+      "voice_phrases": ["regarde derrière", "vue arrière", "qu'est-ce qu'il y a derrière"],
       "actions": [
         {"type": "game_action", "action_id": "seat_general/v_view_look_behind", "mode": "hold", "hold_ms": 1500}
       ],
@@ -584,7 +584,7 @@
       "kind": "action",
       "name": "mobiGlas",
       "category": "communication",
-      "voice_phrases": ["mobiglas", "ouvre le mobiglas", "mon mobiglas"],
+      "voice_phrases": ["mobiGlas", "ouvre le mobiGlas", "mon mobiGlas"],
       "actions": [{"type": "game_action", "action_id": "spaceship_hud/mobiglas"}],
       "cooldown_ms": 800
     },
@@ -602,7 +602,7 @@
       "kind": "action",
       "name": "Nettoyer la visière",
       "category": "immersion",
-      "voice_phrases": ["nettoie la visiere", "essuie la visiere", "visiere"],
+      "voice_phrases": ["nettoie la visière", "essuie la visière", "visière"],
       "actions": [{"type": "game_action", "action_id": "spaceship_hud/visor_wipe"}],
       "cooldown_ms": 1000
     },
@@ -611,7 +611,7 @@
       "kind": "query",
       "name": "Rapport système",
       "category": "system",
-      "voice_phrases": ["rapport systeme", "etat des systemes", "fais un rapport", "statut"],
+      "voice_phrases": ["rapport système", "état des systemes", "fais un rapport", "statut"],
       "actions": [],
       "cooldown_ms": 1000
     },
@@ -622,7 +622,7 @@
       "category": "system",
       "voice_phrases": ["mode simulation"],
       "phrases_on": ["active la simulation"],
-      "phrases_off": ["coupe la simulation", "desactive la simulation"],
+      "phrases_off": ["coupe la simulation", "désactive la simulation"],
       "actions": [],
       "cooldown_ms": 1000
     },
@@ -640,7 +640,7 @@
       "kind": "query",
       "name": "Répéter",
       "category": "system",
-      "voice_phrases": ["repete", "qu'est-ce que tu as dit", "redis-le"],
+      "voice_phrases": ["répète", "qu'est-ce que tu as dit", "redis-le"],
       "actions": [],
       "cooldown_ms": 500
     },
@@ -658,7 +658,7 @@
       "kind": "dialogue",
       "name": "Qui es-tu",
       "category": "immersion",
-      "voice_phrases": ["qui es tu", "presente toi", "c'est quoi ton nom", "comment tu t'appelles", "tu es qui"],
+      "voice_phrases": ["qui es tu", "présente toi", "c'est quoi ton nom", "comment tu t'appelles", "tu es qui"],
       "actions": [],
       "cooldown_ms": 1500
     },
@@ -712,11 +712,7 @@
       "kind": "macro",
       "name": "Préparation au décollage",
       "category": "macro",
-      "voice_phrases": [
-        "prepare le decollage",
-        "procedure de decollage",
-        "demarrage complet"
-      ],
+      "voice_phrases": ["prépare le décollage", "procédure de décollage", "démarrage complet"],
       "actions": [
         {"type": "say", "response_key": "macro.preflight.begin"},
         {"type": "command", "command_id": "ship.power.toggle", "polarity": "on"},
@@ -727,7 +723,7 @@
         {"type": "wait", "ms": 400},
         {"type": "command", "command_id": "ship.lights.toggle", "polarity": "on"},
         {"type": "wait", "ms": 300},
-        {"type": "command", "command_id": "ship.doors.toggle", "polarity": "off"},
+        {"type": "command", "command_id": "ship.doors.toggle", "polarity": "off", "require_directed": true},
         {"type": "say", "response_key": "macro.preflight.done"}
       ],
       "cooldown_ms": 4000
@@ -738,10 +734,10 @@
       "name": "Procédure d'atterrissage",
       "category": "macro",
       "voice_phrases": [
-        "procedure d atterrissage",
-        "prepare l atterrissage",
+        "procédure d atterrissage",
+        "prépare l atterrissage",
         "on se pose",
-        "sequence d atterrissage"
+        "séquence d atterrissage"
       ],
       "actions": [
         {"type": "say", "response_key": "macro.landing.begin"},
@@ -764,7 +760,7 @@
       "voice_phrases": [
         "postes de combat",
         "paré au combat",
-        "prepare le combat",
+        "prépare le combat",
         "on va se battre",
         "alerte rouge"
       ],
@@ -786,7 +782,7 @@
       "kind": "macro",
       "name": "Extinction du vaisseau",
       "category": "macro",
-      "voice_phrases": ["coupe tout", "extinction complete", "procedure d extinction"],
+      "voice_phrases": ["coupe tout", "extinction complète", "procédure d extinction"],
       "actions": [
         {"type": "say", "response_key": "macro.shutdown.begin"},
         {"type": "command", "command_id": "ship.weapons.toggle", "polarity": "off"},

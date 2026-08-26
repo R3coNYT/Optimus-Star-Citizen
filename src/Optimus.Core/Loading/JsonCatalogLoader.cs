@@ -251,7 +251,8 @@ public static class JsonCatalogLoader
                             _ => CommandPolarity.Neutral,
                         };
 
-                        steps.Add(ActionStep.Call(target, polarity));
+                        steps.Add(ActionStep.Call(
+                            target, polarity, GetBool(action, "require_directed") ?? false));
                         break;
                     }
 

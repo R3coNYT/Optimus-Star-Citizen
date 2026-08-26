@@ -113,18 +113,41 @@ public sealed class MacroTests
     {
         SimulatedInputEngine engine = new();
 
-        // Les portes n'ont pas de touche : c'est le dernier pas de la sequence.
-        CommandExecutor executor = new(_catalog, _defaults, engine);
-        Assert.True(_catalog.TryGet("macro.preflight", out CommandDefinition? macro));
+        // Les boucliers directionnels n'ont pas de touche par defaut : le troisieme pas est
+        // donc inexecutable, et il ne demande pas de sens garanti - il ne sera pas ecarte.
+        CommandDefinition macro = new(
+            "macro.essai", CommandKind.Macro, "Essai", "macro", ["essai"],
+            [
+                ActionStep.Call("ship.lights.toggle"),
+                ActionStep.Wait(100),
+                ActionStep.Call("shields.raise.front"),
+            ]);
+
+        CommandCatalog catalog = new("essai", "essai", _catalog.Commands.Append(macro).ToList());
+        CommandExecutor executor = new(catalog, _defaults, engine);
 
         ExecutionResult result = await executor.ExecuteCommandAsync(
-            macro!, ExecutionEnvironment.Sandbox, SequenceOptions.Instant);
+            macro, ExecutionEnvironment.Sandbox, SequenceOptions.Instant);
 
-        // Jouer les quatre premiers pas puis s'arreter laisserait le vaisseau dans un etat
-        // intermediaire que personne n'a demande. La verification precede l'action.
+        // Jouer le premier pas puis s'arreter laisserait le vaisseau dans un etat intermediaire
+        // que personne n'a demande. La verification precede l'action.
         Assert.Equal(ExecutionStatus.Rejected, result.Status);
         Assert.Empty(engine.Events);
-        Assert.Contains("v_toggle_all_doors", result.Message!, StringComparison.Ordinal);
+        Assert.Contains("v_shield_raise_level_forward", result.Message!, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Un_pas_qui_exige_un_sens_garanti_est_ecarte_plutot_que_bascule()
+    {
+        Assert.True(_catalog.TryGet("macro.preflight", out CommandDefinition? macro));
+
+        // Le jeu n'expose aucun sens pour les portes. Basculer les aurait OUVERTES une fois sur
+        // deux au moment de decoller - constate en vol le 2026-08-26.
+        MacroExpansion plan = MacroExpander.Plan(macro!, _catalog, FullyBound());
+
+        Assert.DoesNotContain(plan.Steps, step =>
+            step.ActionId == "spaceship_general/v_toggle_all_doors");
+        Assert.Contains(plan.Skipped, reason => reason.Contains("Portes", StringComparison.Ordinal));
     }
 
     [Fact]

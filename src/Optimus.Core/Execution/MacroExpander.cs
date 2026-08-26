@@ -1,7 +1,15 @@
-using Optimus.Core.Domain.Bindings;
+﻿using Optimus.Core.Domain.Bindings;
 using Optimus.Core.Domain.Commands;
 
 namespace Optimus.Core.Execution;
+
+/// <summary>Résultat d'un dépliage : ce qui sera joué, et ce qui a été écarté.</summary>
+/// <param name="Steps">Étapes exécutables.</param>
+/// <param name="Skipped">
+/// Pas écartés, avec leur raison. Jamais tus : une macro qui saute discrètement une étape
+/// laisse croire qu'elle a tout fait.
+/// </param>
+public sealed record MacroExpansion(IReadOnlyList<ActionStep> Steps, IReadOnlyList<string> Skipped);
 
 /// <summary>
 /// Déplie les renvois d'une macro en une séquence d'étapes exécutables.
@@ -31,6 +39,14 @@ public static class MacroExpander
         CommandDefinition command,
         CommandCatalog catalog,
         BindingProfile bindings,
+        CommandPolarity polarity = CommandPolarity.Neutral) =>
+        Plan(command, catalog, bindings, polarity).Steps;
+
+    /// <summary>Dépliage complet : les étapes retenues et celles qu'on refuse de jouer.</summary>
+    public static MacroExpansion Plan(
+        CommandDefinition command,
+        CommandCatalog catalog,
+        BindingProfile bindings,
         CommandPolarity polarity = CommandPolarity.Neutral)
     {
         ArgumentNullException.ThrowIfNull(command);
@@ -38,10 +54,11 @@ public static class MacroExpander
         ArgumentNullException.ThrowIfNull(bindings);
 
         List<ActionStep> expanded = new();
+        List<string> skipped = new();
         HashSet<string> visiting = new(StringComparer.OrdinalIgnoreCase);
 
         Walk(command, polarity, 0);
-        return expanded;
+        return new MacroExpansion(expanded, skipped);
 
         void Walk(CommandDefinition current, CommandPolarity sense, int depth)
         {
@@ -71,6 +88,23 @@ public static class MacroExpander
                 {
                     throw new InvalidOperationException(
                         $"« {current.Name} » renvoie vers « {step.CommandId} », qui n'existe pas.");
+                }
+
+                // Le pas exige un sens garanti et ne l'obtient pas : on renonce plutôt que de
+                // retomber sur une bascule, qui ferait l'inverse une fois sur deux. Une
+                // préparation au décollage qui OUVRE les portes au lieu de les fermer, c'est le
+                // genre de surprise qu'on ne découvre qu'au moment de décoller — observé en vol
+                // le 2026-08-26. Le repli reste la règle partout ailleurs : allumer un vaisseau
+                // froid par une bascule est exactement ce qu'on veut.
+                if (step.RequireDirected
+                    && step.Polarity != CommandPolarity.Neutral
+                    && !target.UsesDirectedActions(step.Polarity, bindings))
+                {
+                    string direction = step.Polarity == CommandPolarity.On ? "activation" : "extinction";
+                    skipped.Add(
+                        $"« {target.Name} » ({direction}) : le jeu n'expose pas ce sens et aucune touche "
+                        + "dirigée n'est configurée. Une bascule aurait fait l'inverse une fois sur deux.");
+                    continue;
                 }
 
                 Walk(target, step.Polarity, depth + 1);

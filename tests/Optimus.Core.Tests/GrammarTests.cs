@@ -29,8 +29,12 @@ public sealed class GrammarTests
 
         Assert.True(grammar.WakeWordRequired);
         Assert.NotEmpty(grammar.Alternatives);
+
+        // Les alternatives sont ACCENTUEES depuis que le moteur en derive la prononciation :
+        // « Optimus prépare le décollage », pas « optimus prepare le decollage ». La garantie
+        // porte sur le sens, pas sur la casse - on normalise avant de la verifier.
         Assert.All(grammar.Alternatives, phrase =>
-            Assert.StartsWith("optimus ", phrase, StringComparison.Ordinal));
+            Assert.StartsWith("optimus ", TextNormalizer.Normalize(phrase), StringComparison.Ordinal));
     }
 
     [Fact]
@@ -42,8 +46,10 @@ public sealed class GrammarTests
         VoiceGrammar grammar = VoiceGrammarBuilder.Build(catalog, "Optimus", settings);
 
         Assert.False(grammar.WakeWordRequired);
-        Assert.Contains("ouvre les portes", grammar.Alternatives);
-        Assert.Contains("optimus ouvre les portes", grammar.Alternatives);
+
+        string[] normalized = grammar.Alternatives.Select(TextNormalizer.Normalize).ToArray();
+        Assert.Contains("ouvre les portes", normalized);
+        Assert.Contains("optimus ouvre les portes", normalized);
     }
 
     [Fact]

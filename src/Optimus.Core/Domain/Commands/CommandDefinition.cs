@@ -74,13 +74,25 @@ public sealed record ActionStep(
     int WaitMs = 0,
     string? ResponseKey = null,
     string? CommandId = null,
-    CommandPolarity Polarity = CommandPolarity.Neutral)
+    CommandPolarity Polarity = CommandPolarity.Neutral,
+    bool RequireDirected = false)
 {
     public static ActionStep Game(string actionId) => new(ActionStepType.GameAction, actionId);
 
     /// <summary>Étape qui rejoue une autre commande, dans le sens voulu.</summary>
-    public static ActionStep Call(string commandId, CommandPolarity polarity = CommandPolarity.Neutral) =>
-        new(ActionStepType.Command, CommandId: commandId, Polarity: polarity);
+    /// <param name="requireDirected">
+    /// Exiger une action <b>dirigée</b>, et renoncer au pas plutôt que de retomber sur une
+    /// bascule. À réserver aux pas dont l'état de départ est incertain : une préparation au
+    /// décollage qui bascule les portes les <i>ouvre</i> une fois sur deux, et le découvrir au
+    /// moment de décoller n'est pas acceptable. Ailleurs — allumer un vaisseau froid — le repli
+    /// sur la bascule est au contraire ce qu'on veut.
+    /// </param>
+    public static ActionStep Call(
+        string commandId,
+        CommandPolarity polarity = CommandPolarity.Neutral,
+        bool requireDirected = false) =>
+        new(ActionStepType.Command, CommandId: commandId, Polarity: polarity,
+            RequireDirected: requireDirected);
 
     public static ActionStep Wait(int milliseconds) =>
         new(ActionStepType.Wait, WaitMs: milliseconds);
