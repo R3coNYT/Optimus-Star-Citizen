@@ -114,7 +114,13 @@ public sealed class OptimusRuntime : IAsyncDisposable
     /// <summary>Fichier de personnalité : curseurs de caractère.</summary>
     public string PersonalityPath => Path.Combine(CopilotDirectory, "personality.json");
 
-    public CommandCatalog Catalog { get; }
+    public CommandCatalog Catalog { get; private set; }
+
+    /// <summary>Catalogue livré seul, sans les macros du pilote. Sert à savoir ce qui lui appartient.</summary>
+    public CommandCatalog ShippedCatalog { get; private init; } = CommandCatalog.Empty;
+
+    /// <summary>Fichier des macros du pilote.</summary>
+    public string MacroPath { get; private init; } = string.Empty;
 
     /// <summary>Profil du jeu seul, sans les choix du pilote. Sert à savoir ce qui manque.</summary>
     public BindingProfile DefaultBindings { get; }
@@ -172,6 +178,16 @@ public sealed class OptimusRuntime : IAsyncDisposable
 
         LoadResult<CommandCatalog> catalog = JsonCatalogLoader.LoadCatalog(
             Path.Combine(dataRoot, "data", "commands", "starcitizen.core.json"));
+
+        // Les macros ecrites par le pilote se superposent au catalogue livre : celui-ci est
+        // remplace a chaque publication, celles-la doivent survivre.
+        string macroPath = UserMacros.DefaultPath();
+        LoadResult<CommandCatalog> userMacros = UserMacros.Load(macroPath);
+
+        CommandCatalog merged = userMacros.Value.Count == 0
+            ? catalog.Value
+            : CommandCatalog.Merge(
+                catalog.Value.Id, catalog.Value.Name, catalog.Value, userMacros.Value);
         LoadResult<BindingProfile> bindings = JsonCatalogLoader.LoadBindingProfile(
             Path.Combine(dataRoot, "data", "bindings", "starcitizen", "defaults-4.9.json"));
         LoadResult<UserProfile> user = ProfileLoader.Load(
@@ -183,13 +199,18 @@ public sealed class OptimusRuntime : IAsyncDisposable
 
         return new OptimusRuntime(
             dataRoot,
-            catalog.Value,
+            merged,
             bindings.Value,
             BindingOverlay.Load(overlayPath),
             overlayPath,
             user.Value,
             copilot.Value,
-            [.. catalog.Issues, .. bindings.Issues, .. user.Issues, .. copilot.Issues]);
+            [.. catalog.Issues, .. userMacros.Issues, .. bindings.Issues, .. user.Issues,
+             .. copilot.Issues])
+        {
+            MacroPath = macroPath,
+            ShippedCatalog = catalog.Value,
+        };
     }
 
     /// <summary>
@@ -279,6 +300,39 @@ public sealed class OptimusRuntime : IAsyncDisposable
         User = ProfileLoader.Load(ProfilePath).Value;
         Copilot = CopilotLoader.Load(CopilotDirectory).Value;
         Composer = new ResponseComposer(Copilot.Personality, Copilot.Responses);
+
+        if (wasListening)
+        {
+            await StartListeningAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        StateChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// Relit les macros du pilote et reconstruit ce qui en dépend.
+    ///
+    /// La grammaire en fait partie : une macro nouvelle apporte ses formulations, et l'écoute
+    /// doit repartir pour que le moteur les connaisse. Les garder tièdes donnerait une macro
+    /// visible dans la fenêtre mais inaudible au micro.
+    /// </summary>
+    public async Task ReloadMacrosAsync(CancellationToken cancellationToken = default)
+    {
+        bool wasListening = IsListening;
+
+        if (wasListening)
+        {
+            await StopListeningAsync().ConfigureAwait(false);
+        }
+
+        LoadResult<CommandCatalog> userMacros = UserMacros.Load(MacroPath);
+
+        Catalog = userMacros.Value.Count == 0
+            ? ShippedCatalog
+            : CommandCatalog.Merge(
+                ShippedCatalog.Id, ShippedCatalog.Name, ShippedCatalog, userMacros.Value);
+
+        _executor = BuildExecutor();
 
         if (wasListening)
         {

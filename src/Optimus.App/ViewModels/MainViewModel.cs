@@ -122,6 +122,7 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
         ExportLayoutCommand = new RelayCommand(ExportLayout);
         TestCommandCommand = new AsyncRelayCommand(TestCommandAsync, () => SelectedCommand is not null);
         Settings = new SettingsViewModel(_runtime, Add);
+        MacroEditor = new MacroEditorViewModel(_runtime, Add, ReloadMacrosAsync);
 
         // Le jeu peut demarrer ou s'arreter pendant la session : l'etat s'observe, il ne se
         // suppose pas. Deux secondes suffisent - c'est un affichage, pas une garde.
@@ -179,6 +180,9 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
 
     /// <summary>Les réglages, dans leur propre onglet.</summary>
     public SettingsViewModel Settings { get; }
+
+    /// <summary>L'éditeur de macros.</summary>
+    public MacroEditorViewModel MacroEditor { get; }
 
     private Window? _owner;
 
@@ -503,6 +507,21 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
                 ? "Déjà dans le dossier du jeu. Dans Star Citizen : pp_RebindKeys optimus"
                 : $"Écrit dans {target} — à copier dans le dossier Mappings du jeu.",
             ActivityLevel.Normal);
+    }
+
+    /// <summary>
+    /// Reprend les macros après modification, et rafraîchit ce qui en dépend.
+    ///
+    /// Le catalogue change : la liste des commandes le reflète, et l'écoute repart pour que la
+    /// grammaire connaisse les nouvelles formulations.
+    /// </summary>
+    private async Task ReloadMacrosAsync()
+    {
+        await _runtime.ReloadMacrosAsync().ConfigureAwait(true);
+
+        RefreshCommands();
+        RefreshBindings();
+        Raise(nameof(CatalogSummary));
     }
 
     private void RefreshGame()

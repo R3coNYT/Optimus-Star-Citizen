@@ -498,6 +498,194 @@
         </Grid>
       </TabItem>
 
+      <!-- ============================== Macros ============================== -->
+      <TabItem Header="Macros" DataContext="{Binding MacroEditor}">
+        <Grid Margin="0,12,0,0">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="290" />
+            <ColumnDefinition Width="*" />
+          </Grid.ColumnDefinitions>
+
+          <!-- ============================== liste ============================== -->
+          <Grid Grid.Column="0" Margin="0,0,14,0">
+            <Grid.RowDefinitions>
+              <RowDefinition Height="*" />
+              <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <ListBox Grid.Row="0" ItemsSource="{Binding Macros}" SelectedItem="{Binding Selected}"
+                     Background="{StaticResource Panel}" BorderBrush="{StaticResource Line}"
+                     Foreground="{StaticResource Text}">
+              <ListBox.ItemContainerStyle>
+                <Style TargetType="ListBoxItem">
+                  <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                  <Setter Property="Padding" Value="10,7" />
+                </Style>
+              </ListBox.ItemContainerStyle>
+              <ListBox.ItemTemplate>
+                <DataTemplate>
+                  <StackPanel>
+                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    <TextBlock FontSize="11" Foreground="{StaticResource TextMuted}">
+                      <Run Text="{Binding Origin, Mode=OneWay}" /><Run Text="  ·  " /><Run Text="{Binding Summary, Mode=OneWay}" />
+                    </TextBlock>
+                  </StackPanel>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+
+            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,8,0,0">
+              <Button Command="{Binding NewCommand}" Content="Nouvelle" />
+              <Button Command="{Binding DuplicateCommand}" Content="Dupliquer" Margin="6,0,0,0" />
+              <Button Command="{Binding DeleteCommand}" Content="Supprimer" Margin="6,0,0,0" />
+            </StackPanel>
+          </Grid>
+
+          <!-- ============================= éditeur ============================= -->
+          <Grid Grid.Column="1" IsEnabled="{Binding CanEdit}">
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="*" />
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0" Style="{StaticResource Card}" Margin="0,0,0,10">
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="120" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                  <TextBlock Text="NOM" Style="{StaticResource Label}" />
+                  <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" />
+                  <TextBlock Style="{StaticResource Hint}"
+                             Text="Ce qu'Optimus prononce quand il en parle." />
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Margin="0,0,10,0">
+                  <TextBlock Text="FORMULATIONS — UNE PAR LIGNE" Style="{StaticResource Label}" />
+                  <TextBox Text="{Binding Phrases, UpdateSourceTrigger=PropertyChanged}"
+                           AcceptsReturn="True" MinHeight="72" VerticalScrollBarVisibility="Auto"
+                           TextWrapping="NoWrap" />
+                  <TextBlock Style="{StaticResource Hint}"
+                             Text="Écrivez-les accentuées : le moteur en déduit la prononciation." />
+                </StackPanel>
+
+                <StackPanel Grid.Column="2">
+                  <TextBlock Text="TEMPORISATION" Style="{StaticResource Label}" />
+                  <TextBox Text="{Binding CooldownMs, UpdateSourceTrigger=PropertyChanged}" />
+                  <TextBlock Style="{StaticResource Hint}"
+                             Text="En millisecondes. Empêche de la relancer pendant qu'elle se déroule." />
+                </StackPanel>
+              </Grid>
+            </Border>
+
+            <Grid Grid.Row="1">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="300" />
+              </Grid.ColumnDefinitions>
+
+              <ListBox Grid.Column="0" ItemsSource="{Binding Steps}" SelectedItem="{Binding SelectedStep}"
+                       Background="{StaticResource Panel}" BorderBrush="{StaticResource Line}"
+                       Foreground="{StaticResource Text}" FontFamily="Consolas">
+                <ListBox.ItemContainerStyle>
+                  <Style TargetType="ListBoxItem">
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                    <Setter Property="Padding" Value="10,5" />
+                  </Style>
+                </ListBox.ItemContainerStyle>
+                <ListBox.ItemTemplate>
+                  <DataTemplate>
+                    <TextBlock Text="{Binding Summary}" FontFamily="Consolas" TextWrapping="Wrap" />
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+
+              <Border Grid.Column="1" Style="{StaticResource Card}" Margin="10,0,0,0"
+                      DataContext="{Binding SelectedStep}">
+                <StackPanel>
+                  <TextBlock Text="ÉTAPE CHOISIE" Style="{StaticResource Label}" />
+
+                  <TextBlock Style="{StaticResource Hint}" Margin="0,4,0,0"
+                             Text="Choisissez une étape dans la séquence pour la modifier.">
+                    <TextBlock.Visibility>
+                      <Binding Path="." Converter="{StaticResource NullToVisible}"
+                               FallbackValue="Visible" TargetNullValue="Visible" />
+                    </TextBlock.Visibility>
+                  </TextBlock>
+
+                  <StackPanel Visibility="{Binding IsCommand, Converter={StaticResource BoolToVisible}, FallbackValue=Collapsed, TargetNullValue=Collapsed}">
+                    <TextBlock Text="Commande" Style="{StaticResource Hint}" Margin="0,6,0,2" />
+                    <ComboBox ItemsSource="{Binding DataContext.Callable,
+                                            RelativeSource={RelativeSource AncestorType=TabItem}}"
+                              SelectedItem="{Binding CommandId}" />
+
+                    <TextBlock Text="Sens" Style="{StaticResource Hint}" Margin="0,10,0,2" />
+                    <ComboBox SelectedIndex="{Binding Polarity, Converter={StaticResource PolarityToIndex}}">
+                      <ComboBoxItem Content="basculer" />
+                      <ComboBoxItem Content="allumer" />
+                      <ComboBoxItem Content="éteindre" />
+                    </ComboBox>
+
+                    <CheckBox IsChecked="{Binding RequireDirected}"
+                              Content="Exiger un sens garanti" />
+                    <TextBlock Style="{StaticResource Hint}"
+                               Text="Renonce à l'étape plutôt que de basculer à l'aveugle. À cocher quand l'état de départ est incertain — les portes, par exemple." />
+                  </StackPanel>
+
+                  <StackPanel Visibility="{Binding IsWait, Converter={StaticResource BoolToVisible}, FallbackValue=Collapsed, TargetNullValue=Collapsed}">
+                    <TextBlock Text="Attente (ms)" Style="{StaticResource Hint}" Margin="0,6,0,2" />
+                    <TextBox Text="{Binding WaitMs, UpdateSourceTrigger=PropertyChanged}" />
+                    <TextBlock Style="{StaticResource Hint}"
+                               Text="Le jeu ne répond pas à deux touches envoyées dans la même milliseconde." />
+                  </StackPanel>
+
+                  <StackPanel Visibility="{Binding IsSay, Converter={StaticResource BoolToVisible}, FallbackValue=Collapsed, TargetNullValue=Collapsed}">
+                    <TextBlock Text="Clé de réplique" Style="{StaticResource Hint}" Margin="0,6,0,2" />
+                    <TextBox Text="{Binding ResponseKey, UpdateSourceTrigger=PropertyChanged}" />
+                    <TextBlock Style="{StaticResource Hint}"
+                               Text="Une entrée de responses.fr.json. Optimus se tait si elle n'existe pas." />
+                  </StackPanel>
+                </StackPanel>
+              </Border>
+            </Grid>
+
+            <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,10,0,0">
+              <Button Command="{Binding AddCommandStepCommand}" Content="+ Commande" />
+              <Button Command="{Binding AddWaitStepCommand}" Content="+ Attente" Margin="6,0,0,0" />
+              <Button Command="{Binding AddSayStepCommand}" Content="+ Parole" Margin="6,0,0,0" />
+              <Border Width="1" Background="{StaticResource Line}" Margin="12,2" />
+              <Button Command="{Binding MoveUpCommand}" Content="Monter" />
+              <Button Command="{Binding MoveDownCommand}" Content="Descendre" Margin="6,0,0,0" />
+              <Button Command="{Binding RemoveStepCommand}" Content="Retirer" Margin="6,0,0,0" />
+            </StackPanel>
+
+            <Grid Grid.Row="3" Margin="0,10,0,0">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+              </Grid.ColumnDefinitions>
+
+              <StackPanel Grid.Column="0" Orientation="Horizontal">
+                <Button Command="{Binding SaveCommand}" Content="Enregistrer" Padding="20,8"
+                        FontWeight="SemiBold" />
+                <Button Command="{Binding RevertCommand}" Content="Annuler" Margin="6,0,0,0" />
+                <Button Command="{Binding TestCommand}" Content="Essayer en simulation"
+                        Margin="6,0,0,0" />
+              </StackPanel>
+
+              <TextBlock Grid.Column="1" Text="{Binding Verdict}" Margin="16,0,0,0"
+                         VerticalAlignment="Center" TextWrapping="Wrap" FontSize="11"
+                         Foreground="{StaticResource Warn}" />
+            </Grid>
+          </Grid>
+        </Grid>
+      </TabItem>
+
     </TabControl>
   </Grid>
 </Window>

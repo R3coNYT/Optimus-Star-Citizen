@@ -1,4 +1,4 @@
-using System.Text.Encodings.Web;
+﻿using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Optimus.Core.Domain.Copilots;
@@ -23,6 +23,10 @@ public static class SettingsWriter
     private static readonly JsonSerializerOptions Format = new()
     {
         WriteIndented = true,
+
+        // Les noeuds construits a la main - JsonArray.Add, l'indexeur - sont enveloppes dans un
+        // JsonValue generique, que la serialisation refuse d'ecrire sans resolveur de types.
+        TypeInfoResolver = new System.Text.Json.Serialization.Metadata.DefaultJsonTypeInfoResolver(),
 
         // Sans cela, les accents et les apostrophes ressortent en séquences é, illisibles
         // dans un fichier que l'utilisateur a le droit d'ouvrir et de modifier à la main.
