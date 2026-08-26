@@ -166,7 +166,7 @@
                         BorderThickness="0" Background="Transparent"
                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                 <ListView.ItemContainerStyle>
-                  <Style TargetType="ListViewItem">
+                  <Style TargetType="ListViewItem" BasedOn="{StaticResource PlainRow}">
                     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                     <Setter Property="Padding" Value="10,5" />
                     <Setter Property="Background" Value="Transparent" />
@@ -223,7 +223,8 @@
           </Grid>
 
           <ListView Grid.Row="1" ItemsSource="{Binding Commands}"
-                    SelectedItem="{Binding SelectedCommand}">
+                    SelectedItem="{Binding SelectedCommand}"
+                    ItemContainerStyle="{StaticResource GridRow}">
             <ListView.View>
               <GridView>
                 <GridViewColumn Header="CATÉGORIE" Width="110" DisplayMemberBinding="{Binding Category}" />
@@ -272,7 +273,8 @@
                        Foreground="{StaticResource TextMuted}" VerticalAlignment="Center" />
           </Grid>
 
-          <ListView Grid.Row="1" ItemsSource="{Binding Bindings}" SelectedItem="{Binding SelectedSlot}">
+          <ListView Grid.Row="1" ItemsSource="{Binding Bindings}" SelectedItem="{Binding SelectedSlot}"
+                    ItemContainerStyle="{StaticResource GridRow}">
             <ListView.View>
               <GridView>
                 <GridViewColumn Header="ÉTAT" Width="120">
@@ -517,7 +519,7 @@
                      Background="{StaticResource Panel}" BorderBrush="{StaticResource Line}"
                      Foreground="{StaticResource Text}">
               <ListBox.ItemContainerStyle>
-                <Style TargetType="ListBoxItem">
+                <Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
                   <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                   <Setter Property="Padding" Value="10,7" />
                 </Style>
@@ -593,7 +595,7 @@
                        Background="{StaticResource Panel}" BorderBrush="{StaticResource Line}"
                        Foreground="{StaticResource Text}" FontFamily="Consolas">
                 <ListBox.ItemContainerStyle>
-                  <Style TargetType="ListBoxItem">
+                  <Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
                     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                     <Setter Property="Padding" Value="10,5" />
                   </Style>

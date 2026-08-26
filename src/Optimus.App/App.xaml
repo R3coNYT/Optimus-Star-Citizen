@@ -179,5 +179,98 @@
       <Setter Property="Margin" Value="0,8,0,0" />
     </Style>
 
+    <!--
+      Ligne d'une liste a colonnes.
+      Le gabarit par defaut peint la selection avec les couleurs systeme, prevues pour un fond
+      clair : sur ce fond sombre, le texte devenait illisible des qu'on cliquait une ligne. On
+      reprend donc le gabarit, en conservant le GridViewRowPresenter sans lequel les colonnes ne
+      s'afficheraient plus du tout.
+    -->
+    <Style x:Key="GridRow" TargetType="ListViewItem">
+      <Setter Property="Foreground" Value="{StaticResource Text}" />
+      <Setter Property="Padding" Value="0,6" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="ListViewItem">
+            <Border x:Name="Shell" Background="Transparent" BorderThickness="0,0,0,1"
+                    BorderBrush="Transparent" Padding="{TemplateBinding Padding}">
+              <GridViewRowPresenter Content="{TemplateBinding Content}"
+                                    Columns="{TemplateBinding GridView.ColumnCollection}"
+                                    VerticalAlignment="Center" />
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="Shell" Property="Background" Value="{StaticResource PanelHigh}" />
+              </Trigger>
+              <Trigger Property="IsSelected" Value="True">
+                <Setter TargetName="Shell" Property="Background" Value="#22344A" />
+                <Setter TargetName="Shell" Property="BorderBrush" Value="{StaticResource Accent}" />
+                <Setter Property="Foreground" Value="{StaticResource Text}" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <!--
+      Ligne d'une liste SANS colonnes, journal compris. Le gabarit a colonnes ne conviendrait
+      pas ici : son GridViewRowPresenter n'afficherait rien faute de colonnes a presenter.
+    -->
+    <Style x:Key="PlainRow" TargetType="ListViewItem">
+      <Setter Property="Foreground" Value="{StaticResource Text}" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="Padding" Value="10,5" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="ListViewItem">
+            <Border x:Name="Shell" Background="Transparent" BorderThickness="2,0,0,0"
+                    BorderBrush="Transparent" Padding="{TemplateBinding Padding}">
+              <ContentPresenter />
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="Shell" Property="Background" Value="{StaticResource PanelHigh}" />
+              </Trigger>
+              <Trigger Property="IsSelected" Value="True">
+                <Setter TargetName="Shell" Property="Background" Value="#22344A" />
+                <Setter TargetName="Shell" Property="BorderBrush" Value="{StaticResource Accent}" />
+                <Setter Property="Foreground" Value="{StaticResource Text}" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <!--
+      Meme raison pour les listes simples : l'entree selectionnee doit rester lisible.
+    -->
+    <Style TargetType="ListBoxItem">
+      <Setter Property="Foreground" Value="{StaticResource Text}" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="Padding" Value="10,6" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="ListBoxItem">
+            <Border x:Name="Shell" Background="Transparent" BorderThickness="2,0,0,0"
+                    BorderBrush="Transparent" Padding="{TemplateBinding Padding}">
+              <ContentPresenter />
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="Shell" Property="Background" Value="{StaticResource PanelHigh}" />
+              </Trigger>
+              <Trigger Property="IsSelected" Value="True">
+                <Setter TargetName="Shell" Property="Background" Value="#22344A" />
+                <Setter TargetName="Shell" Property="BorderBrush" Value="{StaticResource Accent}" />
+                <Setter Property="Foreground" Value="{StaticResource Text}" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
   </Application.Resources>
 </Application>
