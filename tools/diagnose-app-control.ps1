@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Diagnostique et lève un blocage « stratégie de contrôle d'application » (0x800711C7).
 
@@ -104,6 +104,71 @@ if ($Fix -and $marked.Count -gt 0) {
 elseif ($marked.Count -gt 0) {
     Write-Step 'Reparation'
     Write-Warn 'Relancez avec -Fix pour retirer la marque du web.'
+}
+
+# ------------------------------------------------- Ce que Windows a REELLEMENT bloque
+
+Write-Step 'Fichiers refuses par la politique, d''apres Windows'
+
+# Smart App Control n'evalue pas seulement le point d'entree : il verifie CHAQUE binaire
+# charge. Un .exe qui demarre peut donc se faire refuser un DLL en cours de route, avec pour
+# seul symptome une notification vague. Windows, lui, nomme le fichier exact - autant le lui
+# demander plutot que de deviner.
+$blocked = @()
+$logReadable = $true
+
+# « Aucun evenement correspondant » n'est pas une erreur : c'est le cas normal quand rien
+# n'a ete bloque. Le confondre avec un journal illisible enverrait chercher des droits
+# administrateur pour rien.
+$events = $null
+try {
+    $events = Get-WinEvent -FilterHashtable @{
+        LogName = 'Microsoft-Windows-CodeIntegrity/Operational'
+        StartTime = (Get-Date).AddDays(-2)
+    } -ErrorAction Stop
+}
+catch [System.Diagnostics.Eventing.Reader.EventLogNotFoundException] {
+    $logReadable = $false
+    Write-Warn 'Journal CodeIntegrity absent : cette machine n''est pas concernee.'
+}
+catch {
+    if ($_.Exception.Message -match 'Aucun|No events') {
+        $events = @()
+    }
+    else {
+        $logReadable = $false
+        Write-Warn "Journal CodeIntegrity illisible : $($_.Exception.Message)"
+        Write-Warn 'Relancez PowerShell en tant qu''administrateur pour y acceder.'
+    }
+}
+
+foreach ($event in @($events)) {
+    # 3077 = bloque, 3076 = signale en mode audit.
+    if ($event.Id -ne 3077 -and $event.Id -ne 3076) { continue }
+
+    $text = $event.Message
+    if ($text -notmatch 'Optimus') { continue }
+
+    $file = if ($text -match 'File Name:\s*(\S+)') { $matches[1] } else { '(nom absent)' }
+
+    $blocked += [pscustomobject]@{
+        Quand = $event.TimeCreated
+        Mode  = if ($event.Id -eq 3077) { 'BLOQUE' } else { 'audit' }
+        Fichier = $file
+    }
+}
+
+if ($blocked.Count -eq 0 -and $logReadable) {
+    Write-Ok 'Aucun refus concernant Optimus dans les deux derniers jours.'
+    Write-Ok 'Si une notification apparait quand meme, relevez le chemin exact qu''elle nomme.'
+}
+else {
+    Write-Bad "$($blocked.Count) refus concernant Optimus :"
+    foreach ($entry in ($blocked | Sort-Object Quand -Descending | Select-Object -First 15)) {
+        Write-Bad ("  {0:HH:mm:ss}  {1,-7} {2}" -f $entry.Quand, $entry.Mode, $entry.Fichier)
+    }
+    Write-Host ''
+    Write-Warn 'Ce sont ces fichiers-la qu''il faut faire accepter, pas seulement l''executable.'
 }
 
 # ------------------------------------------------------------------ Conclusion
