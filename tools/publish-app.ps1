@@ -140,6 +140,35 @@ Get-ChildItem -LiteralPath $OutputDir -Recurse -File | Unblock-File -ErrorAction
 # l'autre, et rien ne distingue a l'oeil un dossier de sa version precedente : plusieurs fois
 # une option venait d'etre ajoutee sans etre dans le paquet copie, et le symptome n'en disait
 # rien. Ce fichier se lit dans l'explorateur, avant meme d'ouvrir un terminal.
+# Lanceur de secours.
+#
+# Smart App Control refuse l'apphost non signe (Optimus.App.exe). Le meme programme se lance
+# par « dotnet Optimus.App.dll » : dotnet.exe est signe Microsoft, la politique le laisse
+# passer, et c'est exactement le contournement qui a servi au banc d'essai (R16).
+#
+# Un fichier .cmd plutot qu'une consigne dans un message : personne ne retient une ligne de
+# commande qu'il tape trois fois par mois.
+$launcher = @(
+    '@echo off',
+    'rem Lance Optimus via dotnet.exe, signe Microsoft, quand Smart App Control refuse',
+    'rem l''executable non signe. Voir VERSION.txt et le risque R16.',
+    'cd /d "%~dp0"',
+    'where dotnet >nul 2>&1',
+    'if %errorlevel%==0 (',
+    '    start "" dotnet Optimus.App.dll',
+    '    exit /b',
+    ')',
+    'if exist "%ProgramFiles%\dotnet\dotnet.exe" (',
+    '    start "" "%ProgramFiles%\dotnet\dotnet.exe" Optimus.App.dll',
+    '    exit /b',
+    ')',
+    'echo Le runtime .NET 8 Desktop est introuvable.',
+    'echo Installez-le : winget install Microsoft.DotNet.DesktopRuntime.8',
+    'pause'
+)
+Set-Content -LiteralPath (Join-Path $OutputDir 'Lancer-Optimus.cmd') -Value $launcher -Encoding ascii
+Write-Ok 'Lancer Optimus.cmd : contourne Smart App Control via dotnet.exe'
+
 $cliDll = Join-Path $OutputDir 'Optimus.App.exe'
 $builtAt = if (Test-Path -LiteralPath $cliDll) {
     (Get-Item -LiteralPath $cliDll).LastWriteTime.ToString('yyyy-MM-dd HH:mm')
@@ -167,18 +196,18 @@ Write-Ok "Dossier    : $OutputDir"
 Write-Ok "Poids total : $size Mo"
 Write-Host ''
 Write-Host 'Copie ce dossier entier sur la machine de jeu, puis :' -ForegroundColor Cyan
-
-if ($FrameworkDependent) {
-    Write-Host '  Prerequis, une seule fois :  winget install Microsoft.DotNet.Runtime.8'
-    Write-Host ''
-    Write-Host '  dotnet Optimus.App.exe --status'
-    Write-Host '  dotnet Optimus.App.exe "Optimus, allume les lumieres"          (simulation)'
-    Write-Host '  dotnet Optimus.App.exe --real "Optimus, allume les lumieres"   (touches reellement envoyees)'
-}
-else {
-    Write-Host '  Unblock-File .\Optimus.App.exe        (marque de provenance externe)'
-    Write-Host ''
-    Write-Host '  .\Optimus.App.exe --status'
-    Write-Host '  .\Optimus.App.exe "Optimus, allume les lumieres"          (simulation)'
-    Write-Host '  .\Optimus.App.exe --real "Optimus, allume les lumieres"   (touches reellement envoyees)'
-}
+Write-Host ''
+Write-Host '  Prerequis, une seule fois :'
+Write-Host '    winget install Microsoft.DotNet.DesktopRuntime.8'
+Write-Host '    (le runtime DESKTOP, pas seulement le runtime de base : WPF en depend)'
+Write-Host ''
+Write-Host '  Lancement :'
+Write-Host '    Optimus.App.exe                 en temps normal'
+Write-Host '    Lancer-Optimus.cmd          si Windows refuse l''executable'
+Write-Host ''
+Write-Host '  Le .cmd passe par dotnet.exe, signe Microsoft : c''est le meme contournement'
+Write-Host '  que pour le banc d''essai quand Smart App Control bloque un binaire sans'
+Write-Host '  reputation (risque R16). La reponse definitive reste la signature de code.'
+Write-Host ''
+Write-Host '  Verifiez VERSION.txt apres la copie : sa date doit correspondre a la ligne'
+Write-Host '  « binaire » affichee dans l''en-tete de la fenetre.'
