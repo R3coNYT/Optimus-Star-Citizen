@@ -142,20 +142,84 @@ catch {
     }
 }
 
+# Le nom du fichier se lit dans les DONNEES de l'evenement, pas dans son message : celui-ci
+# est traduit, et chercher « File Name: » sur un Windows francais - qui ecrit « Nom du
+# fichier » - ne trouve evidemment rien. La structure XML, elle, garde des noms de champs
+# invariants.
+function Get-BlockedFile {
+    param($Event)
+
+    try {
+        $xml = [xml] $Event.ToXml()
+
+        foreach ($data in $xml.Event.EventData.Data) {
+            if ($data.Name -match 'File|Path' -and $data.'#text') {
+                $value = [string] $data.'#text'
+                if ($value -match '\.(dll|exe|sys|ps1)$' -or $value -match '\\') { return $value }
+            }
+        }
+    }
+    catch {
+        # On continue avec les autres pistes.
+    }
+
+    # Repli : n'importe quelle propriete qui ressemble a un chemin.
+    foreach ($property in $Event.Properties) {
+        $value = [string] $property.Value
+        if ($value -match '\.(dll|exe|sys)$') { return $value }
+    }
+
+    # Dernier repli : un chemin dans le message, quelle que soit la langue.
+    if ($Event.Message -match '(\\Device\\[^\s,;]+|[A-Za-z]:\\[^\s,;]+\.(?:dll|exe|sys))') {
+        return $matches[1]
+    }
+
+    return $null
+}
+
+$unnamed = @()
+
 foreach ($event in @($events)) {
     # 3077 = bloque, 3076 = signale en mode audit.
     if ($event.Id -ne 3077 -and $event.Id -ne 3076) { continue }
 
-    $text = $event.Message
-    if ($text -notmatch 'Optimus') { continue }
+    $file = Get-BlockedFile -Event $event
 
-    $file = if ($text -match 'File Name:\s*(\S+)') { $matches[1] } else { '(nom absent)' }
+    # Le filtre sur « Optimus » ne peut s'appliquer qu'une fois le nom connu : le message
+    # traduit ne contient pas forcement le mot.
+    if ($file -and $file -notmatch 'Optimus') { continue }
+
+    if (-not $file) {
+        $unnamed += $event
+        continue
+    }
 
     $blocked += [pscustomobject]@{
         Quand = $event.TimeCreated
         Mode  = if ($event.Id -eq 3077) { 'BLOQUE' } else { 'audit' }
         Fichier = $file
     }
+}
+
+# Si rien n'a pu etre nomme, on montre un evenement brut : mieux vaut du texte a lire que
+# quinze lignes de « (nom absent) » qui n'apprennent rien.
+if ($blocked.Count -eq 0 -and $unnamed.Count -gt 0) {
+    Write-Warn "$($unnamed.Count) refus trouves, mais le nom du fichier n'a pas pu etre extrait."
+    Write-Warn 'Evenement le plus recent, brut :'
+    Write-Host ''
+    Write-Host ($unnamed[0].Message) -ForegroundColor Gray
+    Write-Host ''
+    Write-Host '--- donnees structurees ---' -ForegroundColor Gray
+    try {
+        $xml = [xml] $unnamed[0].ToXml()
+        foreach ($data in $xml.Event.EventData.Data) {
+            Write-Host ("    {0} = {1}" -f $data.Name, $data.'#text') -ForegroundColor Gray
+        }
+    }
+    catch {
+        Write-Warn "XML illisible : $($_.Exception.Message)"
+    }
+    Write-Host ''
 }
 
 if ($blocked.Count -eq 0 -and $logReadable) {
