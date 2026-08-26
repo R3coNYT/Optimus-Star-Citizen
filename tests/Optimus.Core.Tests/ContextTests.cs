@@ -50,8 +50,8 @@ public sealed class ContextTests
 
         // Deux fois de suite : une bascule aveugle donnerait l'inverse au second passage, ce qui
         // est exactement ce qui se produisait - dire « mode navigation » faisait croire au combat.
-        Assert.Equal(expectedCombat, state.ApplyMasterMode(utterance));
-        Assert.Equal(expectedCombat, state.ApplyMasterMode(utterance));
+        Assert.Equal(expectedCombat, state.ApplyMasterMode(normalizedUtterance: utterance));
+        Assert.Equal(expectedCombat, state.ApplyMasterMode(normalizedUtterance: utterance));
     }
 
     [Fact]
@@ -59,8 +59,8 @@ public sealed class ContextTests
     {
         CopilotState state = new();
 
-        Assert.True(state.ApplyMasterMode("change de mode"));
-        Assert.False(state.ApplyMasterMode("change de mode"));
+        Assert.True(state.ApplyMasterMode(normalizedUtterance: "change de mode"));
+        Assert.False(state.ApplyMasterMode(normalizedUtterance: "change de mode"));
     }
 
     [Fact]

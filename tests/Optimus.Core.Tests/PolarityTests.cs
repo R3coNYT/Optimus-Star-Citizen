@@ -204,4 +204,49 @@ public sealed class PolarityTests
         Assert.NotNull(request);
         Assert.Equal(expectedKey, request!.Keys[0]);
     }
+
+    [Theory]
+    [InlineData("Optimus, ferme les portes", "spaceship_general/v_close_all_doors")]
+    [InlineData("Optimus, ouvre les portes", "spaceship_general/v_open_all_doors")]
+    [InlineData("Optimus, mode combat", "spaceship_movement/v_master_mode_set_scm")]
+    [InlineData("Optimus, mode navigation", "spaceship_movement/v_master_mode_set_nav")]
+    public void Les_actions_dirigees_du_jeu_sont_preferees_quand_elles_ont_une_touche(
+        string utterance, string expectedAction)
+    {
+        // Le jeu expose ces quatre actions depuis toujours ; mon inventaire les avait ratees
+        // parce qu'il cherchait des suffixes « _on » et « _off ». Sans elles, « ferme les
+        // portes » basculait - donc les ouvrait une fois sur deux.
+        BindingProfile bound = _bindings.WithOverrides([
+            new Binding("spaceship_general/v_open_all_doors", InputSpec.Simple("F13")),
+            new Binding("spaceship_general/v_close_all_doors", InputSpec.Simple("F14")),
+            new Binding("spaceship_movement/v_master_mode_set_scm", InputSpec.Simple("F15")),
+            new Binding("spaceship_movement/v_master_mode_set_nav", InputSpec.Simple("F16")),
+        ]);
+
+        FastIntentMatcher matcher = new(_catalog);
+        IntentResolution resolution = matcher.Resolve(utterance, wakeWord: "Optimus");
+
+        Assert.Equal(IntentDecision.Execute, resolution.Decision);
+        Assert.NotEqual(CommandPolarity.Neutral, resolution.Best!.Polarity);
+
+        string[] actions = resolution.Best.Command
+            .ActionsFor(resolution.Best.Polarity, bound)
+            .Where(s => s.Type == ActionStepType.GameAction)
+            .Select(s => s.ActionId!)
+            .ToArray();
+
+        Assert.Equal([expectedAction], actions);
+    }
+
+    [Fact]
+    public void Verrouiller_une_porte_n_est_pas_la_fermer()
+    {
+        // Le jeu distingue v_close_all_doors de v_lock_all_doors. Mes formulations rangeaient
+        // « verrouille les portes » sous « fermer », ce qui melangeait deux gestes distincts.
+        Assert.True(_catalog.TryGet("ship.doors.toggle", out CommandDefinition? doors));
+        Assert.True(_catalog.TryGet("ship.doorlocks.toggle", out CommandDefinition? locks));
+
+        Assert.DoesNotContain("verrouille les portes", doors!.AllPhrases);
+        Assert.Contains("verrouille les portes", locks!.AllPhrases);
+    }
 }

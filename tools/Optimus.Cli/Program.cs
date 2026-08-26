@@ -450,7 +450,7 @@ public static class Program
         // le pilote lui annonce. Un IGameStateProvider prendra le relais le jour venu.
         if (result.Command?.Id == MasterMode.CommandId && result.Succeeded)
         {
-            bool combat = State.ApplyMasterMode(result.Intent?.NormalizedText);
+            bool combat = State.ApplyMasterMode(result.Polarity, result.Intent?.NormalizedText);
             Console.WriteLine($"  contexte    mode {(combat ? "COMBAT" : "navigation")}");
         }
 
@@ -524,7 +524,7 @@ public static class Program
         // proposition doit compter autant qu'une commande comprise du premier coup.
         if (command.Id == MasterMode.CommandId && result.Succeeded)
         {
-            bool combat = State.ApplyMasterMode(utterance);
+            bool combat = State.ApplyMasterMode(polarity, utterance);
             Console.WriteLine($"  contexte    mode {(combat ? "COMBAT" : "navigation")}");
         }
 

@@ -542,7 +542,7 @@ public sealed class OptimusRuntime : IAsyncDisposable
         // pilote lui annonce, et lit le sens dans la phrase plutot que de basculer a l'aveugle.
         if (result.Command?.Id == MasterMode.CommandId && result.Succeeded)
         {
-            State.ApplyMasterMode(utterance);
+            State.ApplyMasterMode(result.Polarity, utterance);
             StateChanged?.Invoke(this, EventArgs.Empty);
         }
 

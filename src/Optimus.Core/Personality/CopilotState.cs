@@ -1,4 +1,5 @@
-﻿using Optimus.Core.Domain.Personality;
+﻿using Optimus.Core.Domain.Commands;
+using Optimus.Core.Domain.Personality;
 using Optimus.Core.Execution;
 
 namespace Optimus.Core.Personality;
@@ -43,14 +44,31 @@ public sealed class CopilotState
     public void SetCombat(bool active) => CombatActive = active;
 
     /// <summary>
-    /// Aligne le mode déclaré sur ce que le pilote vient de dire, plutôt que de basculer à
-    /// l'aveugle : voir <see cref="MasterMode"/> pour la raison. Retourne l'état atteint.
+    /// Aligne le mode déclaré sur ce que le pilote vient de demander. Retourne l'état atteint.
     /// </summary>
-    public bool ApplyMasterMode(string? normalizedUtterance)
+    /// <param name="polarity">
+    /// Sens porté par l'intention, quand la formulation le dit. Depuis que le jeu expose
+    /// <c>v_master_mode_set_scm</c> et <c>v_master_mode_set_nav</c>, « mode combat » et « mode
+    /// navigation » sont des phrases <b>polarisées</b> : la réponse est déjà là, et la relire
+    /// dans les mots reviendrait à la déduire deux fois — deux occasions de diverger.
+    /// </param>
+    /// <param name="normalizedUtterance">
+    /// Repli pour les formulations neutres — « change de mode » — où seule une bascule a du sens.
+    /// </param>
+    public bool ApplyMasterMode(
+        CommandPolarity polarity = CommandPolarity.Neutral,
+        string? normalizedUtterance = null)
     {
-        if (MasterMode.Intended(normalizedUtterance) is bool target)
+        bool? target = polarity switch
         {
-            SetCombat(target);
+            CommandPolarity.On => true,
+            CommandPolarity.Off => false,
+            _ => MasterMode.Intended(normalizedUtterance),
+        };
+
+        if (target is bool wanted)
+        {
+            SetCombat(wanted);
         }
         else
         {

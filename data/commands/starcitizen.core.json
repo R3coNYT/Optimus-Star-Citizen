@@ -104,21 +104,38 @@
       "kind": "action",
       "name": "Portes du vaisseau",
       "category": "ship",
-      "voice_phrases": ["les portes", "ouverture des portes"],
-      "phrases_on": ["ouvre les portes", "ouvre-moi les portes", "déverrouille les portes"],
-      "phrases_off": ["ferme les portes", "ferme-moi les portes", "verrouille les portes"],
+      "voice_phrases": ["les portes"],
+      "phrases_on": ["ouvre les portes", "ouvre-moi les portes", "ouverture des portes"],
+      "phrases_off": ["ferme les portes", "ferme-moi les portes", "fermeture des portes"],
       "actions": [{"type": "game_action", "action_id": "spaceship_general/v_toggle_all_doors"}],
+      "actions_on": [{"type": "game_action", "action_id": "spaceship_general/v_open_all_doors"}],
+      "actions_off": [{"type": "game_action", "action_id": "spaceship_general/v_close_all_doors"}],
       "cooldown_ms": 1000
+    },
+    {
+      "id": "ship.doorlocks.toggle",
+      "kind": "action",
+      "name": "Verrouillage des portes",
+      "category": "ship",
+      "voice_phrases": ["verrous des portes"],
+      "phrases_on": ["verrouille les portes", "verrouille tout"],
+      "phrases_off": ["déverrouille les portes", "déverrouille tout"],
+      "actions": [{"type": "game_action", "action_id": "spaceship_general/v_toggle_all_doorlocks"}],
+      "actions_on": [{"type": "game_action", "action_id": "spaceship_general/v_lock_all_doors"}],
+      "actions_off": [{"type": "game_action", "action_id": "spaceship_general/v_unlock_all_doors"}],
+      "cooldown_ms": 600
     },
     {
       "id": "ship.portlocks.toggle",
       "kind": "action",
       "name": "Verrouillage des sas",
       "category": "ship",
-      "voice_phrases": ["verrouillage des portes"],
+      "voice_phrases": ["verrous des sas"],
       "phrases_on": ["verrouille les sas"],
       "phrases_off": ["déverrouille les sas"],
       "actions": [{"type": "game_action", "action_id": "spaceship_general/v_toggle_all_portlocks"}],
+      "actions_on": [{"type": "game_action", "action_id": "spaceship_general/v_lock_all_ports"}],
+      "actions_off": [{"type": "game_action", "action_id": "spaceship_general/v_unlock_all_ports"}],
       "cooldown_ms": 1000
     },
     {
@@ -260,17 +277,14 @@
     {
       "id": "nav.master_mode.cycle",
       "kind": "action",
-      "name": "Basculer entre NAV et SCM",
+      "name": "Mode de vol",
       "category": "navigation",
-      "voice_phrases": [
-        "mode navigation",
-        "mode combat",
-        "passe en mode combat",
-        "passe en navigation",
-        "change de mode",
-        "mode scm"
-      ],
+      "voice_phrases": ["change de mode", "mode de vol"],
+      "phrases_on": ["mode combat", "passe en mode combat", "mode scm", "passe en scm"],
+      "phrases_off": ["mode navigation", "passe en navigation", "mode nav", "passe en nav"],
       "actions": [{"type": "game_action", "action_id": "spaceship_movement/v_master_mode_cycle_long"}],
+      "actions_on": [{"type": "game_action", "action_id": "spaceship_movement/v_master_mode_set_scm"}],
+      "actions_off": [{"type": "game_action", "action_id": "spaceship_movement/v_master_mode_set_nav"}],
       "cooldown_ms": 1500
     },
     {
@@ -747,7 +761,7 @@
       ],
       "actions": [
         {"type": "say", "response_key": "macro.landing.begin"},
-        {"type": "command", "command_id": "nav.master_mode.cycle"},
+        {"type": "command", "command_id": "nav.master_mode.cycle", "polarity": "on", "require_directed": true},
         {"type": "wait", "ms": 600},
         {"type": "command", "command_id": "flight.landing_gear.toggle", "polarity": "on"},
         {"type": "wait", "ms": 500},
@@ -772,6 +786,8 @@
       ],
       "actions": [
         {"type": "say", "response_key": "macro.battle.begin"},
+        {"type": "command", "command_id": "nav.master_mode.cycle", "polarity": "on", "require_directed": true},
+        {"type": "wait", "ms": 500},
         {"type": "command", "command_id": "ship.shields.toggle", "polarity": "on"},
         {"type": "wait", "ms": 400},
         {"type": "command", "command_id": "ship.weapons.toggle", "polarity": "on"},
