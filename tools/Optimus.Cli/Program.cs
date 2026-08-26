@@ -1,5 +1,6 @@
 ﻿using Optimus.Core.Abstractions;
 using Optimus.Core.Bindings;
+using Optimus.Core.Diagnostics;
 using Optimus.Core.Domain.Bindings;
 using Optimus.Core.Domain.Commands;
 using Optimus.Core.Domain.Copilots;
@@ -37,6 +38,10 @@ public static class Program
         {
             // Sortie redirigée ou console indisponible.
         }
+
+        // Le banc d'essai journalise dans le meme dossier que l'application, sous son propre
+        // nom : les deux peuvent tourner en meme temps sans melanger leurs traces.
+        DiagnosticLog.Start("Optimus.Cli");
 
         bool real = args.Contains("--real", StringComparer.OrdinalIgnoreCase);
         bool status = args.Contains("--status", StringComparer.OrdinalIgnoreCase);

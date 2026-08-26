@@ -6,6 +6,7 @@ using Optimus.App.Input;
 using Optimus.App.Mvvm;
 using Optimus.Core.Abstractions;
 using Optimus.Core.Bindings;
+using Optimus.Core.Diagnostics;
 using Optimus.Core.Domain.Bindings;
 using Optimus.Core.Domain.Commands;
 using Optimus.Core.Execution;
@@ -114,6 +115,7 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
         ToggleSimulationCommand = new RelayCommand(ToggleSimulation);
         ToggleKillSwitchCommand = new RelayCommand(ToggleKillSwitch);
         ClearJournalCommand = new RelayCommand(Journal.Clear);
+        OpenLogsCommand = new RelayCommand(DiagnosticLog.Reveal);
         AssignCommand = new AsyncRelayCommand(AssignAsync, () => SelectedSlot is not null && !_capturing);
         UnassignCommand = new RelayCommand(Unassign, () => SelectedSlot?.Origin is not null);
         ImportLayoutCommand = new RelayCommand(ImportLayout);
@@ -161,6 +163,9 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
     public RelayCommand ToggleKillSwitchCommand { get; }
 
     public RelayCommand ClearJournalCommand { get; }
+
+    /// <summary>Ouvre le dossier des journaux : indispensable quand il faut envoyer un rapport.</summary>
+    public RelayCommand OpenLogsCommand { get; }
 
     public AsyncRelayCommand AssignCommand { get; }
 
@@ -665,6 +670,18 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
 
     private void Add(ActivityEntry entry)
     {
+        // Ce que l'interface fait - assigner une touche, importer, changer un reglage - doit
+        // figurer dans le fichier au meme titre que ce que le moteur fait, sans quoi la trace
+        // precedant une chute serait borgne.
+        if (entry.Level is ActivityLevel.Warning or ActivityLevel.Danger)
+        {
+            DiagnosticLog.Warn(entry.Title, entry.Detail);
+        }
+        else if (entry.Level != ActivityLevel.Muted)
+        {
+            DiagnosticLog.Info(entry.Title, entry.Detail);
+        }
+
         Journal.Add(entry);
 
         while (Journal.Count > JournalCapacity)

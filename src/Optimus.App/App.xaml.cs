@@ -1,5 +1,7 @@
+﻿using System.IO;
 using System.Windows;
 using System.Windows.Threading;
+using Optimus.Core.Diagnostics;
 using Optimus.Infrastructure.Hosting;
 
 namespace Optimus.App;
@@ -10,34 +12,157 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
-        // Une exception non gérée sur le fil d'interface fermerait la fenêtre sans un mot.
-        // Optimus doit survivre à une commande ratée : on montre, on continue.
-        DispatcherUnhandledException += OnUnhandled;
+        DiagnosticLog.Start("Optimus.App", Version());
+        InstallSafetyNets();
 
-        string? dataRoot = OptimusRuntime.FindDataRoot(AppContext.BaseDirectory);
-
-        if (dataRoot is null)
+        // Verifie le filet lui-meme. Un dispositif de rapport de plantage qu'on n'a jamais vu
+        // fonctionner n'est pas un dispositif : c'est une intention.
+        if (e.Args.Contains("--test-crash", StringComparer.OrdinalIgnoreCase))
         {
-            MessageBox.Show(
-                "Dossier « data » introuvable au-dessus de l'exécutable.\n\n"
-                + "Optimus a besoin du catalogue de commandes et du profil de bindings pour démarrer.",
-                "Optimus", MessageBoxButton.OK, MessageBoxImage.Error);
+            DiagnosticLog.Warn("essai de plantage demandé", "l'exception suivante est volontaire");
 
-            Shutdown(1);
+            // Un vrai fil, pas un Task.Run : une tache non observee ne tue pas le processus et
+            // n'eprouverait donc pas le filet qui compte - celui du fil d'arriere-plan fatal.
+            System.Threading.Thread thread = new(() => throw new InvalidOperationException(
+                "Plantage d'essai déclenché par --test-crash. Si vous lisez ceci dans un rapport, "
+                + "le dispositif fonctionne."))
+            {
+                IsBackground = false,
+            };
+
+            thread.Start();
             return;
         }
 
-        MainWindow window = new(OptimusRuntime.Load(dataRoot));
-        MainWindow = window;
-        window.Show();
+        try
+        {
+            DiagnosticLog.Info("recherche du dossier de données", AppContext.BaseDirectory);
+            string? dataRoot = OptimusRuntime.FindDataRoot(AppContext.BaseDirectory);
+
+            if (dataRoot is null)
+            {
+                DiagnosticLog.Error("dossier « data » introuvable");
+
+                MessageBox.Show(
+                    "Dossier « data » introuvable au-dessus de l'exécutable.\n\n"
+                    + "Optimus a besoin du catalogue de commandes et du profil de bindings pour démarrer.",
+                    "Optimus", MessageBoxButton.OK, MessageBoxImage.Error);
+
+                Shutdown(1);
+                return;
+            }
+
+            DiagnosticLog.Info("chargement des données", dataRoot);
+            OptimusRuntime runtime = OptimusRuntime.Load(dataRoot);
+
+            DiagnosticLog.Info(
+                "données chargées",
+                $"{runtime.Catalog.Count} commandes · {runtime.Bindings.BoundCount} actions liées · "
+                + $"copilote « {runtime.Copilot.Name} » · voix « {runtime.Copilot.Voice.VoiceId} »");
+
+            foreach (Core.Loading.LoadIssue issue in runtime.Issues)
+            {
+                DiagnosticLog.Warn("anomalie de chargement", issue.ToString());
+            }
+
+            DiagnosticLog.Info("ouverture de la fenêtre");
+            MainWindow window = new(runtime);
+            MainWindow = window;
+            window.Show();
+
+            DiagnosticLog.Info("fenêtre affichée");
+        }
+        catch (Exception exception)
+        {
+            // Un plantage AU DEMARRAGE ne laisse aucune fenetre pour se plaindre : sans ce
+            // filet, Optimus disparaitrait en silence avant d'avoir rien pu dire.
+            Fatal(exception, "démarrage");
+            Shutdown(1);
+        }
     }
 
-    private void OnUnhandled(object sender, DispatcherUnhandledExceptionEventArgs e)
+    /// <summary>
+    /// Trois filets, parce qu'une exception ne remonte pas au même endroit selon le fil qui la
+    /// lève, et que le plus dangereux des trois est celui qui tue le processus sans un mot.
+    /// </summary>
+    private void InstallSafetyNets()
     {
-        MessageBox.Show(
-            e.Exception.Message, "Optimus — erreur inattendue",
-            MessageBoxButton.OK, MessageBoxImage.Warning);
+        // Fil d'interface : rattrapable. On montre, on continue.
+        DispatcherUnhandledException += (_, args) =>
+        {
+            Fatal(args.Exception, "interface");
+            args.Handled = true;
+        };
 
-        e.Handled = true;
+        // N'importe quel autre fil : le CLR abat le processus juste apres ce gestionnaire.
+        // On ne peut rien empecher, seulement laisser une trace - c'est tout l'objet.
+        AppDomain.CurrentDomain.UnhandledException += (_, args) =>
+        {
+            if (args.ExceptionObject is Exception exception)
+            {
+                Fatal(exception, args.IsTerminating ? "fil d'arrière-plan (fatal)" : "fil d'arrière-plan");
+            }
+        };
+
+        // Tache dont personne n'a observe le resultat : silencieux par defaut depuis .NET 4.5,
+        // donc invisible sans ceci.
+        TaskScheduler.UnobservedTaskException += (_, args) =>
+        {
+            DiagnosticLog.Error("tâche non observée", args.Exception);
+            args.SetObserved();
+        };
+    }
+
+    private static void Fatal(Exception exception, string origin)
+    {
+        string? report = DiagnosticLog.WriteCrashReport(exception, origin, Context());
+
+        string message = $"Optimus a rencontré un problème ({origin}).\n\n{exception.Message}";
+
+        if (report is not null)
+        {
+            message += $"\n\nRapport écrit dans :\n{report}\n\nOuvrir le dossier ?";
+
+            if (MessageBox.Show(message, "Optimus", MessageBoxButton.YesNo, MessageBoxImage.Error)
+                == MessageBoxResult.Yes)
+            {
+                DiagnosticLog.Reveal();
+            }
+
+            return;
+        }
+
+        MessageBox.Show(message, "Optimus", MessageBoxButton.OK, MessageBoxImage.Error);
+    }
+
+    /// <summary>Ce qu'il faut savoir de l'installation pour comprendre un rapport reçu par message.</summary>
+    private static string Context()
+    {
+        string version = Path.Combine(AppContext.BaseDirectory, "VERSION.txt");
+
+        return $"Exécutable  : {AppContext.BaseDirectory}\n"
+             + $"Journaux    : {DiagnosticLog.Directory}\n"
+             + $"VERSION.txt : {(File.Exists(version) ? File.ReadAllText(version).Trim().Replace("\n", " | ") : "absent")}";
+    }
+
+    private static string Version()
+    {
+        System.Reflection.Assembly assembly = typeof(App).Assembly;
+        string number = assembly.GetName().Version?.ToString(3) ?? "0.0.0";
+
+        try
+        {
+            string location = assembly.Location;
+            if (!string.IsNullOrEmpty(location) && File.Exists(location))
+            {
+                return $"{number} (compilé le {File.GetLastWriteTime(location):yyyy-MM-dd HH:mm})";
+            }
+        }
+        catch (IOException)
+        {
+            // Le repere est un confort.
+        }
+
+        return number;
     }
 }

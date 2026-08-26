@@ -1,5 +1,6 @@
 ﻿using Optimus.Core.Abstractions;
 using Optimus.Core.Bindings;
+using Optimus.Core.Diagnostics;
 using Optimus.Core.Domain.Bindings;
 using Optimus.Core.Domain.Commands;
 using Optimus.Core.Domain.Copilots;
@@ -304,8 +305,28 @@ public sealed class OptimusRuntime : IAsyncDisposable
         VoiceGrammar grammar = VoiceGrammarBuilder.Build(Catalog, Copilot.WakeWord, settings);
         GrammarSize = grammar.Count;
 
-        _listener = new WindowsGrammarListener(
-            grammar, settings.ConfidenceThreshold, settings.NoiseFloor, Copilot.Language);
+        DiagnosticLog.Info(
+            "démarrage de l'écoute",
+            $"mode {settings.Mode} · {grammar.Count} alternatives · mot d'éveil « {Copilot.WakeWord} » · "
+            + $"seuils bruit {settings.NoiseFloor:F2} / exécution {settings.ConfidenceThreshold:F2} · "
+            + $"langue {Copilot.Language}");
+
+        try
+        {
+            _listener = new WindowsGrammarListener(
+                grammar, settings.ConfidenceThreshold, settings.NoiseFloor, Copilot.Language);
+        }
+        catch (Exception exception)
+        {
+            // Cause la plus frequente : aucun peripherique d'entree, ou pas de moteur de
+            // reconnaissance installe pour cette langue. Le dire vaut mieux que de tomber.
+            DiagnosticLog.Error(
+                "impossible d'ouvrir le moteur de reconnaissance", exception);
+            throw new InvalidOperationException(
+                "Le moteur de reconnaissance vocale n'a pas pu démarrer. Vérifiez qu'un microphone "
+                + "est branché et que la reconnaissance vocale Windows est installée pour le français.",
+                exception);
+        }
 
         _listener.Recognized += OnRecognized;
 
@@ -319,6 +340,8 @@ public sealed class OptimusRuntime : IAsyncDisposable
         }
 
         await _listener.StartAsync(cancellationToken).ConfigureAwait(false);
+
+        DiagnosticLog.Info("écoute active", _listener.RecognizerName);
         StateChanged?.Invoke(this, EventArgs.Empty);
     }
 
@@ -337,6 +360,8 @@ public sealed class OptimusRuntime : IAsyncDisposable
             _listener.Recognized -= OnRecognized;
             await _listener.DisposeAsync().ConfigureAwait(false);
             _listener = null;
+
+            DiagnosticLog.Info("écoute arrêtée");
         }
 
         StateChanged?.Invoke(this, EventArgs.Empty);
@@ -394,7 +419,8 @@ public sealed class OptimusRuntime : IAsyncDisposable
         catch (Exception exception)
         {
             // Une exception dans un gestionnaire « async void » abattrait le processus. Optimus
-            // doit survivre a une commande ratee : on la signale et l'on continue d'ecouter.
+            // doit survivre a une commande ratee : on la trace, on la signale, on continue.
+            DiagnosticLog.Error($"échec du traitement de « {recognition.Text} »", exception);
             Report(new SessionActivity(recognition, null, $"Erreur interne : {exception.Message}", []));
         }
         finally
@@ -612,7 +638,24 @@ public sealed class OptimusRuntime : IAsyncDisposable
         _pendingUntil = DateTimeOffset.MinValue;
     }
 
-    private void Report(SessionActivity activity) => Activity?.Invoke(this, activity);
+    private void Report(SessionActivity activity)
+    {
+        // La trace de ce qui precede une chute vaut souvent mieux que la pile d'appels : elle
+        // dit ce qu'Optimus etait en train de faire, et donc quoi reproduire.
+        if (activity.Result is ExecutionResult result)
+        {
+            DiagnosticLog.Info(
+                $"{result.Status} · {result.Command?.Id ?? "?"}",
+                $"trace {result.TraceId} · {result.TotalMs:F1} ms"
+                + (result.Message is null ? string.Empty : $" · {result.Message}"));
+        }
+        else if (activity.Recognition is VoiceRecognition heard && heard.Outcome != RecognitionOutcome.Noise)
+        {
+            DiagnosticLog.Debug($"entendu « {heard.Text} »", $"confiance {heard.Confidence:F2}");
+        }
+
+        Activity?.Invoke(this, activity);
+    }
 
     private static BindingProfile Compose(BindingProfile defaults, BindingOverlay overlay) =>
         overlay.Count == 0
