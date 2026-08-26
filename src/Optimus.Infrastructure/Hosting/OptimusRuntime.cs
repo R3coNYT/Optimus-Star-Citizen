@@ -842,14 +842,21 @@ public sealed class OptimusRuntime : IAsyncDisposable
 
         ForgetBeliefIfGameRestarted(game);
 
+        // Le mode de vol suit : c'est le seul etat du vaisseau qu'Optimus croie connaitre, et
+        // une macro qui branche dessus doit lire ce qu'il croit maintenant, pas au demarrage.
         return SimulationMode
-            ? ExecutionEnvironment.Sandbox with { KillSwitchEngaged = KillSwitch }
+            ? ExecutionEnvironment.Sandbox with
+            {
+                KillSwitchEngaged = KillSwitch,
+                CombatActive = State.CombatActive,
+            }
             : new ExecutionEnvironment(
                 SimulationMode: false,
                 GameRunning: game.IsRunning,
                 GameForeground: game.IsForeground,
                 RequireGameForeground: true,
-                KillSwitchEngaged: KillSwitch);
+                KillSwitchEngaged: KillSwitch,
+                CombatActive: State.CombatActive);
     }
 
     private SequenceOptions Timing() =>

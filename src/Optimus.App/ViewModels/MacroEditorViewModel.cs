@@ -8,133 +8,6 @@ using Optimus.Infrastructure.Hosting;
 
 namespace Optimus.App.ViewModels;
 
-/// <summary>Une étape en cours d'édition. Mutable, contrairement à <see cref="ActionStep"/>.</summary>
-public sealed class StepRow : ObservableObject
-{
-    private ActionStepType _type = ActionStepType.Command;
-    private string? _commandId;
-    private CommandPolarity _polarity = CommandPolarity.Neutral;
-    private bool _requireDirected;
-    private int _waitMs = 500;
-    private string? _responseKey;
-
-    public ActionStepType Type
-    {
-        get => _type;
-        set
-        {
-            if (Set(ref _type, value))
-            {
-                RaiseShape();
-            }
-        }
-    }
-
-    public string? CommandId
-    {
-        get => _commandId;
-        set
-        {
-            if (Set(ref _commandId, value))
-            {
-                Raise(nameof(Summary));
-            }
-        }
-    }
-
-    public CommandPolarity Polarity
-    {
-        get => _polarity;
-        set
-        {
-            if (Set(ref _polarity, value))
-            {
-                Raise(nameof(Summary));
-            }
-        }
-    }
-
-    public bool RequireDirected
-    {
-        get => _requireDirected;
-        set
-        {
-            if (Set(ref _requireDirected, value))
-            {
-                Raise(nameof(Summary));
-            }
-        }
-    }
-
-    public int WaitMs
-    {
-        get => _waitMs;
-        set
-        {
-            if (Set(ref _waitMs, value))
-            {
-                Raise(nameof(Summary));
-            }
-        }
-    }
-
-    public string? ResponseKey
-    {
-        get => _responseKey;
-        set
-        {
-            if (Set(ref _responseKey, value))
-            {
-                Raise(nameof(Summary));
-            }
-        }
-    }
-
-    public bool IsCommand => Type == ActionStepType.Command;
-
-    public bool IsWait => Type == ActionStepType.Wait;
-
-    public bool IsSay => Type == ActionStepType.Say;
-
-    /// <summary>Ligne lisible dans la liste : ce que fera l'étape, en français.</summary>
-    public string Summary => Type switch
-    {
-        ActionStepType.Wait => $"attendre {WaitMs} ms",
-        ActionStepType.Say => $"dire « {ResponseKey} »",
-        _ => (Polarity switch
-        {
-            CommandPolarity.On => "allumer ",
-            CommandPolarity.Off => "éteindre ",
-            _ => "basculer ",
-        }) + (CommandId ?? "?") + (RequireDirected ? "   [sens garanti exigé]" : string.Empty),
-    };
-
-    public ActionStep ToStep() => Type switch
-    {
-        ActionStepType.Wait => ActionStep.Wait(WaitMs),
-        ActionStepType.Say => new ActionStep(ActionStepType.Say, ResponseKey: ResponseKey),
-        _ => ActionStep.Call(CommandId ?? string.Empty, Polarity, RequireDirected),
-    };
-
-    public static StepRow From(ActionStep step) => new()
-    {
-        _type = step.Type,
-        _commandId = step.CommandId,
-        _polarity = step.Polarity,
-        _requireDirected = step.RequireDirected,
-        _waitMs = step.WaitMs > 0 ? step.WaitMs : 500,
-        _responseKey = step.ResponseKey,
-    };
-
-    private void RaiseShape()
-    {
-        Raise(nameof(IsCommand));
-        Raise(nameof(IsWait));
-        Raise(nameof(IsSay));
-        Raise(nameof(Summary));
-    }
-}
-
 /// <summary>Une macro dans la liste : la sienne, ou celle qui est livrée.</summary>
 public sealed class MacroRow(CommandDefinition macro, bool isUsers)
 {
@@ -174,6 +47,9 @@ public sealed class MacroEditorViewModel : ObservableObject
     private string _phrases = string.Empty;
     private int _cooldownMs = 4000;
     private StepRow? _selectedStep;
+
+    /// <summary>Racine de l'arbre. <see cref="Steps"/> n'en est que la projection.</summary>
+    private readonly List<StepRow> _root = new();
     private string _verdict = string.Empty;
     private bool _dirty;
 
@@ -196,6 +72,8 @@ public sealed class MacroEditorViewModel : ObservableObject
         AddCommandStepCommand = new RelayCommand(() => AddStep(ActionStepType.Command));
         AddWaitStepCommand = new RelayCommand(() => AddStep(ActionStepType.Wait));
         AddSayStepCommand = new RelayCommand(() => AddStep(ActionStepType.Say));
+        AddBranchStepCommand = new RelayCommand(() => AddStep(ActionStepType.If));
+        AddLoopStepCommand = new RelayCommand(() => AddStep(ActionStepType.Repeat));
         RemoveStepCommand = new RelayCommand(RemoveStep, () => SelectedStep is not null);
         MoveUpCommand = new RelayCommand(() => Move(-1), () => CanMove(-1));
         MoveDownCommand = new RelayCommand(() => Move(1), () => CanMove(1));
@@ -205,6 +83,13 @@ public sealed class MacroEditorViewModel : ObservableObject
 
     public ObservableCollection<MacroRow> Macros { get; } = new();
 
+    /// <summary>
+    /// Projection à plat de l'arbre, telle que la liste l'affiche.
+    ///
+    /// Reconstruite à chaque changement de structure. Elle contient les repères « sinon » et
+    /// « fin », qui ne sont pas des étapes : leur seule raison d'être est de donner un point
+    /// d'insertion à des branches encore vides.
+    /// </summary>
     public ObservableCollection<StepRow> Steps { get; } = new();
 
     /// <summary>Commandes qu'une étape peut appeler, macros exclues pour limiter les cycles.</summary>
@@ -227,6 +112,12 @@ public sealed class MacroEditorViewModel : ObservableObject
     public RelayCommand AddWaitStepCommand { get; }
 
     public RelayCommand AddSayStepCommand { get; }
+
+    /// <summary>Ajoute un « si », avec sa branche « sinon » prête à recevoir.</summary>
+    public RelayCommand AddBranchStepCommand { get; }
+
+    /// <summary>Ajoute une répétition d'un bloc.</summary>
+    public RelayCommand AddLoopStepCommand { get; }
 
     public RelayCommand RemoveStepCommand { get; }
 
@@ -358,6 +249,7 @@ public sealed class MacroEditorViewModel : ObservableObject
     private void LoadSelected()
     {
         Steps.Clear();
+        _root.Clear();
 
         if (Selected is null)
         {
@@ -374,9 +266,11 @@ public sealed class MacroEditorViewModel : ObservableObject
 
             foreach (ActionStep step in macro.Actions)
             {
-                Steps.Add(Track(StepRow.From(step)));
+                _root.Add(Track(StepRow.From(step)));
             }
         }
+
+        Reflow();
 
         Verdict = string.Empty;
         IsDirty = false;
@@ -562,10 +456,17 @@ public sealed class MacroEditorViewModel : ObservableObject
             Name.Trim(),
             "macro",
             phrases,
-            Steps.Select(s => s.ToStep()).ToList(),
+            _root.Select(s => s.ToStep()).ToList(),
             CooldownMs: Math.Max(0, CooldownMs));
     }
 
+    /// <summary>
+    /// Ajoute une étape <b>dans le bloc désigné par la sélection</b>.
+    ///
+    /// C'est la règle qui rend l'édition prévisible : sélectionner « sinon » ajoute au sinon,
+    /// sélectionner un « si » ajoute dans son alors, sélectionner « fin » ajoute après le bloc.
+    /// Sans elle, il n'y aurait aucun moyen de viser une branche vide.
+    /// </summary>
     private void AddStep(ActionStepType type)
     {
         StepRow row = Track(new StepRow
@@ -573,47 +474,130 @@ public sealed class MacroEditorViewModel : ObservableObject
             Type = type,
             CommandId = type == ActionStepType.Command ? Callable.FirstOrDefault() : null,
             ResponseKey = type == ActionStepType.Say ? "system.success" : null,
+            ConditionCommandId = type == ActionStepType.If ? Callable.FirstOrDefault() : null,
         });
 
-        int index = SelectedStep is null ? Steps.Count : Steps.IndexOf(SelectedStep) + 1;
-        Steps.Insert(index, row);
+        (List<StepRow> list, int index) = InsertionPoint();
+        list.Insert(index, row);
+
+        Reflow();
         SelectedStep = row;
         Touch();
     }
 
+    /// <summary>Bloc et position où déposer la prochaine étape.</summary>
+    private (List<StepRow> List, int Index) InsertionPoint()
+    {
+        if (SelectedStep is not StepRow selected)
+        {
+            return (_root, _root.Count);
+        }
+
+        if (selected.Marker == RowMarker.Else && selected.Owner is StepRow owner)
+        {
+            return (owner.Alternative, owner.Alternative.Count);
+        }
+
+        if (selected.Marker == RowMarker.End && selected.Owner is StepRow closed)
+        {
+            (List<StepRow> parent, int at) = Locate(closed);
+            return (parent, at + 1);
+        }
+
+        // Une etape de bloc selectionnee : on entre dedans, ce qui est la seule facon d'y
+        // deposer un premier pas.
+        if (selected.IsBranch || selected.IsLoop)
+        {
+            return (selected.Block, selected.Block.Count);
+        }
+
+        (List<StepRow> list, int position) = Locate(selected);
+        return (list, position + 1);
+    }
+
+    /// <summary>Bloc contenant cette étape, et son rang. Recherche l'arbre entier.</summary>
+    private (List<StepRow> List, int Index) Locate(StepRow row)
+    {
+        return Search(_root) ?? (_root, _root.Count - 1);
+
+        (List<StepRow>, int)? Search(List<StepRow> block)
+        {
+            for (int i = 0; i < block.Count; i++)
+            {
+                if (ReferenceEquals(block[i], row))
+                {
+                    return (block, i);
+                }
+
+                if (Search(block[i].Block) is { } inBlock)
+                {
+                    return inBlock;
+                }
+
+                if (Search(block[i].Alternative) is { } inAlternative)
+                {
+                    return inAlternative;
+                }
+            }
+
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Retire l'étape sélectionnée — et, si c'est un bloc, tout ce qu'elle contient.
+    ///
+    /// Un repère ne se retire pas : « sinon » et « fin » appartiennent à leur « si », et les
+    /// supprimer séparément laisserait une structure que rien ne pourrait plus refermer.
+    /// </summary>
     private void RemoveStep()
     {
-        if (SelectedStep is not StepRow row)
+        if (SelectedStep is not StepRow row || row.IsMarker)
         {
             return;
         }
 
-        int index = Steps.IndexOf(row);
-        Steps.Remove(row);
+        (List<StepRow> list, int index) = Locate(row);
+        list.RemoveAt(index);
+
+        Reflow();
         SelectedStep = Steps.Count == 0 ? null : Steps[Math.Min(index, Steps.Count - 1)];
         Touch();
     }
 
+    /// <summary>Un déplacement reste dans son bloc : on ne saute pas une frontière par mégarde.</summary>
     private bool CanMove(int delta)
     {
-        if (SelectedStep is null)
+        if (SelectedStep is not StepRow row || row.IsMarker)
         {
             return false;
         }
 
-        int target = Steps.IndexOf(SelectedStep) + delta;
-        return target >= 0 && target < Steps.Count;
+        (List<StepRow> list, int index) = Locate(row);
+        int target = index + delta;
+
+        return target >= 0 && target < list.Count;
     }
 
     private void Move(int delta)
     {
-        if (SelectedStep is not StepRow row)
+        if (SelectedStep is not StepRow row || row.IsMarker)
         {
             return;
         }
 
-        int index = Steps.IndexOf(row);
-        Steps.Move(index, index + delta);
+        (List<StepRow> list, int index) = Locate(row);
+        int target = index + delta;
+
+        if (target < 0 || target >= list.Count)
+        {
+            return;
+        }
+
+        list.RemoveAt(index);
+        list.Insert(target, row);
+
+        Reflow();
         SelectedStep = row;
 
         MoveUpCommand.RaiseCanExecuteChanged();
@@ -621,10 +605,61 @@ public sealed class MacroEditorViewModel : ObservableObject
         Touch();
     }
 
+    /// <summary>
+    /// Reconstruit la projection à plat depuis l'arbre.
+    ///
+    /// Les repères sont recréés à chaque passage plutôt que conservés : ils n'ont pas d'état
+    /// propre, et les régénérer garantit qu'aucun ne survit à la disparition de son bloc.
+    /// </summary>
+    private void Reflow()
+    {
+        StepRow? previous = SelectedStep;
+
+        Steps.Clear();
+        Emit(_root, 0);
+
+        if (previous is not null && Steps.Contains(previous))
+        {
+            SelectedStep = previous;
+        }
+
+        void Emit(List<StepRow> block, int depth)
+        {
+            foreach (StepRow row in block)
+            {
+                row.Depth = depth;
+                Steps.Add(row);
+
+                if (!row.IsBranch && !row.IsLoop)
+                {
+                    continue;
+                }
+
+                Emit(row.Block, depth + 1);
+
+                if (row.IsBranch)
+                {
+                    Steps.Add(new StepRow { Marker = RowMarker.Else, Owner = row, Depth = depth });
+                    Emit(row.Alternative, depth + 1);
+                }
+
+                Steps.Add(new StepRow { Marker = RowMarker.End, Owner = row, Depth = depth });
+            }
+        }
+    }
+
     /// <summary>Une étape modifiée salit la macro : sans cela « Enregistrer » resterait grisé.</summary>
     private StepRow Track(StepRow row)
     {
         row.PropertyChanged += (_, _) => Touch();
+
+        // Les enfants aussi : une condition modifiee au fond d'un bloc doit salir la macro,
+        // sans quoi « Enregistrer » resterait grise sur un changement bien reel.
+        foreach (StepRow child in row.Block.Concat(row.Alternative))
+        {
+            Track(child);
+        }
+
         return row;
     }
 

@@ -433,8 +433,9 @@ public static class Program
                 SimulationMode: false,
                 GameRunning: game.IsRunning,
                 GameForeground: game.IsForeground,
-                RequireGameForeground: true)
-            : ExecutionEnvironment.Sandbox;
+                RequireGameForeground: true,
+                CombatActive: State.CombatActive)
+            : ExecutionEnvironment.Sandbox with { CombatActive = State.CombatActive };
 
         ExecutionResult result = await executor
             .ExecuteUtteranceAsync(
@@ -507,8 +508,9 @@ public static class Program
                 SimulationMode: false,
                 GameRunning: game.IsRunning,
                 GameForeground: game.IsForeground,
-                RequireGameForeground: true)
-            : ExecutionEnvironment.Sandbox;
+                RequireGameForeground: true,
+                CombatActive: State.CombatActive)
+            : ExecutionEnvironment.Sandbox with { CombatActive = State.CombatActive };
 
         ExecutionResult result = await executor
             .ExecuteCommandAsync(

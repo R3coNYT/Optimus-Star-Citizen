@@ -56,3 +56,40 @@ public sealed class NullToVisibleConverter : IValueConverter
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
         throw new NotSupportedException("Conversion à sens unique.");
 }
+
+/// <summary>
+/// Profondeur d'imbrication → marge gauche.
+///
+/// L'indentation n'est pas cosmétique ici : elle est le seul indice visuel de ce qu'un bloc
+/// contient. Une séquence dont les branches s'aligneraient toutes à gauche se lirait comme une
+/// liste linéaire, et un pas placé dans le « sinon » passerait pour un pas placé après le « si ».
+/// </summary>
+public sealed class DepthToMarginConverter : IValueConverter
+{
+    /// <summary>Retrait par niveau. Assez pour se voir, assez peu pour tenir en profondeur.</summary>
+    private const double Step = 18;
+
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        new Thickness(value is int depth ? depth * Step : 0, 0, 0, 0);
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        throw new NotSupportedException("Conversion à sens unique.");
+}
+
+/// <summary>
+/// Sujet de condition ↔ rang dans la liste déroulante.
+///
+/// L'ordre est celui de <see cref="ConditionSubject"/> : le certain d'abord, le supposé
+/// ensuite. Ce n'est pas un hasard de rédaction — la liste se lit de haut en bas, et ce qui
+/// vaut le plus mérite d'être proposé le premier.
+/// </summary>
+public sealed class SubjectToIndexConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        value is ConditionSubject subject ? (int)subject : 0;
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        value is int index && Enum.IsDefined(typeof(ConditionSubject), index)
+            ? (ConditionSubject)index
+            : ConditionSubject.Binding;
+}

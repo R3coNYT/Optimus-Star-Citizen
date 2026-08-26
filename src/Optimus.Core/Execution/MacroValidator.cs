@@ -1,4 +1,4 @@
-using Optimus.Core.Domain.Bindings;
+﻿using Optimus.Core.Domain.Bindings;
 using Optimus.Core.Domain.Commands;
 using Optimus.Core.Intent;
 
@@ -116,24 +116,112 @@ public static class MacroValidator
             return;
         }
 
-        foreach (ActionStep step in macro.Actions)
+        // Le controle parcourt les DEUX branches de chaque « si », la ou le depliage n'en retient
+        // qu'une. Une branche jamais prise aujourd'hui - parce que la touche manque, parce que le
+        // vaisseau est en NAV - sera prise demain, et un renvoi casse qui s'y cache empecherait
+        // alors le catalogue entier de se charger.
+        bool testsBelief = false;
+
+        Inspect(macro.Actions);
+
+        if (testsBelief)
         {
-            switch (step.Type)
+            warnings.Add(
+                "Cette macro se fie à un état supposé. Optimus ne connaît que les commutations "
+                + "qu'il a lui-même provoquées : si vous avez actionné la même fonction au "
+                + "clavier, il se trompera sans le savoir.");
+        }
+
+        void Inspect(IReadOnlyList<ActionStep> steps)
+        {
+            foreach (ActionStep step in steps)
             {
-                case ActionStepType.Command when step.CommandId is null
-                    || !catalog.Contains(step.CommandId):
-                    errors.Add($"L'étape renvoie vers « {step.CommandId} », qui n'existe pas.");
+                switch (step.Type)
+                {
+                    case ActionStepType.Command when step.CommandId is null
+                        || !catalog.Contains(step.CommandId):
+                        errors.Add($"L'étape renvoie vers « {step.CommandId} », qui n'existe pas.");
+                        break;
+
+                    case ActionStepType.Wait when step.WaitMs <= 0:
+                        warnings.Add("Une attente de zéro milliseconde ne sert à rien.");
+                        break;
+
+                    case ActionStepType.Say when string.IsNullOrWhiteSpace(step.ResponseKey):
+                        errors.Add("Une étape parlée n'indique pas quelle réplique dire.");
+                        break;
+
+                    case ActionStepType.If:
+                        CheckCondition(step.Condition);
+                        Inspect(step.Block);
+                        Inspect(step.Alternative);
+
+                        if (step.Block.Count == 0 && step.Alternative.Count == 0)
+                        {
+                            warnings.Add("Un « si » dont les deux branches sont vides ne fait rien.");
+                        }
+
+                        break;
+
+                    case ActionStepType.Repeat:
+                        if (step.Repeat < 1 || step.Repeat > MacroExpander.MaxRepeat)
+                        {
+                            errors.Add($"Une répétition de {step.Repeat} tours : le compte doit être "
+                                     + $"compris entre 1 et {MacroExpander.MaxRepeat}.");
+                        }
+
+                        if (step.Block.Count == 0)
+                        {
+                            errors.Add("Une répétition sans étapes ne ferait que perdre du temps.");
+                        }
+
+                        Inspect(step.Block);
+                        break;
+                }
+            }
+        }
+
+        void CheckCondition(MacroCondition? condition)
+        {
+            if (condition is null)
+            {
+                errors.Add("Un « si » sans condition : rien ne permettrait de trancher.");
+                return;
+            }
+
+            if (condition.Subject is ConditionSubject.Binding or ConditionSubject.Directed
+                or ConditionSubject.Believed)
+            {
+                if (condition.CommandId is null || !catalog.Contains(condition.CommandId))
+                {
+                    errors.Add($"La condition porte sur « {condition.CommandId} », qui n'existe pas.");
+                }
+            }
+
+            switch (condition.Subject)
+            {
+                case ConditionSubject.FlightMode
+                    when !IsOneOf(condition.Value, "nav", "scm"):
+                    errors.Add($"Un mode de vol « {condition.Value} » : attendu « nav » ou « scm ».");
                     break;
 
-                case ActionStepType.Wait when step.WaitMs <= 0:
-                    warnings.Add("Une attente de zéro milliseconde ne sert à rien.");
+                case ConditionSubject.Believed when !IsOneOf(condition.Value, "on", "off"):
+                    errors.Add($"Un état supposé « {condition.Value} » : attendu « on » ou « off ».");
                     break;
 
-                case ActionStepType.Say when string.IsNullOrWhiteSpace(step.ResponseKey):
-                    errors.Add("Une étape parlée n'indique pas quelle réplique dire.");
+                case ConditionSubject.Believed:
+                    testsBelief = true;
+                    break;
+
+                case ConditionSubject.Directed when condition.Polarity == CommandPolarity.Neutral:
+                    errors.Add("Une condition sur le sens dirigé doit dire lequel : « on » ou « off ».");
                     break;
             }
         }
+
+        static bool IsOneOf(string? value, params string[] allowed) =>
+            value is not null
+            && allowed.Any(a => string.Equals(a, value, StringComparison.OrdinalIgnoreCase));
 
         // Le depliage attrape les cycles et les renvois casses, y compris indirects.
         CommandCatalog withMacro = CommandCatalog.Merge(

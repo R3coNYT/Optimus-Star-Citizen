@@ -743,7 +743,9 @@
         {"type": "wait", "ms": 300},
         {"type": "command", "command_id": "ship.doors.toggle", "polarity": "off", "require_directed": true},
         {"type": "wait", "ms": 400},
-        {"type": "command", "command_id": "flight.atc_request"},
+        {"type": "if",
+         "condition": {"subject": "binding", "command_id": "flight.atc_request"},
+         "then": [{"type": "command", "command_id": "flight.atc_request"}]},
         {"type": "say", "response_key": "macro.preflight.done"}
       ],
       "cooldown_ms": 4000
@@ -767,7 +769,9 @@
         {"type": "wait", "ms": 500},
         {"type": "command", "command_id": "ship.lights.toggle", "polarity": "on"},
         {"type": "wait", "ms": 300},
-        {"type": "command", "command_id": "flight.atc_request"},
+        {"type": "if",
+         "condition": {"subject": "binding", "command_id": "flight.atc_request"},
+         "then": [{"type": "command", "command_id": "flight.atc_request"}]},
         {"type": "say", "response_key": "macro.landing.done"}
       ],
       "cooldown_ms": 4000

@@ -53,6 +53,23 @@ public enum ActionStepType
     /// sinon.
     /// </summary>
     Command,
+
+    /// <summary>
+    /// Branche : joue un bloc ou l'autre selon une condition.
+    ///
+    /// Tranchee au <b>depliage</b>, pas a l'execution (D38) : le garde doit voir la sequence
+    /// complete avant qu'une seule touche ne parte. Une branche non retenue disparait donc du
+    /// plan, et la trace dit laquelle et pourquoi.
+    /// </summary>
+    If,
+
+    /// <summary>
+    /// Repetition d'un bloc, un nombre de fois <b>fixe</b>.
+    ///
+    /// Fixe, et non « tant que » : une boucle dont la fin depend de l'execution ne peut pas se
+    /// planifier, et le garde ne pourrait plus rien promettre de la sequence entiere.
+    /// </summary>
+    Repeat,
 }
 
 /// <summary>
@@ -75,8 +92,17 @@ public sealed record ActionStep(
     string? ResponseKey = null,
     string? CommandId = null,
     CommandPolarity Polarity = CommandPolarity.Neutral,
-    bool RequireDirected = false)
+    bool RequireDirected = false,
+    MacroCondition? Condition = null,
+    IReadOnlyList<ActionStep>? Then = null,
+    IReadOnlyList<ActionStep>? Else = null)
 {
+    /// <summary>Bloc joue quand la condition tient, ou corps d'une repetition.</summary>
+    public IReadOnlyList<ActionStep> Block => Then ?? Array.Empty<ActionStep>();
+
+    /// <summary>Bloc joue quand elle ne tient pas.</summary>
+    public IReadOnlyList<ActionStep> Alternative => Else ?? Array.Empty<ActionStep>();
+
     public static ActionStep Game(string actionId) => new(ActionStepType.GameAction, actionId);
 
     /// <summary>Étape qui rejoue une autre commande, dans le sens voulu.</summary>
@@ -96,6 +122,17 @@ public sealed record ActionStep(
 
     public static ActionStep Wait(int milliseconds) =>
         new(ActionStepType.Wait, WaitMs: milliseconds);
+
+    /// <summary>Branche conditionnelle.</summary>
+    public static ActionStep When(
+        MacroCondition condition,
+        IReadOnlyList<ActionStep> then,
+        IReadOnlyList<ActionStep>? otherwise = null) =>
+        new(ActionStepType.If, Condition: condition, Then: then, Else: otherwise);
+
+    /// <summary>Repetition d'un bloc, un nombre de fois fixe.</summary>
+    public static ActionStep Loop(int times, IReadOnlyList<ActionStep> body) =>
+        new(ActionStepType.Repeat, Repeat: times, Then: body);
 }
 
 /// <summary>

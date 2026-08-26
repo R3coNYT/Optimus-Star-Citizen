@@ -210,12 +210,20 @@ public sealed class CommandExecutor
         // vaisseau dans un etat que personne n'a demande.
         IReadOnlyList<ActionStep> steps;
         IReadOnlyList<string> skipped;
+        IReadOnlyList<string> decisions;
 
         try
         {
-            MacroExpansion plan = MacroExpander.Plan(command, _catalog, _bindings, polarity);
+            // Les conditions se tranchent ici, sur ce qu'Optimus sait a cet instant precis, et
+            // le plan qui en sort est celui que la garde verifiera. Les faits sont forkes par le
+            // deplieur : planifier ne change rien a ce qu'Optimus croit.
+            MacroFacts facts = MacroFacts.From(
+                environment.CombatActive, _belief, _catalog, environment.SimulationMode);
+
+            MacroExpansion plan = MacroExpander.Plan(command, _catalog, _bindings, polarity, facts);
             steps = plan.Steps;
             skipped = plan.Skipped;
+            decisions = plan.Decisions;
         }
         catch (InvalidOperationException exception)
         {
@@ -276,16 +284,24 @@ public sealed class CommandExecutor
 
             // Un pas ecarte se voit dans la trace. Une macro qui sauterait une etape en silence
             // laisserait croire qu'elle a tout fait - c'est justement ce dont on veut se premunir.
-            if (skipped.Count > 0)
+            // Une branche tranchee s'y voit aussi, et separement : « écarté » dit qu'Optimus a
+            // refuse de jouer un pas, « si … → non » dit qu'il a suivi la macro telle qu'elle est
+            // ecrite. Les melanger ferait lire un incident la ou il n'y a qu'un « sinon ».
+            if (skipped.Count > 0 || decisions.Count > 0)
             {
-                List<SequenceStepTrace> withSkips = new(traces);
+                List<SequenceStepTrace> annotated = new(traces);
+
+                foreach (string decision in decisions)
+                {
+                    annotated.Add(new SequenceStepTrace(annotated.Count, $"si — {decision}", 0));
+                }
 
                 foreach (string reason in skipped)
                 {
-                    withSkips.Add(new SequenceStepTrace(withSkips.Count, $"écarté — {reason}", 0));
+                    annotated.Add(new SequenceStepTrace(annotated.Count, $"écarté — {reason}", 0));
                 }
 
-                traces = withSkips;
+                traces = annotated;
             }
 
             return new ExecutionResult(

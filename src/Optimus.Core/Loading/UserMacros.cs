@@ -145,8 +145,78 @@ public static class UserMacros
 
         ActionStepType.Command => Command(step),
 
+        ActionStepType.If => Branch(step),
+
+        ActionStepType.Repeat => new JsonObject
+        {
+            ["type"] = "repeat",
+            ["times"] = step.Repeat,
+            ["body"] = Steps(step.Block),
+        },
+
         _ => new JsonObject { ["type"] = "game_action", ["action_id"] = step.ActionId },
     };
+
+    private static JsonObject Branch(ActionStep step)
+    {
+        JsonObject node = new()
+        {
+            ["type"] = "if",
+            ["condition"] = Condition(step.Condition),
+            ["then"] = Steps(step.Block),
+        };
+
+        // Un « sinon » vide ne s'ecrit pas : le fichier se relit a la main, et une cle vide y
+        // ferait chercher une intention qui n'y est pas.
+        if (step.Alternative.Count > 0)
+        {
+            node["else"] = Steps(step.Alternative);
+        }
+
+        return node;
+    }
+
+    private static JsonObject Condition(MacroCondition? condition)
+    {
+        if (condition is null)
+        {
+            return new JsonObject();
+        }
+
+        JsonObject node = new()
+        {
+            ["subject"] = condition.Subject switch
+            {
+                ConditionSubject.Binding => "binding",
+                ConditionSubject.Directed => "directed",
+                ConditionSubject.Simulation => "simulation",
+                ConditionSubject.FlightMode => "flight_mode",
+                _ => "believed",
+            },
+        };
+
+        if (condition.CommandId is not null)
+        {
+            node["command_id"] = condition.CommandId;
+        }
+
+        if (condition.Polarity != CommandPolarity.Neutral)
+        {
+            node["polarity"] = condition.Polarity == CommandPolarity.On ? "on" : "off";
+        }
+
+        if (condition.Value is not null)
+        {
+            node["value"] = condition.Value;
+        }
+
+        if (condition.Negated)
+        {
+            node["negated"] = true;
+        }
+
+        return node;
+    }
 
     private static JsonObject Command(ActionStep step)
     {

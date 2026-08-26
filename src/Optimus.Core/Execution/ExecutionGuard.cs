@@ -16,7 +16,8 @@ public sealed record ExecutionEnvironment(
     bool GameRunning = true,
     bool GameForeground = true,
     bool RequireGameForeground = true,
-    bool ConfirmDangerous = true)
+    bool ConfirmDangerous = true,
+    bool CombatActive = false)
 {
     /// <summary>Environnement des tests et du mode simulation : rien n'est exigé du monde extérieur.</summary>
     public static ExecutionEnvironment Sandbox { get; } = new(

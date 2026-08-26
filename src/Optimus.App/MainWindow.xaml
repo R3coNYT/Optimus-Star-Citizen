@@ -652,7 +652,24 @@
                 </ListBox.ItemContainerStyle>
                 <ListBox.ItemTemplate>
                   <DataTemplate>
-                    <TextBlock Text="{Binding Summary}" FontFamily="Consolas" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding Summary}" FontFamily="Consolas" TextWrapping="Wrap"
+                               Margin="{Binding Depth, Converter={StaticResource DepthToMargin}}">
+                      <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                          <!-- Les valeurs par defaut sont indispensables : sans elles, la fin du
+                               declencheur rend UnsetValue, que Foreground refuse - et l'exception
+                               remonte jusqu'a la fenetre. -->
+                          <Setter Property="Foreground" Value="{StaticResource Text}" />
+                          <Setter Property="FontStyle" Value="Normal" />
+                          <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsMarker}" Value="True">
+                              <Setter Property="Foreground" Value="{StaticResource TextMuted}" />
+                              <Setter Property="FontStyle" Value="Italic" />
+                            </DataTrigger>
+                          </Style.Triggers>
+                        </Style>
+                      </TextBlock.Style>
+                    </TextBlock>
                   </DataTemplate>
                 </ListBox.ItemTemplate>
               </ListBox>
@@ -689,6 +706,50 @@
                                Text="Renonce à l'étape plutôt que de basculer à l'aveugle. À cocher quand l'état de départ est incertain — les portes, par exemple." />
                   </StackPanel>
 
+                  <StackPanel Visibility="{Binding IsBranch, Converter={StaticResource BoolToVisible}, FallbackValue=Collapsed, TargetNullValue=Collapsed}">
+                    <TextBlock Text="Ce qui est interrogé" Style="{StaticResource Hint}" Margin="0,6,0,2" />
+                    <ComboBox SelectedIndex="{Binding Subject, Converter={StaticResource SubjectToIndex}}">
+                      <ComboBoxItem Content="la commande a toutes ses touches" />
+                      <ComboBoxItem Content="le sens est garanti par le jeu" />
+                      <ComboBoxItem Content="Optimus simule" />
+                      <ComboBoxItem Content="le mode de vol" />
+                      <ComboBoxItem Content="l'état supposé d'une bascule" />
+                    </ComboBox>
+                    <TextBlock Text="{Binding SubjectCaveat}" Style="{StaticResource Hint}" />
+
+                    <StackPanel Visibility="{Binding ConditionNeedsCommand, Converter={StaticResource BoolToVisible}, FallbackValue=Collapsed}">
+                      <TextBlock Text="Commande visée" Style="{StaticResource Hint}" Margin="0,10,0,2" />
+                      <ComboBox ItemsSource="{Binding DataContext.Callable,
+                                              RelativeSource={RelativeSource AncestorType=TabItem}}"
+                                SelectedItem="{Binding ConditionCommandId}" />
+                    </StackPanel>
+
+                    <StackPanel Visibility="{Binding ConditionNeedsPolarity, Converter={StaticResource BoolToVisible}, FallbackValue=Collapsed}">
+                      <TextBlock Text="Sens" Style="{StaticResource Hint}" Margin="0,10,0,2" />
+                      <ComboBox SelectedIndex="{Binding ConditionPolarity, Converter={StaticResource PolarityToIndex}}">
+                        <ComboBoxItem Content="basculer" IsEnabled="False" />
+                        <ComboBoxItem Content="allumer" />
+                        <ComboBoxItem Content="éteindre" />
+                      </ComboBox>
+                    </StackPanel>
+
+                    <StackPanel Visibility="{Binding ConditionNeedsValue, Converter={StaticResource BoolToVisible}, FallbackValue=Collapsed}">
+                      <TextBlock Text="Valeur attendue" Style="{StaticResource Hint}" Margin="0,10,0,2" />
+                      <ComboBox ItemsSource="{Binding ConditionValues}" SelectedItem="{Binding ConditionValue}" />
+                    </StackPanel>
+
+                    <CheckBox IsChecked="{Binding ConditionNegated}" Content="Inverser la condition" />
+                    <TextBlock Style="{StaticResource Hint}"
+                               Text="Les étapes suivantes indentées forment le « alors ». Celles placées sous « sinon » ne se jouent que si la condition ne tient pas." />
+                  </StackPanel>
+
+                  <StackPanel Visibility="{Binding IsLoop, Converter={StaticResource BoolToVisible}, FallbackValue=Collapsed, TargetNullValue=Collapsed}">
+                    <TextBlock Text="Nombre de tours" Style="{StaticResource Hint}" Margin="0,6,0,2" />
+                    <TextBox Text="{Binding Times, UpdateSourceTrigger=PropertyChanged}" />
+                    <TextBlock Style="{StaticResource Hint}"
+                               Text="Un compte fixe, entre 1 et 20. Une boucle « tant que » ne pourrait pas être planifiée à l'avance, et le garde ne pourrait plus vérifier la séquence complète avant qu'une touche ne parte." />
+                  </StackPanel>
+
                   <StackPanel Visibility="{Binding IsWait, Converter={StaticResource BoolToVisible}, FallbackValue=Collapsed, TargetNullValue=Collapsed}">
                     <TextBlock Text="Attente (ms)" Style="{StaticResource Hint}" Margin="0,6,0,2" />
                     <TextBox Text="{Binding WaitMs, UpdateSourceTrigger=PropertyChanged}" />
@@ -710,6 +771,8 @@
               <Button Command="{Binding AddCommandStepCommand}" Content="+ Commande" />
               <Button Command="{Binding AddWaitStepCommand}" Content="+ Attente" Margin="6,0,0,0" />
               <Button Command="{Binding AddSayStepCommand}" Content="+ Parole" Margin="6,0,0,0" />
+              <Button Command="{Binding AddBranchStepCommand}" Content="+ Si" Margin="6,0,0,0" />
+              <Button Command="{Binding AddLoopStepCommand}" Content="+ Répéter" Margin="6,0,0,0" />
               <Border Width="1" Background="{StaticResource Line}" Margin="12,2" />
               <Button Command="{Binding MoveUpCommand}" Content="Monter" />
               <Button Command="{Binding MoveDownCommand}" Content="Descendre" Margin="6,0,0,0" />

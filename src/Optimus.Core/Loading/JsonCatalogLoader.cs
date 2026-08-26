@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using Optimus.Core.Domain.Bindings;
 using Optimus.Core.Domain.Commands;
+using Optimus.Core.Execution;
 
 namespace Optimus.Core.Loading;
 
@@ -189,6 +190,69 @@ public static class JsonCatalogLoader
             issues);
     }
 
+    /// <summary>
+    /// Lit une condition, ou signale precisement ce qui manque.
+    ///
+    /// Une condition mal ecrite est ignoree avec son « si » entier plutot que remplacee par une
+    /// valeur par defaut : une branche qui se joue sur un verdict invente serait pire qu'une
+    /// branche qui ne se joue pas.
+    /// </summary>
+    private static MacroCondition? ParseCondition(
+        JsonElement step, string path, string commandId, List<LoadIssue> issues)
+    {
+        if (!step.TryGetProperty("condition", out JsonElement node)
+            || node.ValueKind != JsonValueKind.Object)
+        {
+            issues.Add(new LoadIssue(path, commandId, "Étape « si » sans condition, ignorée."));
+            return null;
+        }
+
+        string? subject = GetString(node, "subject")?.ToLowerInvariant();
+
+        ConditionSubject? parsed = subject switch
+        {
+            "binding" => ConditionSubject.Binding,
+            "directed" => ConditionSubject.Directed,
+            "simulation" => ConditionSubject.Simulation,
+            "flight_mode" => ConditionSubject.FlightMode,
+            "believed" => ConditionSubject.Believed,
+            _ => null,
+        };
+
+        if (parsed is not ConditionSubject known)
+        {
+            issues.Add(new LoadIssue(path, commandId,
+                $"Condition sur « {subject ?? "?"} » : sujet inconnu. Étape ignorée."));
+
+            return null;
+        }
+
+        string? target = GetString(node, "command_id");
+
+        if (known is ConditionSubject.Binding or ConditionSubject.Directed or ConditionSubject.Believed
+            && string.IsNullOrWhiteSpace(target))
+        {
+            issues.Add(new LoadIssue(path, commandId,
+                $"Condition « {subject} » sans command_id. Étape ignorée."));
+
+            return null;
+        }
+
+        CommandPolarity polarity = GetString(node, "polarity")?.ToLowerInvariant() switch
+        {
+            "on" => CommandPolarity.On,
+            "off" => CommandPolarity.Off,
+            _ => CommandPolarity.Neutral,
+        };
+
+        return new MacroCondition(
+            known,
+            GetBool(node, "negated") ?? false,
+            target,
+            polarity,
+            GetString(node, "value"));
+    }
+
     private static List<ActionStep> ParseActions(
         JsonElement command, string path, string commandId, List<LoadIssue> issues,
         string property = "actions")
@@ -253,6 +317,39 @@ public static class JsonCatalogLoader
 
                         steps.Add(ActionStep.Call(
                             target, polarity, GetBool(action, "require_directed") ?? false));
+                        break;
+                    }
+
+                case "if":
+                    {
+                        MacroCondition? condition = ParseCondition(action, path, commandId, issues);
+
+                        if (condition is null)
+                        {
+                            break;
+                        }
+
+                        steps.Add(ActionStep.When(
+                            condition,
+                            ParseActions(action, path, commandId, issues, "then"),
+                            ParseActions(action, path, commandId, issues, "else")));
+                        break;
+                    }
+
+                case "repeat":
+                    {
+                        int times = GetInt(action, "times") ?? 0;
+
+                        if (times < 1 || times > MacroExpander.MaxRepeat)
+                        {
+                            issues.Add(new LoadIssue(path, commandId,
+                                $"Répétition de {times} tours : le compte doit être compris entre 1 "
+                                + $"et {MacroExpander.MaxRepeat}. Étape ignorée."));
+                            break;
+                        }
+
+                        steps.Add(ActionStep.Loop(
+                            times, ParseActions(action, path, commandId, issues, "body")));
                         break;
                     }
 

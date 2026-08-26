@@ -8,6 +8,8 @@
     <mvvm:BoolToVisibleConverter x:Key="BoolToVisible" />
     <mvvm:PolarityToIndexConverter x:Key="PolarityToIndex" />
     <mvvm:NullToVisibleConverter x:Key="NullToVisible" />
+    <mvvm:DepthToMarginConverter x:Key="DepthToMargin" />
+    <mvvm:SubjectToIndexConverter x:Key="SubjectToIndex" />
 
     <!--
       Palette sombre : l'outil accompagne une session de jeu de nuit, un fond clair
