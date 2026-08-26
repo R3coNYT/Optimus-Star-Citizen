@@ -53,7 +53,7 @@ foreach ($id in $profile.unbound) { $unbound[$id] = $true }
 
 $categories = @('ship','flight','navigation','quantum','combat','weapons','shields','power','targeting',
                 'scanning','mining','salvage','exploration','landing','takeoff','camera','communication',
-                'vehicle','fps','social','immersion','lore','system','ai','media','plugin')
+                'vehicle','fps','social','immersion','lore','system','ai','media','plugin','macro')
 $kinds = @('action','macro','dialogue','lore','query')
 
 $errors = @()

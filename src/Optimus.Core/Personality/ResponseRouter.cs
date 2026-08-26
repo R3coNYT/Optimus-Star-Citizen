@@ -47,6 +47,13 @@ public static class ResponseRouter
             variables["action"] = actionId;
         }
 
+        // La sequence a deja parle pour elle-meme : ajouter un « Recu » par-dessus reviendrait
+        // a doubler la voix du copilote.
+        if (result.Narrated && result.Succeeded)
+        {
+            return null;
+        }
+
         return result.Status switch
         {
             ExecutionStatus.Executed or ExecutionStatus.Simulated =>

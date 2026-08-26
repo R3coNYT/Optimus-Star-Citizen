@@ -234,6 +234,27 @@ public static class JsonCatalogLoader
                     steps.Add(new ActionStep(ActionStepType.Say, ResponseKey: GetString(action, "response_key")));
                     break;
 
+                case "command":
+                    {
+                        string? target = GetString(action, "command_id");
+
+                        if (string.IsNullOrWhiteSpace(target))
+                        {
+                            issues.Add(new LoadIssue(path, commandId, "Étape « command » sans command_id, ignorée."));
+                            break;
+                        }
+
+                        CommandPolarity polarity = GetString(action, "polarity")?.ToLowerInvariant() switch
+                        {
+                            "on" => CommandPolarity.On,
+                            "off" => CommandPolarity.Off,
+                            _ => CommandPolarity.Neutral,
+                        };
+
+                        steps.Add(ActionStep.Call(target, polarity));
+                        break;
+                    }
+
                 default:
                     issues.Add(new LoadIssue(path, commandId, $"Type d'étape « {type} » non pris en charge, ignorée."));
                     break;

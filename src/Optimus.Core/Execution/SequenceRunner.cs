@@ -1,4 +1,4 @@
-using Optimus.Core.Abstractions;
+﻿using Optimus.Core.Abstractions;
 using Optimus.Core.Domain.Bindings;
 using Optimus.Core.Domain.Commands;
 
@@ -41,10 +41,22 @@ public sealed class SequenceRunner
     private readonly IInputEngine _engine;
     private readonly BindingProfile _bindings;
 
-    public SequenceRunner(IInputEngine engine, BindingProfile bindings)
+    private readonly Func<string, CancellationToken, Task>? _narrate;
+
+    /// <param name="narrate">
+    /// Prononce une réplique au milieu d'une séquence, désignée par sa clé. Optionnel : le
+    /// moteur reste utilisable sans voix, ce dont les tests profitent. En simulation, la
+    /// narration reste active — ne pas envoyer de touches n'est pas une raison de se taire,
+    /// et c'est même ainsi qu'on vérifie une macro avant de la lancer pour de vrai.
+    /// </param>
+    public SequenceRunner(
+        IInputEngine engine,
+        BindingProfile bindings,
+        Func<string, CancellationToken, Task>? narrate = null)
     {
         _engine = engine ?? throw new ArgumentNullException(nameof(engine));
         _bindings = bindings ?? throw new ArgumentNullException(nameof(bindings));
+        _narrate = narrate;
     }
 
     /// <summary>
@@ -98,6 +110,14 @@ public sealed class SequenceRunner
                 return $"attendre {step.WaitMs} ms";
 
             case ActionStepType.Say:
+                // Une macro de dix secondes qui se deroulerait en silence est inquietante :
+                // c'est precisement pendant une sequence longue qu'on veut etre accompagne.
+                // Faute de narrateur, on trace l'intention plutot que de la perdre.
+                if (_narrate is not null && step.ResponseKey is not null)
+                {
+                    await _narrate(step.ResponseKey, cancellationToken).ConfigureAwait(false);
+                }
+
                 return $"dire « {step.ResponseKey} »";
 
             case ActionStepType.Key:

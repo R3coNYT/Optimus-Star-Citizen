@@ -37,6 +37,54 @@
         { "text": "Rien n'a changé. Raccourci absent." }
       ]
     },
+    "macro.preflight.begin": {
+      "any": [
+        { "text": "Séquence de démarrage. Ne touchez à rien." },
+        { "text": "Préparation au décollage, {pilote}." }
+      ]
+    },
+    "macro.preflight.done": {
+      "any": [
+        { "text": "Vaisseau paré. À vous les commandes." },
+        { "text": "Tous les systèmes en ligne, {pilote}." }
+      ]
+    },
+    "macro.landing.begin": {
+      "any": [
+        { "text": "Approche. Je sors le train." },
+        { "text": "Configuration d'atterrissage, {pilote}." }
+      ]
+    },
+    "macro.landing.done": {
+      "any": [
+        { "text": "Autorisation demandée. Prêt à poser." },
+        { "text": "Nous sommes parés, {pilote}." }
+      ]
+    },
+    "macro.battle.begin": {
+      "any": [
+        { "text": "Postes de combat." },
+        { "text": "Armement en cours, {pilote}." }
+      ]
+    },
+    "macro.battle.done": {
+      "any": [
+        { "text": "Paré au combat." },
+        { "text": "Tout est chaud, {pilote}." }
+      ]
+    },
+    "macro.shutdown.begin": {
+      "any": [
+        { "text": "Extinction des systèmes." },
+        { "text": "Je coupe tout, {pilote}." }
+      ]
+    },
+    "macro.shutdown.done": {
+      "any": [
+        { "text": "Vaisseau hors tension. Bonne journée." },
+        { "text": "Tout est éteint, {pilote}." }
+      ]
+    },
     "system.already_in_state": {
       "any": [
         { "text": "C'est déjà le cas, {pilote}." },

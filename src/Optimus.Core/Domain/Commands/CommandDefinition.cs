@@ -41,6 +41,18 @@ public enum ActionStepType
 
     /// <summary>Réplique du copilote au milieu d'une séquence.</summary>
     Say,
+
+    /// <summary>
+    /// Renvoi vers une autre commande du catalogue.
+    ///
+    /// C'est ce qui rend les macros fiables. Une macro qui enchaînerait des identifiants
+    /// d'action bruts enchaînerait des <b>bascules</b> : chaque pas serait à pile ou face selon
+    /// l'état du vaisseau, et une séquence de six pas n'aurait qu'une chance sur soixante-quatre
+    /// de faire ce qu'on attend. En désignant une commande et un sens, la macro hérite de toute
+    /// la résolution de polarité — action dirigée quand elle a une touche, repli sur la bascule
+    /// sinon.
+    /// </summary>
+    Command,
 }
 
 /// <summary>
@@ -60,9 +72,15 @@ public sealed record ActionStep(
     int Repeat = 1,
     int IntervalMs = InputSpec.DefaultIntervalMs,
     int WaitMs = 0,
-    string? ResponseKey = null)
+    string? ResponseKey = null,
+    string? CommandId = null,
+    CommandPolarity Polarity = CommandPolarity.Neutral)
 {
     public static ActionStep Game(string actionId) => new(ActionStepType.GameAction, actionId);
+
+    /// <summary>Étape qui rejoue une autre commande, dans le sens voulu.</summary>
+    public static ActionStep Call(string commandId, CommandPolarity polarity = CommandPolarity.Neutral) =>
+        new(ActionStepType.Command, CommandId: commandId, Polarity: polarity);
 
     public static ActionStep Wait(int milliseconds) =>
         new(ActionStepType.Wait, WaitMs: milliseconds);
@@ -165,6 +183,21 @@ public sealed record CommandDefinition(
 
         return Actions;
     }
+
+    /// <summary>
+    /// Vrai si ce sens dispose d'une séquence dirigée réellement utilisable.
+    ///
+    /// Une action dirigée est <b>idempotente</b> : la renvoyer ne peut pas nuire, il n'y a donc
+    /// rien à supposer de l'état du vaisseau. C'est seulement sur une bascule qu'un appui de
+    /// trop fait l'inverse de ce qu'on demande.
+    /// </summary>
+    public bool UsesDirectedActions(CommandPolarity polarity, BindingProfile bindings)
+    {
+        IReadOnlyList<ActionStep> directed = DirectedActions(polarity);
+
+        return directed.Count > 0 && ReferenceEquals(ActionsFor(polarity, bindings), directed);
+    }
+
 
     /// <summary>
     /// Actions du jeu de la séquence par défaut.

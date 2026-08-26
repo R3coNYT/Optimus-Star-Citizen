@@ -131,9 +131,11 @@ public sealed class ExecutionGuard
             switch (lookup)
             {
                 case BindingLookup.NotBound:
+                    // L'action est nommee dans le message : sur une macro de dix pas, savoir
+                    // LEQUEL manque est toute la difference entre un diagnostic et une enigme.
                     return new GuardDecision(
                         GuardVerdict.BindingNotConfigured,
-                        "Aucun raccourci n'est configuré pour cette action.",
+                        $"Aucun raccourci configuré pour « {actionId} ».",
                         actionId);
 
                 case BindingLookup.UnknownAction:

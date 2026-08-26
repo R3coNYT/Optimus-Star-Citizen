@@ -52,7 +52,8 @@ public sealed record ExecutionResult(
     IReadOnlyList<SequenceStepTrace> Steps,
     double TotalMs,
     string? Message = null,
-    CommandPolarity Polarity = CommandPolarity.Neutral)
+    CommandPolarity Polarity = CommandPolarity.Neutral,
+    bool Narrated = false)
 {
     public bool Succeeded => Status is ExecutionStatus.Executed or ExecutionStatus.Simulated
         or ExecutionStatus.Answered or ExecutionStatus.NoChangeNeeded;
@@ -95,7 +96,7 @@ public sealed record ExecutionResult(
 
         foreach (SequenceStepTrace step in Steps)
         {
-            builder.AppendLine($"  étape {step.Index}     {step.Description}  ({step.DurationMs:F1} ms)");
+            builder.AppendLine($"  étape {step.Index,-3} {step.Description}  ({step.DurationMs:F1} ms)");
         }
 
         if (Message is not null)
@@ -122,6 +123,7 @@ public sealed class CommandExecutor
     private readonly ExecutionGuard _guard;
     private readonly IInputEngine _engine;
     private readonly ToggleBelief _belief;
+    private readonly Func<string, CancellationToken, Task>? _narrate;
 
     public CommandExecutor(
         CommandCatalog catalog,
@@ -129,7 +131,8 @@ public sealed class CommandExecutor
         IInputEngine engine,
         FastIntentMatcher? matcher = null,
         ExecutionGuard? guard = null,
-        ToggleBelief? belief = null)
+        ToggleBelief? belief = null,
+        Func<string, CancellationToken, Task>? narrate = null)
     {
         _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
         _bindings = bindings ?? throw new ArgumentNullException(nameof(bindings));
@@ -137,6 +140,7 @@ public sealed class CommandExecutor
         _matcher = matcher ?? new FastIntentMatcher(catalog);
         _guard = guard ?? new ExecutionGuard();
         _belief = belief ?? new ToggleBelief();
+        _narrate = narrate;
     }
 
     /// <summary>État supposé des bascules. À oublier quand le jeu redémarre.</summary>
@@ -200,10 +204,27 @@ public sealed class CommandExecutor
         long start = startTimestamp ?? Stopwatch.GetTimestamp();
 
         // Sequence dirigee si le jeu en declare une ET qu'elle a une touche ; la bascule sinon.
-        IReadOnlyList<ActionStep> steps = command.ActionsFor(polarity, _bindings);
+        // Les renvois d'une macro sont deplies ICI, avant la garde : elle doit pouvoir verifier
+        // la sequence complete avant qu'une seule touche ne parte, sans quoi une macro dont le
+        // quatrieme pas manque de raccourci jouerait les trois premiers et laisserait le
+        // vaisseau dans un etat que personne n'a demande.
+        IReadOnlyList<ActionStep> steps;
+
+        try
+        {
+            steps = MacroExpander.Expand(command, _catalog, _bindings, polarity);
+        }
+        catch (InvalidOperationException exception)
+        {
+            return new ExecutionResult(
+                traceId, ExecutionStatus.Failed, null, command, null,
+                Array.Empty<SequenceStepTrace>(), Elapsed(start), exception.Message, polarity);
+        }
+
+        // Se demande a la commande, pas a la liste depliee : le depliage cree une nouvelle
+        // liste, et comparer les references ici aurait silencieusement toujours repondu « non ».
         bool directed = polarity != CommandPolarity.Neutral
-            && command.DirectedActions(polarity).Count > 0
-            && ReferenceEquals(steps, command.DirectedActions(polarity));
+            && command.UsesDirectedActions(polarity, _bindings);
 
         GuardDecision guard = _guard.Evaluate(command, _bindings, environment, confirmed, steps);
         if (!guard.IsAllowed)
@@ -231,7 +252,7 @@ public sealed class CommandExecutor
                 Array.Empty<SequenceStepTrace>(), Elapsed(start), null, polarity);
         }
 
-        SequenceRunner runner = new(_engine, _bindings);
+        SequenceRunner runner = new(_engine, _bindings, _narrate);
 
         try
         {
@@ -246,8 +267,12 @@ public sealed class CommandExecutor
                 ? ExecutionStatus.Executed
                 : ExecutionStatus.Simulated;
 
+            // Une macro qui s'annonce elle-meme n'a pas besoin qu'on la felicite ensuite :
+            // entendre « Vaisseau pare » puis « Conforme » sonne comme deux copilotes.
+            bool narrated = steps.Any(step => step.Type == ActionStepType.Say);
+
             return new ExecutionResult(
-                traceId, status, null, command, guard, traces, Elapsed(start), null, polarity);
+                traceId, status, null, command, guard, traces, Elapsed(start), null, polarity, narrated);
         }
         catch (OperationCanceledException)
         {

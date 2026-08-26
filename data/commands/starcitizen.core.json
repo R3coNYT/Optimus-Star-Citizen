@@ -213,7 +213,9 @@
       "name": "Frein spatial",
       "category": "flight",
       "voice_phrases": ["freine", "frein spatial", "stop", "arrete-toi"],
-      "actions": [{"type": "game_action", "action_id": "spaceship_movement/v_space_brake", "mode": "hold", "hold_ms": 1200}],
+      "actions": [
+        {"type": "game_action", "action_id": "spaceship_movement/v_space_brake", "mode": "hold", "hold_ms": 1200}
+      ],
       "cooldown_ms": 500
     },
     {
@@ -235,7 +237,9 @@
       "name": "Augmenter le limiteur de vitesse",
       "category": "flight",
       "voice_phrases": ["augmente la vitesse", "monte le limiteur", "plus vite"],
-      "actions": [{"type": "game_action", "action_id": "spaceship_movement/v_ifcs_speed_limiter_increment", "repeat": 3, "interval_ms": 80}],
+      "actions": [
+        {"type": "game_action", "action_id": "spaceship_movement/v_ifcs_speed_limiter_increment", "repeat": 3, "interval_ms": 80}
+      ],
       "cooldown_ms": 500
     },
     {
@@ -244,7 +248,9 @@
       "name": "Réduire le limiteur de vitesse",
       "category": "flight",
       "voice_phrases": ["reduis la vitesse", "baisse le limiteur", "moins vite", "ralentis"],
-      "actions": [{"type": "game_action", "action_id": "spaceship_movement/v_ifcs_speed_limiter_decrement", "repeat": 3, "interval_ms": 80}],
+      "actions": [
+        {"type": "game_action", "action_id": "spaceship_movement/v_ifcs_speed_limiter_decrement", "repeat": 3, "interval_ms": 80}
+      ],
       "cooldown_ms": 500
     },
     {
@@ -294,7 +300,9 @@
       "name": "Plus de puissance moteur",
       "category": "power",
       "voice_phrases": ["plus de puissance moteur", "renforce les propulseurs", "priorite aux moteurs"],
-      "actions": [{"type": "game_action", "action_id": "spaceship_power/v_engineering_assignment_engine_increase", "repeat": 3, "interval_ms": 80}],
+      "actions": [
+        {"type": "game_action", "action_id": "spaceship_power/v_engineering_assignment_engine_increase", "repeat": 3, "interval_ms": 80}
+      ],
       "parameters": [{"name": "amount", "type": "int", "min": 1, "max": 10, "default": 3, "maps_to": "repeat"}],
       "cooldown_ms": 500
     },
@@ -304,7 +312,9 @@
       "name": "Moins de puissance moteur",
       "category": "power",
       "voice_phrases": ["moins de puissance moteur", "reduis les moteurs"],
-      "actions": [{"type": "game_action", "action_id": "spaceship_power/v_engineering_assignment_engine_decrease", "repeat": 3, "interval_ms": 80}],
+      "actions": [
+        {"type": "game_action", "action_id": "spaceship_power/v_engineering_assignment_engine_decrease", "repeat": 3, "interval_ms": 80}
+      ],
       "cooldown_ms": 500
     },
     {
@@ -313,7 +323,9 @@
       "name": "Plus de puissance boucliers",
       "category": "power",
       "voice_phrases": ["plus de puissance aux boucliers", "priorite aux boucliers", "renforce la protection"],
-      "actions": [{"type": "game_action", "action_id": "spaceship_power/v_engineering_assignment_shields_increase", "repeat": 3, "interval_ms": 80}],
+      "actions": [
+        {"type": "game_action", "action_id": "spaceship_power/v_engineering_assignment_shields_increase", "repeat": 3, "interval_ms": 80}
+      ],
       "cooldown_ms": 500
     },
     {
@@ -322,7 +334,9 @@
       "name": "Moins de puissance boucliers",
       "category": "power",
       "voice_phrases": ["moins de puissance aux boucliers", "reduis les boucliers"],
-      "actions": [{"type": "game_action", "action_id": "spaceship_power/v_engineering_assignment_shields_decrease", "repeat": 3, "interval_ms": 80}],
+      "actions": [
+        {"type": "game_action", "action_id": "spaceship_power/v_engineering_assignment_shields_decrease", "repeat": 3, "interval_ms": 80}
+      ],
       "cooldown_ms": 500
     },
     {
@@ -331,7 +345,9 @@
       "name": "Plus de puissance armes",
       "category": "power",
       "voice_phrases": ["plus de puissance aux armes", "priorite a l armement", "renforce la puissance de feu"],
-      "actions": [{"type": "game_action", "action_id": "spaceship_power/v_engineering_assignment_weapons_increase", "repeat": 3, "interval_ms": 80}],
+      "actions": [
+        {"type": "game_action", "action_id": "spaceship_power/v_engineering_assignment_weapons_increase", "repeat": 3, "interval_ms": 80}
+      ],
       "cooldown_ms": 500
     },
     {
@@ -340,7 +356,9 @@
       "name": "Moins de puissance armes",
       "category": "power",
       "voice_phrases": ["moins de puissance aux armes", "reduis les armes"],
-      "actions": [{"type": "game_action", "action_id": "spaceship_power/v_engineering_assignment_weapons_decrease", "repeat": 3, "interval_ms": 80}],
+      "actions": [
+        {"type": "game_action", "action_id": "spaceship_power/v_engineering_assignment_weapons_decrease", "repeat": 3, "interval_ms": 80}
+      ],
       "cooldown_ms": 500
     },
     {
@@ -381,7 +399,9 @@
         "renforce l'avant",
         "protege l'avant"
       ],
-      "actions": [{"type": "game_action", "action_id": "spaceship_defensive/v_shield_raise_level_forward", "repeat": 2, "interval_ms": 80}],
+      "actions": [
+        {"type": "game_action", "action_id": "spaceship_defensive/v_shield_raise_level_forward", "repeat": 2, "interval_ms": 80}
+      ],
       "cooldown_ms": 500
     },
     {
@@ -395,7 +415,9 @@
         "renforce l'arriere",
         "protege l'arriere"
       ],
-      "actions": [{"type": "game_action", "action_id": "spaceship_defensive/v_shield_raise_level_back", "repeat": 2, "interval_ms": 80}],
+      "actions": [
+        {"type": "game_action", "action_id": "spaceship_defensive/v_shield_raise_level_back", "repeat": 2, "interval_ms": 80}
+      ],
       "cooldown_ms": 500
     },
     {
@@ -404,7 +426,9 @@
       "name": "Boucliers à bâbord",
       "category": "shields",
       "voice_phrases": ["boucliers a gauche", "boucliers a babord", "renforce la gauche"],
-      "actions": [{"type": "game_action", "action_id": "spaceship_defensive/v_shield_raise_level_left", "repeat": 2, "interval_ms": 80}],
+      "actions": [
+        {"type": "game_action", "action_id": "spaceship_defensive/v_shield_raise_level_left", "repeat": 2, "interval_ms": 80}
+      ],
       "cooldown_ms": 500
     },
     {
@@ -413,7 +437,9 @@
       "name": "Boucliers à tribord",
       "category": "shields",
       "voice_phrases": ["boucliers a droite", "boucliers a tribord", "renforce la droite"],
-      "actions": [{"type": "game_action", "action_id": "spaceship_defensive/v_shield_raise_level_right", "repeat": 2, "interval_ms": 80}],
+      "actions": [
+        {"type": "game_action", "action_id": "spaceship_defensive/v_shield_raise_level_right", "repeat": 2, "interval_ms": 80}
+      ],
       "cooldown_ms": 500
     },
     {
@@ -442,7 +468,9 @@
       "name": "Leurre",
       "category": "combat",
       "voice_phrases": ["leurre", "largue un leurre", "contre-mesures", "decoy"],
-      "actions": [{"type": "game_action", "action_id": "spaceship_defensive/v_weapon_countermeasure_decoy_launch"}],
+      "actions": [
+        {"type": "game_action", "action_id": "spaceship_defensive/v_weapon_countermeasure_decoy_launch"}
+      ],
       "cooldown_ms": 300
     },
     {
@@ -451,7 +479,9 @@
       "name": "Brouilleur",
       "category": "combat",
       "voice_phrases": ["brouilleur", "largue du chaff", "chaff", "brouille"],
-      "actions": [{"type": "game_action", "action_id": "spaceship_defensive/v_weapon_countermeasure_noise_launch"}],
+      "actions": [
+        {"type": "game_action", "action_id": "spaceship_defensive/v_weapon_countermeasure_noise_launch"}
+      ],
       "cooldown_ms": 300
     },
     {
@@ -502,7 +532,9 @@
       "name": "Ping radar",
       "category": "scanning",
       "voice_phrases": ["ping", "envoie un ping", "balaye la zone", "sonde"],
-      "actions": [{"type": "game_action", "action_id": "spaceship_radar/v_invoke_ping", "mode": "hold", "hold_ms": 600}],
+      "actions": [
+        {"type": "game_action", "action_id": "spaceship_radar/v_invoke_ping", "mode": "hold", "hold_ms": 600}
+      ],
       "cooldown_ms": 1000
     },
     {
@@ -542,7 +574,9 @@
       "name": "Regarder derrière",
       "category": "camera",
       "voice_phrases": ["regarde derriere", "vue arriere", "qu'est-ce qu'il y a derriere"],
-      "actions": [{"type": "game_action", "action_id": "seat_general/v_view_look_behind", "mode": "hold", "hold_ms": 1500}],
+      "actions": [
+        {"type": "game_action", "action_id": "seat_general/v_view_look_behind", "mode": "hold", "hold_ms": 1500}
+      ],
       "cooldown_ms": 800
     },
     {
@@ -672,6 +706,101 @@
       "voice_phrases": ["tu as vu ca", "c'etait quoi ca", "on a failli y passer", "ca chauffe"],
       "actions": [],
       "cooldown_ms": 2000
+    },
+    {
+      "id": "macro.preflight",
+      "kind": "macro",
+      "name": "Préparation au décollage",
+      "category": "macro",
+      "voice_phrases": [
+        "prepare le decollage",
+        "procedure de decollage",
+        "demarrage complet"
+      ],
+      "actions": [
+        {"type": "say", "response_key": "macro.preflight.begin"},
+        {"type": "command", "command_id": "ship.power.toggle", "polarity": "on"},
+        {"type": "wait", "ms": 700},
+        {"type": "command", "command_id": "ship.engines.toggle", "polarity": "on"},
+        {"type": "wait", "ms": 700},
+        {"type": "command", "command_id": "ship.shields.toggle", "polarity": "on"},
+        {"type": "wait", "ms": 400},
+        {"type": "command", "command_id": "ship.lights.toggle", "polarity": "on"},
+        {"type": "wait", "ms": 300},
+        {"type": "command", "command_id": "ship.doors.toggle", "polarity": "off"},
+        {"type": "say", "response_key": "macro.preflight.done"}
+      ],
+      "cooldown_ms": 4000
+    },
+    {
+      "id": "macro.landing",
+      "kind": "macro",
+      "name": "Procédure d'atterrissage",
+      "category": "macro",
+      "voice_phrases": [
+        "procedure d atterrissage",
+        "prepare l atterrissage",
+        "on se pose",
+        "sequence d atterrissage"
+      ],
+      "actions": [
+        {"type": "say", "response_key": "macro.landing.begin"},
+        {"type": "command", "command_id": "nav.master_mode.cycle"},
+        {"type": "wait", "ms": 600},
+        {"type": "command", "command_id": "flight.landing_gear.toggle", "polarity": "on"},
+        {"type": "wait", "ms": 500},
+        {"type": "command", "command_id": "ship.lights.toggle", "polarity": "on"},
+        {"type": "wait", "ms": 300},
+        {"type": "command", "command_id": "flight.atc_request"},
+        {"type": "say", "response_key": "macro.landing.done"}
+      ],
+      "cooldown_ms": 4000
+    },
+    {
+      "id": "macro.battle_stations",
+      "kind": "macro",
+      "name": "Postes de combat",
+      "category": "macro",
+      "voice_phrases": [
+        "postes de combat",
+        "paré au combat",
+        "prepare le combat",
+        "on va se battre",
+        "alerte rouge"
+      ],
+      "actions": [
+        {"type": "say", "response_key": "macro.battle.begin"},
+        {"type": "command", "command_id": "ship.shields.toggle", "polarity": "on"},
+        {"type": "wait", "ms": 400},
+        {"type": "command", "command_id": "ship.weapons.toggle", "polarity": "on"},
+        {"type": "wait", "ms": 400},
+        {"type": "command", "command_id": "ship.lights.toggle", "polarity": "off"},
+        {"type": "wait", "ms": 300},
+        {"type": "command", "command_id": "targeting.auto.toggle", "polarity": "on"},
+        {"type": "say", "response_key": "macro.battle.done"}
+      ],
+      "cooldown_ms": 4000
+    },
+    {
+      "id": "macro.shutdown",
+      "kind": "macro",
+      "name": "Extinction du vaisseau",
+      "category": "macro",
+      "voice_phrases": ["coupe tout", "extinction complete", "procedure d extinction"],
+      "actions": [
+        {"type": "say", "response_key": "macro.shutdown.begin"},
+        {"type": "command", "command_id": "ship.weapons.toggle", "polarity": "off"},
+        {"type": "wait", "ms": 400},
+        {"type": "command", "command_id": "ship.shields.toggle", "polarity": "off"},
+        {"type": "wait", "ms": 400},
+        {"type": "command", "command_id": "ship.engines.toggle", "polarity": "off"},
+        {"type": "wait", "ms": 600},
+        {"type": "command", "command_id": "ship.lights.toggle", "polarity": "off"},
+        {"type": "wait", "ms": 400},
+        {"type": "command", "command_id": "ship.power.toggle", "polarity": "off"},
+        {"type": "say", "response_key": "macro.shutdown.done"}
+      ],
+      "cooldown_ms": 4000
     }
   ]
 }

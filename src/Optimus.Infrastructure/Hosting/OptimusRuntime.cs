@@ -84,8 +84,10 @@ public sealed class OptimusRuntime : IAsyncDisposable
         State = new CopilotState();
 
         Simulation = new SimulatedInputEngine();
-        _engine = Simulation;
-        _executor = new CommandExecutor(catalog, Bindings, _engine, new FastIntentMatcher(catalog));
+        SimulationMode = user.SimulationMode;
+
+        _engine = SimulationMode ? Simulation : new SendInputEngine();
+        _executor = BuildExecutor();
     }
 
     /// <summary>Une activité vient d'avoir lieu : entendue, exécutée, ou simplement dite.</summary>
@@ -151,10 +153,11 @@ public sealed class OptimusRuntime : IAsyncDisposable
     /// <summary>
     /// Mode simulation : on trace, on n'appuie pas.
     ///
-    /// Vrai par défaut, et c'est délibéré (§56) : on ne commence jamais par envoyer de vraies
-    /// touches à un jeu sans que quelqu'un l'ait explicitement demandé.
+    /// Lu dans le profil utilisateur (<c>safety.simulation_mode</c>) plutôt que fixé ici : le
+    /// mode reste disponible — §56 l'exige, et c'est la seule façon d'essayer une macro sans
+    /// conséquence — mais c'est au pilote de décider comment Optimus démarre chez lui.
     /// </summary>
-    public bool SimulationMode { get; private set; } = true;
+    public bool SimulationMode { get; private set; }
 
     /// <summary>
     /// Arrêt d'urgence (§37). Tant qu'il est engagé, plus rien ne sort — la garde le refuse
@@ -228,7 +231,7 @@ public sealed class OptimusRuntime : IAsyncDisposable
         }
 
         _engine = simulation ? Simulation : new SendInputEngine();
-        _executor = new CommandExecutor(Catalog, Bindings, _engine, new FastIntentMatcher(Catalog));
+        _executor = BuildExecutor();
 
         StateChanged?.Invoke(this, EventArgs.Empty);
     }
@@ -249,7 +252,7 @@ public sealed class OptimusRuntime : IAsyncDisposable
     public void ReloadBindings()
     {
         Bindings = Compose(DefaultBindings, Overlay);
-        _executor = new CommandExecutor(Catalog, Bindings, _engine, new FastIntentMatcher(Catalog));
+        _executor = BuildExecutor();
         StateChanged?.Invoke(this, EventArgs.Empty);
     }
 
@@ -636,6 +639,30 @@ public sealed class OptimusRuntime : IAsyncDisposable
         _pendingUtterance = null;
         _pendingPolarity = CommandPolarity.Neutral;
         _pendingUntil = DateTimeOffset.MinValue;
+    }
+
+    /// <summary>
+    /// Assemble l'exécuteur, narrateur compris.
+    ///
+    /// Reconstruit à chaque changement de moteur ou de profil : garder un exécuteur qui pointe
+    /// vers l'ancien moteur d'entrée enverrait les touches là où plus personne ne regarde.
+    /// </summary>
+    private CommandExecutor BuildExecutor() => new(
+        Catalog, Bindings, _engine, new FastIntentMatcher(Catalog), narrate: NarrateAsync);
+
+    /// <summary>Prononce une étape de macro, sans jamais interrompre la séquence.</summary>
+    private async Task NarrateAsync(string responseKey, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await SayAsync([responseKey], ResponseEvent.Any).ConfigureAwait(false);
+        }
+        catch (Exception exception)
+        {
+            // Une macro qui s'arrete parce qu'une phrase n'a pas pu etre dite serait absurde :
+            // le vaisseau resterait a mi-chemin pour un probleme de confort.
+            DiagnosticLog.Warn($"narration impossible pour « {responseKey} »", exception.Message);
+        }
     }
 
     private void Report(SessionActivity activity)
