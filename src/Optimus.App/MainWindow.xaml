@@ -688,6 +688,116 @@
         </Grid>
       </TabItem>
 
+      <!-- =========================== Compréhension =========================== -->
+      <TabItem Header="Compréhension" DataContext="{Binding Understanding}">
+        <Grid Margin="0,12,0,0">
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+          </Grid.RowDefinitions>
+
+          <Border Grid.Row="0" Style="{StaticResource Card}" Margin="0,0,0,10">
+            <StackPanel>
+              <TextBlock Text="{Binding Summary}" FontWeight="SemiBold" TextWrapping="Wrap" />
+              <TextBlock Style="{StaticResource Hint}"
+                         Text="La grammaire est fermée : Optimus ne peut restituer qu'une formulation qu'il connaît déjà. Cette liste dit sur quelle commande il a hésité, pas ce que vous avez dit — c'est à vous d'écrire la tournure que vous employez." />
+            </StackPanel>
+          </Border>
+
+          <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="360" />
+            </Grid.ColumnDefinitions>
+
+            <Grid Grid.Column="0">
+              <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="140" />
+              </Grid.RowDefinitions>
+
+              <ListView Grid.Row="0" ItemsSource="{Binding Hesitations}"
+                        SelectedItem="{Binding Selected}"
+                        ItemContainerStyle="{StaticResource GridRow}">
+                <ListView.View>
+                  <GridView>
+                    <GridViewColumn Header="ENTENDU" Width="190" DisplayMemberBinding="{Binding Heard}" />
+                    <GridViewColumn Header="CE QU'IL EN A FAIT" Width="160" DisplayMemberBinding="{Binding Kind}" />
+                    <GridViewColumn Header="COMMANDE ENVISAGÉE" Width="170" DisplayMemberBinding="{Binding CommandName}" />
+                    <GridViewColumn Header="FRÉQUENCE" Width="230" DisplayMemberBinding="{Binding Detail}" />
+                  </GridView>
+                </ListView.View>
+              </ListView>
+
+              <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,10,0,0">
+                <Button Command="{Binding IgnoreCommand}" Content="Ignorer cette ligne" />
+                <Button Command="{Binding ClearCommand}" Content="Vider la liste" Margin="6,0,0,0" />
+              </StackPanel>
+
+              <TextBlock Grid.Row="2" Text="VOS FORMULATIONS" Style="{StaticResource Label}"
+                         Margin="0,16,0,4" />
+
+              <Grid Grid.Row="3">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <ListView Grid.Column="0" ItemsSource="{Binding Aliases}"
+                          SelectedItem="{Binding SelectedAlias}"
+                          ItemContainerStyle="{StaticResource GridRow}">
+                  <ListView.View>
+                    <GridView>
+                      <GridViewColumn Header="FORMULATION" Width="260" DisplayMemberBinding="{Binding Phrase}" />
+                      <GridViewColumn Header="COMMANDE" Width="230" DisplayMemberBinding="{Binding CommandName}" />
+                      <GridViewColumn Header="SENS" Width="120" DisplayMemberBinding="{Binding Sense}" />
+                    </GridView>
+                  </ListView.View>
+                </ListView>
+
+                <Button Grid.Column="1" Command="{Binding RemoveAliasCommand}" Content="Retirer"
+                        Margin="8,0,0,0" VerticalAlignment="Top" />
+              </Grid>
+            </Grid>
+
+            <Border Grid.Column="1" Style="{StaticResource Card}" Margin="10,0,0,0"
+                    VerticalAlignment="Top">
+              <StackPanel>
+                <TextBlock Text="APPRENDRE UNE FORMULATION" Style="{StaticResource Label}" />
+
+                <TextBlock Text="Ce que vous dites réellement" Style="{StaticResource Hint}"
+                           Margin="0,8,0,2" />
+                <TextBox Text="{Binding Phrase, UpdateSourceTrigger=PropertyChanged}" />
+                <TextBlock Style="{StaticResource Hint}"
+                           Text="Écrivez-la accentuée : le moteur en déduit la prononciation." />
+
+                <TextBlock Text="Commande à déclencher" Style="{StaticResource Hint}"
+                           Margin="0,12,0,2" />
+                <ComboBox ItemsSource="{Binding Commands}" SelectedItem="{Binding TargetCommand}" />
+
+                <TextBlock Text="Sens" Style="{StaticResource Hint}" Margin="0,12,0,2" />
+                <ComboBox SelectedIndex="{Binding Polarity, Converter={StaticResource PolarityToIndex}}">
+                  <ComboBoxItem Content="aucun — bascule" />
+                  <ComboBoxItem Content="activation" />
+                  <ComboBoxItem Content="extinction" />
+                </ComboBox>
+
+                <Button Command="{Binding AddCommand}" Content="Apprendre" Margin="0,16,0,0"
+                        Padding="20,8" FontWeight="SemiBold" HorizontalAlignment="Left" />
+
+                <TextBlock Text="{Binding Verdict}" Style="{StaticResource Hint}"
+                           Foreground="{StaticResource Warn}" Margin="0,10,0,0" />
+
+                <TextBlock Style="{StaticResource Hint}" Margin="0,14,0,0"
+                           Text="La formulation est enregistrée hors du catalogue livré : elle survit aux mises à jour d'Optimus." />
+              </StackPanel>
+            </Border>
+          </Grid>
+        </Grid>
+      </TabItem>
+
     </TabControl>
   </Grid>
 </Window>

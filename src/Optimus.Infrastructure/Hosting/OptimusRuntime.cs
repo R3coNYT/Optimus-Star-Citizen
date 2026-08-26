@@ -122,6 +122,15 @@ public sealed class OptimusRuntime : IAsyncDisposable
     /// <summary>Fichier des macros du pilote.</summary>
     public string MacroPath { get; private init; } = string.Empty;
 
+    /// <summary>Fichier des formulations ajoutées par le pilote.</summary>
+    public string PhrasePath { get; private init; } = string.Empty;
+
+    /// <summary>Formulations ajoutées, telles qu'elles sont sur disque.</summary>
+    public IReadOnlyList<PhraseAlias> Aliases { get; private set; } = [];
+
+    /// <summary>Ce qu'Optimus a entendu sans agir.</summary>
+    public UnderstandingLog Understanding { get; private init; } = new();
+
     /// <summary>Profil du jeu seul, sans les choix du pilote. Sert à savoir ce qui manque.</summary>
     public BindingProfile DefaultBindings { get; }
 
@@ -188,6 +197,12 @@ public sealed class OptimusRuntime : IAsyncDisposable
             ? catalog.Value
             : CommandCatalog.Merge(
                 catalog.Value.Id, catalog.Value.Name, catalog.Value, userMacros.Value);
+
+        // Les formulations ajoutees par le pilote s'appliquent par-dessus : c'est ce qui rend
+        // le reglage de la reconnaissance cumulatif d'une session a l'autre.
+        string phrasePath = UserPhrases.DefaultPath();
+        IReadOnlyList<PhraseAlias> aliases = UserPhrases.Load(phrasePath);
+        merged = UserPhrases.Apply(merged, aliases);
         LoadResult<BindingProfile> bindings = JsonCatalogLoader.LoadBindingProfile(
             Path.Combine(dataRoot, "data", "bindings", "starcitizen", "defaults-4.9.json"));
         LoadResult<UserProfile> user = ProfileLoader.Load(
@@ -209,7 +224,10 @@ public sealed class OptimusRuntime : IAsyncDisposable
              .. copilot.Issues])
         {
             MacroPath = macroPath,
+            PhrasePath = phrasePath,
             ShippedCatalog = catalog.Value,
+            Aliases = aliases,
+            Understanding = UnderstandingLog.Load(UnderstandingLog.DefaultPath()),
         };
     }
 
@@ -327,10 +345,12 @@ public sealed class OptimusRuntime : IAsyncDisposable
 
         LoadResult<CommandCatalog> userMacros = UserMacros.Load(MacroPath);
 
-        Catalog = userMacros.Value.Count == 0
+        CommandCatalog rebuilt = userMacros.Value.Count == 0
             ? ShippedCatalog
             : CommandCatalog.Merge(
                 ShippedCatalog.Id, ShippedCatalog.Name, ShippedCatalog, userMacros.Value);
+
+        Catalog = UserPhrases.Apply(rebuilt, Aliases);
 
         _executor = BuildExecutor();
 
@@ -341,6 +361,26 @@ public sealed class OptimusRuntime : IAsyncDisposable
 
         StateChanged?.Invoke(this, EventArgs.Empty);
     }
+
+    /// <summary>
+    /// Enregistre les formulations du pilote, puis reconstruit le catalogue et la grammaire.
+    ///
+    /// L'écoute repart : c'est elle qui porte la grammaire, et une formulation qu'Optimus
+    /// connaîtrait sans l'entendre ne servirait à rien.
+    /// </summary>
+    public async Task SaveAliasesAsync(
+        IReadOnlyList<PhraseAlias> aliases, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(aliases);
+
+        UserPhrases.Save(PhrasePath, aliases);
+        Aliases = aliases;
+
+        await ReloadMacrosAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>Enregistre le journal de compréhension sur disque.</summary>
+    public void SaveUnderstanding() => Understanding.Save(UnderstandingLog.DefaultPath());
 
     /// <summary>Enregistre les assignations sur disque.</summary>
     public void SaveOverlay() => Overlay.Save(_overlayPath);
@@ -497,6 +537,12 @@ public sealed class OptimusRuntime : IAsyncDisposable
                 return;
 
             case RecognitionOutcome.Unclear:
+                // Interpelle sans etre compris : le signal le plus utile pour ajuster les
+                // formulations, et le seul dont on dispose avec une grammaire fermee.
+                Understanding.Record(
+                    recognition.Text, HesitationKind.Proposed,
+                    recognition.CommandId, recognition.Confidence);
+
                 await ProposeAsync(recognition).ConfigureAwait(false);
                 return;
 
@@ -557,6 +603,14 @@ public sealed class OptimusRuntime : IAsyncDisposable
 
         if (recognition.CommandId == "system.deny" && pendingAlive)
         {
+            // Une proposition refusee dit plus qu'une hesitation : le rattachement etait faux.
+            if (_pending is CommandDefinition refused)
+            {
+                Understanding.Record(
+                    _pendingUtterance ?? refused.Name, HesitationKind.Denied,
+                    refused.Id, recognition.Confidence);
+            }
+
             ClearProposal();
             string? said = await SayAsync(["system.deny"], ResponseEvent.Any).ConfigureAwait(false);
             Report(new SessionActivity(recognition, null, said, []));
@@ -598,6 +652,18 @@ public sealed class OptimusRuntime : IAsyncDisposable
         {
             State.ApplyMasterMode(result.Polarity, utterance);
             StateChanged?.Invoke(this, EventArgs.Empty);
+        }
+
+        // Non compris ou ambigu : on le note pour que le pilote puisse y attacher sa tournure.
+        if (result.Status is ExecutionStatus.Unknown or ExecutionStatus.NeedsClarification)
+        {
+            Understanding.Record(
+                result.Intent?.RawText ?? utterance ?? "?",
+                result.Status == ExecutionStatus.Unknown
+                    ? HesitationKind.Unknown
+                    : HesitationKind.Ambiguous,
+                result.Command?.Id,
+                result.Intent?.Best?.Score ?? 0);
         }
 
         ResponseRequest? request = ResponseRouter.Route(result, State.Snapshot());
@@ -754,6 +820,18 @@ public sealed class OptimusRuntime : IAsyncDisposable
         _disposed = true;
 
         await StopListeningAsync().ConfigureAwait(false);
+
+        try
+        {
+            SaveUnderstanding();
+        }
+        catch (Exception exception)
+        {
+            // Perdre le journal de comprehension est facheux, pas grave : il se reconstruit en
+            // volant. Empecher la fermeture pour cela serait absurde.
+            DiagnosticLog.Warn("journal de compréhension non enregistré", exception.Message);
+        }
+
         await Speech.DisposeAsync().ConfigureAwait(false);
 
         if (!ReferenceEquals(_engine, Simulation))

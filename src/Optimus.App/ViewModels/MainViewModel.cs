@@ -123,6 +123,7 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
         TestCommandCommand = new AsyncRelayCommand(TestCommandAsync, () => SelectedCommand is not null);
         Settings = new SettingsViewModel(_runtime, Add);
         MacroEditor = new MacroEditorViewModel(_runtime, Add, ReloadMacrosAsync);
+        Understanding = new UnderstandingViewModel(_runtime, Add, ReloadMacrosAsync);
 
         // Le jeu peut demarrer ou s'arreter pendant la session : l'etat s'observe, il ne se
         // suppose pas. Deux secondes suffisent - c'est un affichage, pas une garde.
@@ -183,6 +184,9 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
 
     /// <summary>L'éditeur de macros.</summary>
     public MacroEditorViewModel MacroEditor { get; }
+
+    /// <summary>Ce qu'Optimus n'a pas compris, et ce qu'on peut lui apprendre.</summary>
+    public UnderstandingViewModel Understanding { get; }
 
     private Window? _owner;
 
@@ -629,6 +633,14 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
         if (activity.Result is ExecutionResult result)
         {
             Add(Describe(result), Detail(result), Level(result));
+        }
+
+        // Une hesitation qui vient d'arriver doit apparaitre dans l'onglet sans relancer
+        // l'application : c'est en vol qu'on les accumule, et apres coup qu'on les traite.
+        if (activity.Result?.Status is ExecutionStatus.Unknown or ExecutionStatus.NeedsClarification
+            || activity.Recognition?.Outcome == RecognitionOutcome.Unclear)
+        {
+            Understanding.Refresh();
         }
 
         if (activity.Spoken is string spoken)

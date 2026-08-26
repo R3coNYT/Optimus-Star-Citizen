@@ -87,6 +87,31 @@ le langage de séquence sans ouvrir le chantier des conditions.
 
 ---
 
+## 11.2 bis — Le plan de travail, arrêté le 2026-08-26
+
+Ce que le socle sait déjà faire est décrit dans le registre des décisions (D1 à D44). Ce qui
+suit est la file d'attente convenue avec le pilote, dans l'ordre.
+
+| # | Chantier | Pourquoi maintenant | État |
+|---|---|---|---|
+| **1** | **Alias sur ce qui n'a pas été compris** | Un écran qui liste ce qu'Optimus a entendu sans agir, et permet d'y attacher la formulation réellement employée. Le travail de calibration — accents (D39), seuils (D29), formulations — devient cumulatif au lieu de dépendre d'une passe de développement à chaque fois. C'est la seule fonction qui améliore les autres. | **fait le 2026-08-26** |
+| **2** | **Étage conversationnel (LLM)** | « Qu'est-ce que tu penses de ce vaisseau ? » obtient aujourd'hui une réplique de catalogue. Le LLM ne rendra **jamais qu'une intention validée contre la liste blanche, jamais une touche** (§73, §75) et reste **facultatif** (§84) : tout continue de fonctionner hors ligne sans lui. | à faire |
+| **3** | **Conditions dans les macros** | `si` et `répéter`. Le moteur de séquence ne sait qu'enchaîner ; une macro ne peut ni s'adapter ni boucler. Dépend en partie d'un état de jeu fiable, donc des actions dirigées (D41) plutôt que d'une télémétrie. | à faire |
+| **4** | **Voix neurale locale (Piper)** | Le jour où Microsoft Paul lasse. Mesuré au spike S0-5 : les voix Windows suffisent en latence, l'enjeu est le timbre. Reste local, aucun service distant. | à faire |
+| **5** | **Profils de binding** | Chasse / Minage / Cargo, avec bascule à chaud. Les touches diffèrent selon ce qu'on pilote, et tout recharger à la main est une friction certaine. | à faire |
+| **6** | **API locale** | REST et WebSocket, jeton, documentation. Socle de tout ce qui suit — et le seul moyen de garder l'exécution **strictement locale** (§81–83) quand d'autres surfaces s'y branchent. | à faire |
+| **7** | **Discord** | Bot local, appairage, notifications. Transmet des **intentions**, jamais des frappes : aucun serveur ne touche au clavier de personne. | à faire |
+| **8** | **Plugins** | Chargement à chaud, permissions, deux plugins de référence. | à faire |
+| **9** | **Multi-copilotes** | Le modèle le prévoit depuis l'origine ; seul Optimus est livré. CRUD, duplication, import et export. | à faire |
+| **10** | **HOTAS et périphériques** | Manette, palonnier, Stream Deck. Change la façon de déclencher, pas ce qui est déclenché. | à faire |
+| **11** | **Overlay in-game** | HUD transparent : état, dernière commande, confirmations. **Incertitude réelle** : l'interaction avec l'anti-triche reste à valider avant d'y engager quoi que ce soit. | à faire |
+
+**Hors file, mais ouvert** : la signature de code (R16). Sans conséquence tant qu'Optimus reste
+sur le poste de son auteur — bloquant dès qu'il faut le diffuser.
+
+
+---
+
 ## 11.3 V1 — « Optimus devient une plateforme » (+ 3 à 4 mois)
 
 | Bloc | Contenu |
