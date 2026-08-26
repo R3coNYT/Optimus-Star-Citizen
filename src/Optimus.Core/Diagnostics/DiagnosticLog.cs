@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Globalization;
 using System.Text;
 
@@ -38,6 +38,15 @@ public static class DiagnosticLog
 {
     /// <summary>Lignes conservées en mémoire, jointes au rapport de plantage.</summary>
     private const int TrailSize = 200;
+
+    /// <summary>
+    /// Longueur maximale d'un détail.
+    ///
+    /// Une pile d'appels WPF depasse aisement cent mille caracteres, et la reproduire dans la
+    /// trace fait grossir chaque rapport suivant du precedent : quatre plantages d'affilee ont
+    /// produit des fichiers de 79 puis 315 Ko, illisibles et sans information de plus.
+    /// </summary>
+    private const int DetailLimit = 4000;
 
     /// <summary>Journaux plus vieux que cela : effacés au démarrage.</summary>
     private static readonly TimeSpan Retention = TimeSpan.FromDays(14);
@@ -185,7 +194,11 @@ public static class DiagnosticLog
 
         if (detail is not null)
         {
-            line += Environment.NewLine + "    " + detail.Replace(
+            string trimmed = detail.Length > DetailLimit
+                ? detail[..DetailLimit] + $"{Environment.NewLine}… ({detail.Length - DetailLimit} caractères de plus)"
+                : detail;
+
+            line += Environment.NewLine + "    " + trimmed.Replace(
                 Environment.NewLine, Environment.NewLine + "    ", StringComparison.Ordinal);
         }
 

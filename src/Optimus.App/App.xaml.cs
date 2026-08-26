@@ -113,8 +113,36 @@ public partial class App : Application
         };
     }
 
+    private static string? _lastSignature;
+    private static DateTimeOffset _lastCrash;
+    private static int _repeats;
+
+    /// <summary>
+    /// Rapporte un plantage, sans s'emballer.
+    ///
+    /// Une exception levée pendant la mise en page se reproduit à chaque tentative de dessin :
+    /// quatre rapports ont été écrits en quatre secondes, chacun contenant la pile du précédent.
+    /// Le dispositif censé expliquer la chute devenait alors le problème. Une même chute
+    /// répétée n'est donc rapportée qu'une fois, puis seulement comptée.
+    /// </summary>
     private static void Fatal(Exception exception, string origin)
     {
+        string signature = $"{exception.GetType().FullName}|{origin}|{FirstFrame(exception)}";
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+
+        if (signature == _lastSignature && now - _lastCrash < TimeSpan.FromSeconds(30))
+        {
+            _repeats++;
+            DiagnosticLog.Warn(
+                $"même plantage répété ({_repeats} fois)",
+                "rapport déjà écrit, on ne le réécrit pas");
+            return;
+        }
+
+        _lastSignature = signature;
+        _lastCrash = now;
+        _repeats = 1;
+
         string? report = DiagnosticLog.WriteCrashReport(exception, origin, Context());
 
         string message = $"Optimus a rencontré un problème ({origin}).\n\n{exception.Message}";
@@ -134,6 +162,14 @@ public partial class App : Application
 
         MessageBox.Show(message, "Optimus", MessageBoxButton.OK, MessageBoxImage.Error);
     }
+
+    /// <summary>Première ligne de pile applicative : ce qui distingue deux plantages différents.</summary>
+    private static string FirstFrame(Exception exception) =>
+        exception.StackTrace?
+            .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
+            .FirstOrDefault(line => line.Contains("Optimus", StringComparison.Ordinal))
+        ?? exception.StackTrace?.Split(Environment.NewLine).FirstOrDefault()
+        ?? string.Empty;
 
     /// <summary>Ce qu'il faut savoir de l'installation pour comprendre un rapport reçu par message.</summary>
     private static string Context()
