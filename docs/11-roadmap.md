@@ -113,7 +113,7 @@ le langage de séquence sans ouvrir le chantier des conditions.
 
 | Bloc | Contenu | Incertitude |
 |---|---|---|
-| **Télémétrie de jeu** | `IGameStateProvider` réel : parsing de `Game.log` (zone, canal, événements), OCR ciblé du HUD, lecture des fichiers de session | ⚠ dépend de ce que le jeu expose ; à cadrer par un spike |
+| **Télémétrie de jeu** | `IGameStateProvider` réel. **Spike fait le 2026-08-26, résultat négatif pour l'essentiel** : `Game.log` ne consigne <b>ni le mode de vol, ni l'état des portes</b>. Les occurrences de « NAV » y sont des faux positifs venus de `ItemNavigation` ; ce qu'on y trouve est du routage quantique (`CSCItemNavigation`, `FinalStop=`) et des entités voisines. Sans conséquence : les actions dirigées du jeu (D41) rendent portes et mode de vol exacts sans rien observer. Restent à explorer si le besoin revient — l'OCR ciblé du HUD, et le vaisseau courant que le log semble nommer | ⚠ `Game.log` écarté pour l'état du vaisseau |
 | **Overlay in-game** | HUD transparent (DirectX/overlay externe) : état, dernière commande, confirmations | ⚠ interaction avec l'anti-triche à valider |
 | **Multi-agents** | plusieurs copilotes actifs, dialogues croisés, routage par rôle (combat/minage/navigation) | |
 | **Store de copilotes** | packs signés, catalogue, notation, mise à jour — **sans jamais donner au serveur le moindre pouvoir sur le clavier** | |
