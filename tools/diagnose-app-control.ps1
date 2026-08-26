@@ -245,21 +245,30 @@ if ($sacState -eq 1) {
     Write-Host '    il refuse par principe tout binaire sans reputation etablie, et chaque' -ForegroundColor Red
     Write-Host '    publication d''Optimus en produit un nouveau.' -ForegroundColor Red
     Write-Host ''
-    Write-Host '    Trois sorties, par ordre de preference :' -ForegroundColor Yellow
+    Write-Host '    Mesure sur R3CON-PC le 2026-08-26 : seuls les assemblys de POINT' -ForegroundColor Yellow
+    Write-Host '    D''ENTREE sont refuses (Optimus.App.dll, Optimus.Cli.dll et leurs .exe).' -ForegroundColor Gray
+    Write-Host '    Optimus.Core.dll et Optimus.Infrastructure.dll - celui qui injecte les' -ForegroundColor Gray
+    Write-Host '    frappes - passent toujours. Ce n''est donc pas ce que fait Optimus qui le' -ForegroundColor Gray
+    Write-Host '    rend suspect, mais son absence de reputation.' -ForegroundColor Gray
     Write-Host ''
-    Write-Host '      1. Executer depuis les sources sur cette machine :' -ForegroundColor Yellow
-    Write-Host '         dotnet run --project tools/Optimus.Cli -- --bindings' -ForegroundColor Gray
-    Write-Host '         Le SDK compile dans un dossier de travail que la politique traite' -ForegroundColor Gray
-    Write-Host '         autrement. C''est la voie a essayer en premier : rien a desactiver.' -ForegroundColor Gray
+    Write-Host '    Le lancement par dotnet.exe NE SUFFIT PAS : l''assembly d''entree est' -ForegroundColor Yellow
+    Write-Host '    evalue de la meme facon. Ce contournement a ete tente et refuse.' -ForegroundColor Gray
     Write-Host ''
-    Write-Host '      2. Signer les binaires avec un certificat reconnu. C''est la vraie' -ForegroundColor Yellow
-    Write-Host '         reponse, prevue au risque R16, mais elle suppose un certificat' -ForegroundColor Gray
-    Write-Host '         d''editeur - un certificat auto-signe ne satisfait pas SAC.' -ForegroundColor Gray
+    Write-Host '    Ce qui reste :' -ForegroundColor Yellow
+    Write-Host ''
+    Write-Host '      1. Compiler sur cette machine (dotnet build, puis lancer depuis bin).' -ForegroundColor Yellow
+    Write-Host '         A ESSAYER UNE FOIS, sans garantie : un binaire compile localement n''a' -ForegroundColor Gray
+    Write-Host '         pas la meme provenance qu''un fichier copie, et la politique en tient' -ForegroundColor Gray
+    Write-Host '         parfois compte. Dix minutes pour trancher la question definitivement.' -ForegroundColor Gray
+    Write-Host ''
+    Write-Host '      2. Signer les binaires. Reponse definitive, prevue au risque R16, mais un' -ForegroundColor Yellow
+    Write-Host '         certificat auto-signe ne satisfait pas SAC : il faut un certificat' -ForegroundColor Gray
+    Write-Host '         d''editeur, de preference EV (~300-400 EUR/an).' -ForegroundColor Gray
     Write-Host ''
     Write-Host '      3. Desactiver Smart App Control.' -ForegroundColor Yellow
-    Write-Host '         ATTENTION : cette operation est IRREVERSIBLE. Une fois desactive,' -ForegroundColor Red
-    Write-Host '         SAC ne peut plus etre reactive sans reinstaller Windows. Ce choix' -ForegroundColor Red
-    Write-Host '         vous appartient : ce script ne le fera pas a votre place.' -ForegroundColor Red
+    Write-Host '         ATTENTION : IRREVERSIBLE. Une fois desactive, SAC ne peut plus etre' -ForegroundColor Red
+    Write-Host '         reactive sans reinstaller Windows. Ce choix vous appartient : ce script' -ForegroundColor Red
+    Write-Host '         ne le fera pas a votre place.' -ForegroundColor Red
     Write-Host '         Securite Windows > Controle des applications et du navigateur >' -ForegroundColor Gray
     Write-Host '         Parametres de Smart App Control.' -ForegroundColor Gray
     Write-Host ''
