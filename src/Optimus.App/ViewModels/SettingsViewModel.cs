@@ -4,6 +4,7 @@ using Optimus.App.Input;
 using Optimus.App.Mvvm;
 using Optimus.Core.Abstractions;
 using Optimus.Core.Ai;
+using Optimus.Core.Api;
 using Optimus.Core.Domain.Copilots;
 using Optimus.Core.Domain.Personality;
 using Optimus.Core.Domain.Profiles;
@@ -11,6 +12,7 @@ using Optimus.Core.Loading;
 using Optimus.Core.Personality;
 using Optimus.Infrastructure.Hosting;
 using Optimus.Infrastructure.Input;
+using Optimus.Infrastructure.Api;
 using Optimus.Infrastructure.Speech;
 
 namespace Optimus.App.ViewModels;
@@ -50,6 +52,9 @@ public sealed class SettingsViewModel : ObservableObject
     private int _aiBudget = 200;
     private string _aiProbe = string.Empty;
     private bool _neuralVoice;
+    private bool _apiEnabled;
+    private int _apiPort = 8731;
+    private int _apiRate = 30;
     private bool _dirty;
 
     public SettingsViewModel(OptimusRuntime runtime, Action<string, string?, ActivityLevel> log)
@@ -62,6 +67,7 @@ public sealed class SettingsViewModel : ObservableObject
         CaptureKeyCommand = new AsyncRelayCommand(CaptureKeyAsync, () => PushToTalk);
         TestVoiceCommand = new AsyncRelayCommand(TestVoiceAsync);
         ProbeAiCommand = new AsyncRelayCommand(ProbeAiAsync, () => AiEnabled);
+        RegenerateTokenCommand = new RelayCommand(RegenerateToken, () => ApiEnabled);
 
         Revert();
     }
@@ -76,6 +82,9 @@ public sealed class SettingsViewModel : ObservableObject
 
     /// <summary>Vérifie que le fournisseur répond, sans consommer de jetons.</summary>
     public AsyncRelayCommand ProbeAiCommand { get; }
+
+    /// <summary>Émet un secret neuf. L'ancien cesse aussitôt de valoir.</summary>
+    public RelayCommand RegenerateTokenCommand { get; }
 
     public ObservableCollection<string> Voices { get; } = new();
 
@@ -243,6 +252,68 @@ public sealed class SettingsViewModel : ObservableObject
               + "jamais sur la commande. Une voix « low » divise l'attente par deux."
             : "Voix Windows : quasi instantanées (7 à 15 ms), toujours disponibles, mais au "
               + "timbre synthétique. C'est le choix sûr.";
+
+    /// <summary>L'API locale est-elle demandée ?</summary>
+    public bool ApiEnabled
+    {
+        get => _apiEnabled;
+        set
+        {
+            if (Track(ref _apiEnabled, value))
+            {
+                RegenerateTokenCommand.RaiseCanExecuteChanged();
+                Raise(nameof(ApiExplanation));
+            }
+        }
+    }
+
+    public int ApiPort
+    {
+        get => _apiPort;
+        set
+        {
+            if (Track(ref _apiPort, value))
+            {
+                Raise(nameof(ApiAddress));
+            }
+        }
+    }
+
+    public int ApiRate
+    {
+        get => _apiRate;
+        set => Track(ref _apiRate, value);
+    }
+
+    /// <summary>Adresse d'écoute, telle qu'on la colle dans un client.</summary>
+    public string ApiAddress => $"http://127.0.0.1:{ApiPort}/";
+
+    /// <summary>Le jeton en vigueur, ou une invite à activer l'interface.</summary>
+    public string ApiTokenSecret =>
+        _runtime.ApiTokens.Count > 0
+            ? _runtime.ApiTokens[0].Secret
+            : "Le jeton sera émis à l'activation.";
+
+    /// <summary>État réel du serveur, et non le réglage souhaité.</summary>
+    public string ApiState => _runtime.Api is { IsRunning: true }
+        ? $"À l'écoute sur {_runtime.Api.Prefix}"
+        : ApiEnabled
+            ? "Éteinte. Enregistrez pour la démarrer."
+            : "Éteinte.";
+
+    /// <summary>
+    /// Ce que l'API garantit, et ce qu'elle ne garantit pas.
+    ///
+    /// Les deux propriétés qui comptent sont dites ici, parce qu'un pilote qui ouvre une
+    /// interface a le droit de savoir jusqu'où elle va — et où elle s'arrête.
+    /// </summary>
+    public string ApiExplanation => ApiEnabled
+        ? "N'écoute que 127.0.0.1 : Windows refuse à un programme sans droits administrateur "
+          + "d'écouter sur le réseau, et Optimus n'en a pas. Elle transporte des intentions, "
+          + "jamais des touches — on désigne une commande du catalogue, et l'exécution repasse "
+          + "par la même garde que la voix. Le jeton est chiffré au compte Windows courant."
+        : "Éteinte. Rien n'écoute, pas même sur cette machine. À activer pour brancher un "
+          + "Stream Deck, un bot Discord ou un overlay — chacun devra présenter le jeton.";
 
     public bool AiEnabled
     {
@@ -430,6 +501,11 @@ public sealed class SettingsViewModel : ObservableObject
         _rate = voice.Rate;
         _volume = voice.Volume;
 
+        ApiSettings api = _runtime.User.Api ?? ApiSettings.Disabled;
+        _apiEnabled = api.Enabled;
+        _apiPort = api.Port;
+        _apiRate = api.ExecutionsPerMinute;
+
         AiSettings ai = _runtime.User.Ai ?? AiSettings.Disabled;
         _aiEnabled = ai.Enabled;
         _aiProvider = ai.Provider;
@@ -490,10 +566,17 @@ public sealed class SettingsViewModel : ObservableObject
 
         SettingsWriter.SaveTraits(_runtime.PersonalityPath, CurrentTraits());
 
+        SettingsWriter.SaveApi(_runtime.ProfilePath, new ApiSettings(
+            ApiEnabled, Math.Clamp(ApiPort, 1024, 65535), Math.Max(1, ApiRate)));
+
         SettingsWriter.SaveAi(_runtime.ProfilePath, new AiSettings(
             AiEnabled, AiProvider.Trim(), AiEndpoint.Trim(), AiModel.Trim(), Math.Max(1, AiBudget)));
 
         await _runtime.ReloadSettingsAsync().ConfigureAwait(true);
+
+        // L'API suit le reglage : l'allumer, l'eteindre ou changer son port prend effet tout de
+        // suite, sans redemarrer.
+        await _runtime.ApplyApiSettingsAsync().ConfigureAwait(true);
 
         IsDirty = false;
         RaiseAll();
@@ -563,6 +646,33 @@ public sealed class SettingsViewModel : ObservableObject
             : $"Aucune réponse de {settings.Endpoint}. Le service est-il lancé ?";
     }
 
+    /// <summary>
+    /// Émet un secret neuf pour le jeton du pilote.
+    ///
+    /// À faire dès qu'un jeton a pu fuiter — collé dans un salon, laissé dans un script. Les
+    /// clients qui portaient l'ancien cesseront d'être admis, ce qui est le but.
+    /// </summary>
+    private void RegenerateToken()
+    {
+        try
+        {
+            ApiTokenStore.Regenerate(ApiTokenStore.OwnerName);
+        }
+        catch (Exception exception)
+        {
+            _log("jeton non régénéré", exception.Message, ActivityLevel.Warning);
+            return;
+        }
+
+        _log("jeton d'API régénéré", "Les clients qui portaient l'ancien sont refusés.",
+            ActivityLevel.Warning);
+
+        // Le serveur tient la liste chargee : sans relecture, l'ancien jeton continuerait
+        // d'ouvrir la porte jusqu'au prochain demarrage.
+        IsDirty = true;
+        Raise(nameof(ApiTokenSecret));
+    }
+
     private PersonalityTraits CurrentTraits() =>
         _runtime.Copilot.Personality.Traits with
         {
@@ -608,6 +718,8 @@ public sealed class SettingsViewModel : ObservableObject
             nameof(Volume), nameof(Humor), nameof(Sarcasm), nameof(Formality), nameof(Verbosity),
             nameof(Calmness), nameof(Warmth), nameof(Preview), nameof(VerbosityEffect),
             nameof(NeuralVoice), nameof(NeuralVoiceAvailable), nameof(VoiceEngineExplanation),
+            nameof(ApiEnabled), nameof(ApiPort), nameof(ApiRate), nameof(ApiAddress),
+            nameof(ApiTokenSecret), nameof(ApiState), nameof(ApiExplanation),
             nameof(AiEnabled), nameof(AiProvider), nameof(AiEndpoint), nameof(AiModel),
             nameof(AiBudget), nameof(AiExplanation), nameof(AiProbe),
         })

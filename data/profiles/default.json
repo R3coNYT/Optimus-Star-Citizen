@@ -43,6 +43,20 @@
     "model": "llama3.1",
     "call_budget": 200
   },
+  "api": {
+    "notes": [
+      "API locale, DESACTIVEE par defaut. Elle n'ecoute que 127.0.0.1 : Windows refuse a un",
+      "programme non administrateur d'ecouter sur toutes les interfaces, et Optimus s'installe",
+      "par utilisateur, sans UAC. La promesse « jamais sur le reseau » est donc portee par le",
+      "systeme, pas seulement par ce fichier.",
+      "Elle transporte des INTENTIONS, jamais des touches : aucune route ne prend un code de",
+      "touche, on designe une commande du catalogue, et l'execution repasse par la garde.",
+      "Le jeton est emis a la premiere activation, chiffre par DPAPI dans %APPDATA%/Optimus/api."
+    ],
+    "enabled": false,
+    "port": 8731,
+    "executions_per_minute": 30
+  },
   "safety": {
     "simulation_mode": false,
     "require_game_foreground": true,

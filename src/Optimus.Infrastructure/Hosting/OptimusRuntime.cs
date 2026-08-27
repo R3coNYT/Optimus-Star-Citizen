@@ -1,6 +1,8 @@
 ﻿using Optimus.Core.Abstractions;
 using Optimus.Core.Ai;
+using Optimus.Core.Api;
 using Optimus.Infrastructure.Ai;
+using Optimus.Infrastructure.Api;
 using Optimus.Core.Bindings;
 using Optimus.Core.Diagnostics;
 using Optimus.Core.Domain.Bindings;
@@ -154,6 +156,18 @@ public sealed class OptimusRuntime : IAsyncDisposable
 
     /// <summary>Vrai si l'étage conversationnel est monté.</summary>
     public bool HasConversation => Conversation is not null;
+
+    /// <summary>
+    /// L'API locale, ou <c>null</c> tant qu'elle n'est pas demandée.
+    ///
+    /// Éteinte par défaut, comme l'étage conversationnel : une interface qu'on n'a pas demandée
+    /// est une surface offerte, même sur la boucle locale — n'importe quel programme lancé par
+    /// le pilote pourrait s'y adresser.
+    /// </summary>
+    public LocalApiServer? Api { get; private set; }
+
+    /// <summary>Jetons d'accès en vigueur. Vide tant que l'API n'a jamais été activée.</summary>
+    public IReadOnlyList<ApiToken> ApiTokens { get; private set; } = [];
 
     /// <summary>Profil du jeu seul, sans les choix du pilote. Sert à savoir ce qui manque.</summary>
     public BindingProfile DefaultBindings { get; }
@@ -964,6 +978,45 @@ public sealed class OptimusRuntime : IAsyncDisposable
     public Task ReloadBindingProfilesAsync(CancellationToken cancellationToken = default) =>
         ReloadMacrosAsync(cancellationToken);
 
+    /// <summary>
+    /// Aligne l'API locale sur les réglages : la monte, l'arrête, ou la remonte sur un autre port.
+    ///
+    /// Appelée au démarrage et après chaque enregistrement des réglages. Les jetons ne sont émis
+    /// qu'au moment où l'API sert pour la première fois : un pilote qui n'active jamais
+    /// l'interface n'a aucun secret qui traîne sur son disque.
+    /// </summary>
+    public async Task ApplyApiSettingsAsync()
+    {
+        ApiSettings settings = User.Api ?? ApiSettings.Disabled;
+
+        if (Api is not null)
+        {
+            await Api.DisposeAsync().ConfigureAwait(false);
+            Api = null;
+        }
+
+        if (!settings.Enabled)
+        {
+            StateChanged?.Invoke(this, EventArgs.Empty);
+            return;
+        }
+
+        ApiTokens = ApiTokenStore.Ensure();
+
+        LocalApiServer server = new(this, settings, ApiTokens);
+
+        if (await server.StartAsync().ConfigureAwait(false))
+        {
+            Api = server;
+        }
+        else
+        {
+            await server.DisposeAsync().ConfigureAwait(false);
+        }
+
+        StateChanged?.Invoke(this, EventArgs.Empty);
+    }
+
     private SequenceOptions Timing() =>
         SimulationMode ? SequenceOptions.Instant : new SequenceOptions(RealTime: true);
 
@@ -1061,6 +1114,12 @@ public sealed class OptimusRuntime : IAsyncDisposable
             // Perdre le journal de comprehension est facheux, pas grave : il se reconstruit en
             // volant. Empecher la fermeture pour cela serait absurde.
             DiagnosticLog.Warn("journal de compréhension non enregistré", exception.Message);
+        }
+
+        if (Api is not null)
+        {
+            await Api.DisposeAsync().ConfigureAwait(false);
+            Api = null;
         }
 
         if (_model is not null)

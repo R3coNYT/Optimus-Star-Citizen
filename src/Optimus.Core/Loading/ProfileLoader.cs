@@ -22,7 +22,8 @@ public sealed record UserProfile(
     bool RequireGameForeground = true,
     bool ConfirmDangerous = true,
     Ai.AiSettings? Ai = null,
-    string? ActiveBindingProfile = null)
+    string? ActiveBindingProfile = null,
+    Api.ApiSettings? Api = null)
 {
     public static UserProfile Default { get; } =
         new("default", "Pilote", "optimus", VoiceInputSettings.Default);
@@ -78,7 +79,8 @@ public static class ProfileLoader
             GetBool(root, "safety", "require_game_foreground") ?? true,
             GetBool(root, "safety", "confirm_dangerous") ?? true,
             ReadAi(root),
-            GetString(root, "active_binding_profile"));
+            GetString(root, "active_binding_profile"),
+            ReadApi(root));
 
         return new LoadResult<UserProfile>(profile, issues);
     }
@@ -99,6 +101,22 @@ public static class ProfileLoader
     /// Absent du fichier vaut désactivé : c'est l'exigence §84, et le comportement par défaut
     /// doit être celui qui ne dépend de rien.
     /// </summary>
+    /// <summary>
+    /// Lit la section « api ». Absente, l'API reste éteinte — c'est le défaut voulu.
+    /// </summary>
+    private static Api.ApiSettings ReadApi(JsonElement root)
+    {
+        if (!root.TryGetProperty("api", out JsonElement api) || api.ValueKind != JsonValueKind.Object)
+        {
+            return Api.ApiSettings.Disabled;
+        }
+
+        return new Api.ApiSettings(
+            GetBool(api, "enabled") ?? false,
+            GetInt(api, "port") ?? 8731,
+            GetInt(api, "executions_per_minute") ?? 30);
+    }
+
     private static Ai.AiSettings ReadAi(JsonElement root)
     {
         if (!root.TryGetProperty("ai", out JsonElement ai) || ai.ValueKind != JsonValueKind.Object)
@@ -128,6 +146,14 @@ public static class ProfileLoader
 
     private static string? GetString(JsonElement element, string parent, string property) =>
         element.TryGetProperty(parent, out JsonElement container) ? GetString(container, property) : null;
+
+    private static int? GetInt(JsonElement element, string property) =>
+        element.ValueKind == JsonValueKind.Object &&
+        element.TryGetProperty(property, out JsonElement value) &&
+        value.ValueKind == JsonValueKind.Number &&
+        value.TryGetInt32(out int number)
+            ? number
+            : null;
 
     private static double? GetDouble(JsonElement element, string property) =>
         element.ValueKind == JsonValueKind.Object &&

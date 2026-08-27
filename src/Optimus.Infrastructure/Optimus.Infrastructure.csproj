@@ -24,6 +24,23 @@
 
   <ItemGroup>
     <PackageReference Include="System.Speech" Version="8.0.0" />
+
+    <!--
+      DPAPI, pour chiffrer les jetons de l'API locale au compte Windows courant. Le pilote
+      recopie %APPDATA%\Optimus d'une machine a l'autre : un jeton en clair partirait avec.
+    -->
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      Le plafond d'executions est un controle de surete : sa fenetre glissante merite d'etre
+      eprouvee, et l'ouvrir aux essais coute moins qu'une classe publique qui n'a rien a faire
+      dans la surface de la bibliotheque.
+    -->
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>Optimus.Infrastructure.Tests</_Parameter1>
+    </AssemblyAttribute>
   </ItemGroup>
 
 </Project>

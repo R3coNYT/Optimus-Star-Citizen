@@ -373,6 +373,11 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
     public async Task WarmUpAsync()
     {
         await _runtime.WarmUpAsync().ConfigureAwait(true);
+
+        // L'API locale monte apres le prechauffage : elle n'est utile qu'une fois le moteur
+        // pret, et la faire attendre evite qu'un client tres matinal tombe sur un copilote
+        // encore en train de charger sa voix.
+        await _runtime.ApplyApiSettingsAsync().ConfigureAwait(true);
         await Settings.LoadVoicesAsync().ConfigureAwait(true);
     }
 

@@ -66,6 +66,22 @@ public static class SettingsWriter
         Patch(profilePath, root => root["active_binding_profile"] = name);
     }
 
+    /// <summary>Écrit les réglages de l'API locale.</summary>
+    public static void SaveApi(string profilePath, Api.ApiSettings settings)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(profilePath);
+        ArgumentNullException.ThrowIfNull(settings);
+
+        Patch(profilePath, root =>
+        {
+            JsonObject api = Section(root, "api");
+
+            api["enabled"] = settings.Enabled;
+            api["port"] = settings.Port;
+            api["executions_per_minute"] = settings.ExecutionsPerMinute;
+        });
+    }
+
     /// <summary>Écrit les réglages de l'étage conversationnel.</summary>
     public static void SaveAi(string profilePath, Ai.AiSettings settings)
     {

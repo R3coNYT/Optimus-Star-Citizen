@@ -2,9 +2,41 @@
 
 ## 12.1 API locale (Optimus Bridge)
 
-Hébergée **dans le processus** de l'application, Kestrel lié à `127.0.0.1` uniquement.
+Hébergée **dans le processus** de l'application, liée à `127.0.0.1` uniquement.
 Sert : l'UI (à terme), le bot Discord, les plugins, un compagnon tablette/SIMPIT, et de futurs
-clients. Elle n'est **jamais** exposée sur le réseau local par défaut.
+clients. Elle n'est **jamais** exposée sur le réseau local.
+
+### Ce qui est livré (2026-08-27)
+
+Le tableau ci-dessous décrit la cible. Ce qui existe aujourd'hui en est le socle exécutable :
+
+| Méthode | Route | Portée |
+|---|---|---|
+| `GET` | `/api/status` | `read` |
+| `GET` | `/api/commands` | `read` |
+| `POST` | `/api/intents/resolve` | `read` — résout un énoncé **sans rien exécuter** |
+| `POST` | `/api/commands/{id}/execute` | `execute` |
+| `POST` | `/api/utterance` | `execute` — même chemin que la voix |
+| `POST` | `/api/say` | `write` |
+| `POST` | `/api/system/killswitch` · `/api/system/simulation` | `write` |
+| `WS` | `/ws/events` | `read` — trames `activity` et `state` |
+
+Le reste du tableau cible — CRUD des copilotes, des commandes, des bindings, historique,
+statistiques — reste à faire : l'écran couvre déjà ces gestes, et les ouvrir à l'API sans besoin
+exprimé aurait été de la surface offerte pour rien.
+
+**`HttpListener` plutôt que Kestrel.** Une poignée de routes sur la boucle locale ne justifie pas
+d'embarquer ASP.NET Core dans une publication autonome déjà à 76 Mo. Et surtout : mesuré le
+2026-08-27, `HttpListener` accepte `http://127.0.0.1:port/` **sans aucun privilège** mais refuse
+`http://+:port/` — l'écoute sur toutes les interfaces — à qui n'est pas administrateur. Optimus
+s'installant par utilisateur, sans UAC (D58), il lui est donc *impossible* de s'exposer au
+réseau, même par erreur de programmation. La promesse §81-83 est portée par le système
+d'exploitation, pas seulement par une ligne qu'un jour quelqu'un modifierait.
+
+**Une exécution prend le temps que prend la parole.** `/execute` et `/utterance` ne rendent la
+main qu'une fois la réplique du copilote prononcée — mesuré à environ 4 s pour un refus bavard.
+C'est délibéré : l'API suit exactement le chemin de la voix, réponse comprise. Un client qui ne
+veut pas attendre écoute `/ws/events` plutôt que la réponse HTTP.
 
 ### Routes
 
