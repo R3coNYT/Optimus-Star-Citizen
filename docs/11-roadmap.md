@@ -112,8 +112,26 @@ suit est la file d'attente convenue avec le pilote, dans l'ordre.
 
 **Réserve sur le chantier 2.** L'étage est en place et éprouvé, mais **la conversation libre à la voix n'est pas encore atteignable**. La grammaire est fermée (D28, D30) : un énoncé hors catalogue ne parvient jamais à Optimus sous forme de texte — le moteur rend la formulation connue la plus proche, assortie d'une faible confiance, jamais ce qui a été dit. Le modèle sert donc aujourd'hui deux entrées : le champ « essayer un énoncé », et les énoncés vocaux ressortis en `Unknown`. Parler librement à son copilote demande l'étage de parole libre (Whisper, D28 phase B), qui n'est pas encore monté.
 
-**Hors file, mais ouvert** : la signature de code (R16). Sans conséquence tant qu'Optimus reste
-sur le poste de son auteur — bloquant dès qu'il faut le diffuser.
+**Dernier chantier, une fois tout le reste fait : la signature de code (R16).**
+
+Voie retenue le 2026-08-27 : **SignPath Foundation**, qui signe gratuitement les projets open
+source. Les certificats commerciaux coûtent de 100 à 600 € par an, ce qui est hors budget — et un
+certificat qu'on ne renouvelle pas laisse un binaire signé par une clé expirée, soit pire que rien.
+
+En contrepartie, SignPath exige un dépôt public, une licence OSI et une compilation depuis les
+sources sur une CI publique. **C'est donc autant une décision de diffusion qu'une décision
+technique** : la question « privé / open source / produit » de 13.5 se trouve tranchée par le
+même geste.
+
+Ce qu'il restera à faire, dans cet ordre :
+
+1. Publier le dépôt et choisir la licence.
+2. Monter la compilation en GitHub Actions, reproductible depuis les sources.
+3. Déposer le dossier auprès de SignPath Foundation.
+4. Brancher la signature sur `tools/build-installer.ps1`, pour l'exécutable **et** l'installateur.
+
+D'ici là, Optimus s'installe et fonctionne : l'avertissement SmartScreen se franchit par
+« Informations complémentaires → Exécuter quand même », une fois par version.
 
 
 ---
