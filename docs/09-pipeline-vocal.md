@@ -68,6 +68,78 @@ Mesuré depuis `speech_end` (fin de parole détectée) jusqu'à l'événement cl
 | *(si LLM local Ollama 7B)* | +400 à 900 ms | — | uniquement sur échec du matcher local |
 | *(si LLM cloud)* | +600 à 2 000 ms | — | jamais sur le chemin des commandes connues |
 
+### La voix neuronale locale (Piper)
+
+Les voix Windows sont irréprochables en latence et discutables en timbre. Piper renverse
+exactement ce rapport, et le pilote choisit lequel des deux compromis il préfère —
+`voice.provider` dans le fichier du copilote, ou la case dans les réglages.
+
+**Locale au sens fort** : le modèle tourne sur la machine du pilote. Rien ne part sur le réseau,
+Optimus reste utilisable hors ligne, et ce que dit le copilote ne parvient à personne. C'est ce
+qui distingue Piper d'un service de synthèse en ligne, dont le timbre serait peut-être meilleur.
+
+#### Mesures du 2026-08-27 (12 cœurs, modèles français)
+
+| | Chargement de la voix | Synthèse par réplique | Facteur temps réel |
+|---|---|---|---|
+| Voix Windows OneCore | 429 ms, une fois (D23) | **7 à 15 ms** | 0,003 |
+| Piper `fr_FR-tom-medium` | **620 à 785 ms** | **377 à 455 ms** | 0,113 |
+| Piper `fr_FR-gilles-low` | **318 ms** | **214 ms** | 0,047 |
+
+Piper coûte donc environ **quarante fois** plus qu'une voix Windows par réplique. Ce qui rend
+l'échange acceptable est écrit plus haut, et c'est la décision structurante du pipeline :
+**l'action ne dépend jamais du TTS**. La touche est déjà partie quand Optimus commente. Le délai
+porte sur le commentaire, jamais sur la réactivité du jeu.
+
+Une voix `low` divise l'attente par deux pour un timbre à peine moins riche : c'est le réglage à
+essayer avant de renoncer.
+
+#### Un processus persistant, et pourquoi
+
+Relancer `piper.exe` à chaque phrase ferait payer le chargement du modèle — 0,6 s — **avant
+chaque mot**, soit près d'une seconde d'attente par réplique. Le processus reste donc ouvert, la
+voix chargée, et le préchauffage du démarrage attend réellement l'annonce de disponibilité :
+sans cette attente, la première réplique payait 740 ms, ce qui vidait D23 de son sens.
+
+Le protocole retenu est celui qui a été vérifié : **une ligne de texte** sur l'entrée standard,
+**un chemin de fichier WAV** sur la sortie standard, les journaux sur l'erreur standard. Le mode
+`--json-input` a été essayé et écarté — il ignore `length_scale` dans cette version, ce qui
+aurait rendu le réglage de débit inopérant sans que rien ne le signale.
+
+#### Installation
+
+Piper n'est pas livré avec Optimus : 22 Mo de binaire et 63 Mo par voix, pour une fonction dont
+on peut se passer. L'installation vit dans `%APPDATA%\Optimus\piper`, hors de `data/` que le
+script de publication remplace (même principe que D35, D43 et D46).
+
+```
+%APPDATA%\Optimus\piper\
+├── piper.exe            (+ ses DLL et espeak-ng-data, tels que livrés dans l'archive)
+└── voices\
+    ├── fr_FR-tom-medium.onnx
+    └── fr_FR-tom-medium.onnx.json
+```
+
+Le binaire vient des versions publiées de `rhasspy/piper` (`piper_windows_amd64.zip`), les voix
+de `huggingface.co/rhasspy/piper-voices` — chaque voix étant un `.onnx` **et** son `.onnx.json`,
+les deux étant nécessaires. Optimus n'accepte l'installation que si les deux sont là : un Piper
+sans modèle est une installation à moitié faite, et la retenir rendrait le copilote muet le
+temps que le pilote comprenne pourquoi.
+
+**Cette installation est propre à chaque machine.** Le dossier ne suit pas la publication : sur
+un second poste, il faut soit le recopier, soit décocher la case — auquel cas les voix Windows
+reprennent la main, avec une ligne de journal qui le dit.
+
+#### Rien ne peut rendre le copilote muet
+
+Piper est un processus externe : un antivirus qui le tue, un modèle corrompu, un disque plein.
+Les voix Windows, elles, sont toujours là. Le moteur principal est donc doublé, et **abandonné
+après deux échecs consécutifs** — réessayer indéfiniment ferait payer son délai d'attente à
+chaque réplique, ce qui serait bien pire qu'un changement de timbre. Le pilote entend une autre
+voix, ce qui est un signal en soi, et le journal dit pourquoi.
+
+---
+
 ### Optimisations prévues
 
 | Technique | Gain | Complexité |

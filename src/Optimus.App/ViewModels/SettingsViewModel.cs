@@ -11,6 +11,7 @@ using Optimus.Core.Loading;
 using Optimus.Core.Personality;
 using Optimus.Infrastructure.Hosting;
 using Optimus.Infrastructure.Input;
+using Optimus.Infrastructure.Speech;
 
 namespace Optimus.App.ViewModels;
 
@@ -48,6 +49,7 @@ public sealed class SettingsViewModel : ObservableObject
     private string _aiModel = string.Empty;
     private int _aiBudget = 200;
     private string _aiProbe = string.Empty;
+    private bool _neuralVoice;
     private bool _dirty;
 
     public SettingsViewModel(OptimusRuntime runtime, Action<string, string?, ActivityLevel> log)
@@ -206,6 +208,42 @@ public sealed class SettingsViewModel : ObservableObject
         set => Track(ref _volume, Math.Round(value, 2));
     }
 
+    /// <summary>Le copilote parle-t-il avec une voix neuronale locale plutôt qu'une voix Windows ?</summary>
+    public bool NeuralVoice
+    {
+        get => _neuralVoice;
+        set
+        {
+            if (Track(ref _neuralVoice, value))
+            {
+                Raise(nameof(VoiceEngineExplanation));
+            }
+        }
+    }
+
+    /// <summary>Vrai si Piper est installé et utilisable.</summary>
+    public bool NeuralVoiceAvailable => PiperInstallation.Locate() is not null;
+
+    /// <summary>
+    /// Le compromis, dit en clair plutôt que découvert à l'usage.
+    ///
+    /// Les chiffres sont mesurés sur cette machine le 2026-08-27, pas repris d'une brochure :
+    /// une voix neuronale coûte une fraction de seconde de plus <b>par réplique</b>. C'est
+    /// supportable parce que la parole vient après l'action — le vaisseau a déjà obéi quand
+    /// Optimus commente — mais personne ne devrait s'en apercevoir en vol.
+    /// </summary>
+    public string VoiceEngineExplanation => !NeuralVoiceAvailable
+        ? "Piper n'est pas installé. Placez piper.exe et au moins un modèle .onnx dans "
+          + $"{PiperInstallation.DefaultRoot} — le binaire vient des versions publiées de "
+          + "rhasspy/piper, les voix de huggingface.co/rhasspy/piper-voices."
+        : NeuralVoice
+            ? "Le modèle tourne sur cette machine : rien ne part sur le réseau. Compter environ "
+              + "400 ms par réplique avec une voix « medium », contre 10 ms pour une voix "
+              + "Windows. La parole venant après l'action, ce délai porte sur le commentaire, "
+              + "jamais sur la commande. Une voix « low » divise l'attente par deux."
+            : "Voix Windows : quasi instantanées (7 à 15 ms), toujours disponibles, mais au "
+              + "timbre synthétique. C'est le choix sûr.";
+
     public bool AiEnabled
     {
         get => _aiEnabled;
@@ -345,7 +383,17 @@ public sealed class SettingsViewModel : ObservableObject
     /// <summary>Charge la liste des voix installées.</summary>
     public async Task LoadVoicesAsync()
     {
-        IReadOnlyList<VoiceInfo> voices = await _runtime.Speech.GetVoicesAsync().ConfigureAwait(true);
+        List<VoiceInfo> voices = new(
+            await _runtime.Speech.GetVoicesAsync().ConfigureAwait(true));
+
+        // Les voix Piper meme quand le moteur actif est celui de Windows : sans cela, choisir une
+        // voix neuronale demanderait d'enregistrer, de redemarrer, puis de revenir choisir — trois
+        // gestes pour un seul reglage.
+        if (PiperInstallation.Locate() is PiperInstallation installation
+            && !_runtime.Speech.Id.Equals(SpeechFactory.Piper, StringComparison.OrdinalIgnoreCase))
+        {
+            voices.InsertRange(0, installation.Voices());
+        }
 
         Voices.Clear();
 
@@ -378,6 +426,7 @@ public sealed class SettingsViewModel : ObservableObject
 
         _wakeWord = _runtime.Copilot.WakeWord;
         _voiceId = voice.VoiceId;
+        _neuralVoice = string.Equals(voice.Provider, SpeechFactory.Piper, StringComparison.OrdinalIgnoreCase);
         _rate = voice.Rate;
         _volume = voice.Volume;
 
@@ -430,7 +479,13 @@ public sealed class SettingsViewModel : ObservableObject
 
         SettingsWriter.SaveCopilotVoice(
             _runtime.CopilotPath,
-            _runtime.Copilot.Voice with { VoiceId = VoiceId, Rate = Rate, Volume = Volume },
+            _runtime.Copilot.Voice with
+            {
+                Provider = NeuralVoice ? SpeechFactory.Piper : "windows-onecore",
+                VoiceId = VoiceId,
+                Rate = Rate,
+                Volume = Volume,
+            },
             WakeWord.Trim());
 
         SettingsWriter.SaveTraits(_runtime.PersonalityPath, CurrentTraits());
@@ -552,6 +607,7 @@ public sealed class SettingsViewModel : ObservableObject
             nameof(NoiseFloor), nameof(ThresholdExplanation), nameof(VoiceId), nameof(Rate),
             nameof(Volume), nameof(Humor), nameof(Sarcasm), nameof(Formality), nameof(Verbosity),
             nameof(Calmness), nameof(Warmth), nameof(Preview), nameof(VerbosityEffect),
+            nameof(NeuralVoice), nameof(NeuralVoiceAvailable), nameof(VoiceEngineExplanation),
             nameof(AiEnabled), nameof(AiProvider), nameof(AiEndpoint), nameof(AiModel),
             nameof(AiBudget), nameof(AiExplanation), nameof(AiProbe),
         })

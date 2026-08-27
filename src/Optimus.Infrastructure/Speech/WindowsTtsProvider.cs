@@ -1,4 +1,4 @@
-using System.Runtime.Versioning;
+﻿using System.Runtime.Versioning;
 using Optimus.Core.Abstractions;
 using Windows.Media.Core;
 using Windows.Media.Playback;
@@ -156,6 +156,13 @@ public sealed class WindowsTtsProvider : ITextToSpeechProvider
 
         // Voix introuvable : on garde celle par défaut plutôt que d'échouer. Une voix
         // inattendue vaut mieux qu'un copilote muet, et l'anomalie se voit à l'oreille.
+        //
+        // Elle se lit aussi, desormais : le cas le plus frequent est un identifiant Piper arrive
+        // ici apres un repli, et un pilote qui entend soudain une autre voix merite mieux qu'une
+        // devinette.
+        Optimus.Core.Diagnostics.DiagnosticLog.Warn(
+            $"voix Windows « {voiceId} » introuvable",
+            "La voix par défaut du système prend le relais.");
     }
 
     public ValueTask DisposeAsync()

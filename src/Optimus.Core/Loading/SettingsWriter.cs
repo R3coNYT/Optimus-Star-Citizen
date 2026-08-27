@@ -81,6 +81,7 @@ public static class SettingsWriter
             root["wake_word"] = wakeWord;
 
             JsonObject node = Section(root, "voice");
+            node["provider"] = voice.Provider;
             node["voice_id"] = voice.VoiceId;
             node["rate"] = Math.Round(voice.Rate, 3);
             node["volume"] = Math.Round(voice.Volume, 3);

@@ -82,7 +82,7 @@ public sealed class OptimusRuntime : IAsyncDisposable
 
         Bindings = Compose(bindings, overlay);
         Composer = new ResponseComposer(copilot.Personality, copilot.Responses);
-        Speech = new WindowsTtsProvider();
+        Speech = SpeechFactory.For(copilot);
         Detector = new StarCitizenDetector();
         State = new CopilotState();
 
@@ -169,7 +169,10 @@ public sealed class OptimusRuntime : IAsyncDisposable
 
     public ResponseComposer Composer { get; private set; }
 
-    public ITextToSpeechProvider Speech { get; }
+    public ITextToSpeechProvider Speech { get; private set; }
+
+    /// <summary>Vrai si une installation de Piper est utilisable sur cette machine.</summary>
+    public static bool PiperAvailable => PiperInstallation.Locate() is not null;
 
     public StarCitizenDetector Detector { get; }
 
@@ -340,8 +343,21 @@ public sealed class OptimusRuntime : IAsyncDisposable
         }
 
         User = ProfileLoader.Load(ProfilePath).Value;
+
+        Copilot previous = Copilot;
         Copilot = CopilotLoader.Load(CopilotDirectory).Value;
         Composer = new ResponseComposer(Copilot.Personality, Copilot.Responses);
+
+        // Changer de moteur demande d'en construire un autre : le precedent tient un processus
+        // Piper ouvert et un lecteur audio, qu'il faut relacher plutot que d'abandonner.
+        if (!string.Equals(previous.Voice.Provider, Copilot.Voice.Provider, StringComparison.OrdinalIgnoreCase))
+        {
+            ITextToSpeechProvider stale = Speech;
+            Speech = SpeechFactory.For(Copilot);
+
+            await stale.DisposeAsync().ConfigureAwait(false);
+            await Speech.WarmUpAsync(Copilot.Voice.VoiceId, cancellationToken).ConfigureAwait(false);
+        }
 
         if (wasListening)
         {

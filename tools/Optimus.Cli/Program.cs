@@ -99,9 +99,7 @@ public static class Program
 
         PrintHeader(catalog, profile, copilot, user, game, real);
 
-        await using ITextToSpeechProvider speech = silent
-            ? new NullTextToSpeechProvider()
-            : new WindowsTtsProvider();
+        await using ITextToSpeechProvider speech = SpeechFactory.For(copilot.Value, silent);
 
         if (listVoices)
         {
@@ -647,6 +645,7 @@ public static class Program
         Console.WriteLine($"binaire       : {BuildStamp()}");
         Console.WriteLine($"copilote      : {copilot.Value.Name} · {copilot.Value.Voice.VoiceId ?? "voix par défaut"}" +
                           $" · débit {copilot.Value.EffectiveRate:F2}");
+        Console.WriteLine($"synthèse      : {SpeechFactory.Describe(copilot.Value)}");
         Console.WriteLine($"personnalité  : {copilot.Value.Responses.EntryCount} entrées, " +
                           $"{copilot.Value.Responses.VariantCount} variantes · " +
                           $"{copilot.Value.Personality.Traits.MaxWords} mots max");
