@@ -4,8 +4,7 @@
   "display_name": "Pilote",
   "language": "fr-FR",
   "preferred_copilot": "optimus",
-  "active_binding_profile": "defaults-4.9",
-
+  "active_binding_profile": "Standard",
   "voice_input": {
     "notes": [
       "mode = always_on : Optimus ecoute en permanence, et la grammaire n'accepte que les",
@@ -21,14 +20,12 @@
     "noise_floor": 0.35,
     "input_device_id": null
   },
-
   "hotkeys": {
     "push_to_talk": "INSERT",
     "toggle_microphone": "CTRL+INSERT",
     "kill_switch": "CTRL+ALT+PAUSE",
     "toggle_simulation": "CTRL+ALT+S"
   },
-
   "ai": {
     "notes": [
       "Etage conversationnel, DESACTIVE par defaut (§84) : tout fonctionne sans lui, hors ligne,",
@@ -46,7 +43,6 @@
     "model": "llama3.1",
     "call_budget": 200
   },
-
   "safety": {
     "simulation_mode": false,
     "require_game_foreground": true,

@@ -135,6 +135,14 @@ public static class ResponseRouter
             return [MasterMode.ResponseKey(context.CombatActive), result.Command.Id, fallback];
         }
 
+        // Les commandes de bascule de profil sont engendrees a partir des fichiers du pilote :
+        // leur identifiant depend d'un nom qu'on ne connait pas a l'avance, et aucune reponse ne
+        // peut donc etre ecrite pour lui. Une cle commune leur sert de point de chute.
+        if (result.Command.Id.StartsWith(Bindings.BindingProfileSet.CommandPrefix, StringComparison.Ordinal))
+        {
+            return [Bindings.BindingProfileSet.ResponseKey, fallback];
+        }
+
         // Le sens demande prime sur la commande : « Voila de la lumiere » apres une extinction
         // sonnerait faux. On tente d'abord la cle dirigee, et l'on retombe sur la cle generale
         // pour toutes les commandes ou ecrire deux jeux de repliques ne vaut pas le detour.

@@ -81,16 +81,29 @@ public static class Program
         LoadResult<CommandCatalog> catalog = JsonCatalogLoader.LoadCatalog(catalogPath);
         LoadResult<BindingProfile> profile = JsonCatalogLoader.LoadBindingProfile(profilePath);
 
+        _userProfilePath = Path.Combine(repoRoot, "data", "profiles", "default.json");
+
+        LoadResult<UserProfile> user = ProfileLoader.Load(_userProfilePath);
+
         // Les touches choisies par le pilote se posent par-dessus le profil du jeu, qui reste
         // intact et donc remplacable a chaque mise a jour (« defauts + deltas »).
-        string overlayPath = BindingOverlay.DefaultPath();
+        //
+        // Le PROFIL ACTIF, et non un chemin fixe : le banc et l'application doivent lire et
+        // ecrire le meme fichier, sans quoi « --bind » modifierait un profil qu'Optimus ne
+        // regarde plus, et le pilote verrait sa touche disparaitre sans explication.
+        string bindingProfile = BindingProfileSet.Resolve(user.Value.ActiveBindingProfile);
+        string overlayPath = BindingProfileSet.PathOf(bindingProfile);
         BindingOverlay overlay = BindingOverlay.Load(overlayPath);
 
         if (overlay.Count > 0)
         {
             profile = profile with { Value = profile.Value.WithOverrides(BindingEditor.ToBindings(overlay)) };
         }
-        LoadResult<UserProfile> user = ProfileLoader.Load(Path.Combine(repoRoot, "data", "profiles", "default.json"));
+
+        // Le banc doit connaitre les memes commandes que l'application, bascules de profil
+        // comprises : un banc qui repondrait « je ne connais pas cette commande » a une phrase
+        // qu'Optimus execute serait pire qu'inutile, il induirait en erreur.
+        catalog = catalog with { Value = BindingProfileSet.Augment(catalog.Value) };
         LoadResult<Copilot> copilot = CopilotLoader.Load(
             Path.Combine(repoRoot, "data", "copilots", user.Value.PreferredCopilot));
 
@@ -409,6 +422,15 @@ public static class Program
         return 0;
     }
 
+    /// <summary>
+    /// Chemin du profil utilisateur, fixe pour toute l'execution.
+    ///
+    /// Un champ statique plutot qu'un parametre de plus : « RunAsync » est appelee de trois
+    /// endroits, et faire voyager un chemin constant a travers huit arguments pour l'usage
+    /// d'une seule ligne aurait alourdi les trois pour n'en servir qu'une.
+    /// </summary>
+    private static string _userProfilePath = string.Empty;
+
     private static async Task RunAsync(
         CommandExecutor executor,
         StarCitizenDetector detector,
@@ -444,6 +466,17 @@ public static class Program
             .ConfigureAwait(false);
 
         State.Record(result);
+
+        // Bascule de profil de touches. Le banc l'applique reellement plutot que de se contenter
+        // de reconnaitre la phrase : une trace qui affiche « Allowed » sans que rien ne change
+        // serait plus trompeuse qu'un refus franc.
+        if (BindingProfileSet.ProfileOf(result.Command) is string switched && result.Succeeded)
+        {
+            SettingsWriter.SaveActiveBindingProfile(
+                _userProfilePath, switched);
+
+            Console.WriteLine($"  profil      « {switched} » sera actif au prochain enonce");
+        }
 
         // Bascule declarative du mode de combat : faute de telemetrie, Optimus se fie a ce que
         // le pilote lui annonce. Un IGameStateProvider prendra le relais le jour venu.
@@ -653,6 +686,12 @@ public static class Program
         Console.WriteLine($"catalogue     : {catalog.Value.Count} commandes");
         Console.WriteLine($"bindings      : {profile.Value.BoundCount} actions liées, {profile.Value.UnboundCount} sans touche" +
                           $"  (jeu {profile.Value.GameVersion}, build {profile.Value.GameBuild})");
+        string bindings = BindingProfileSet.Resolve(user.Value.ActiveBindingProfile);
+
+        Console.WriteLine(
+            $"profil touches: « {bindings} » · "
+            + $"{BindingOverlay.Load(BindingProfileSet.PathOf(bindings)).Count} assignations"
+            + $"  ({BindingProfileSet.List().Count} profils installés)");
         Console.WriteLine($"scancodes     : {ScanCodeMap.Count} touches connues");
 
         // Ce banc monte son propre executeur, pas `OptimusRuntime` : l'escalade vers le modele

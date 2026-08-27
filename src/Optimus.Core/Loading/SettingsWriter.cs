@@ -51,6 +51,21 @@ public static class SettingsWriter
         });
     }
 
+    /// <summary>
+    /// Écrit le profil de touches actif.
+    ///
+    /// Dans le profil utilisateur et non dans le fichier du profil de touches : c'est un
+    /// réglage de la machine, pas du jeu d'assignations. Deux postes qui partagent les mêmes
+    /// profils peuvent ainsi en avoir chacun un d'actif différent.
+    /// </summary>
+    public static void SaveActiveBindingProfile(string profilePath, string name)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(profilePath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+
+        Patch(profilePath, root => root["active_binding_profile"] = name);
+    }
+
     /// <summary>Écrit les réglages de l'étage conversationnel.</summary>
     public static void SaveAi(string profilePath, Ai.AiSettings settings)
     {

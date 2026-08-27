@@ -46,7 +46,7 @@ public sealed class OptimusRuntime : IAsyncDisposable
     private static readonly TimeSpan ProposalLifetime = TimeSpan.FromSeconds(12);
 
     private readonly SemaphoreSlim _processing = new(1, 1);
-    private readonly string _overlayPath;
+    private string _overlayPath;
 
     private ILanguageModel? _model;
     private IInputEngine _engine;
@@ -161,7 +161,13 @@ public sealed class OptimusRuntime : IAsyncDisposable
     /// <summary>Profil effectif : défauts du jeu ⊕ assignations du pilote.</summary>
     public BindingProfile Bindings { get; private set; }
 
-    public BindingOverlay Overlay { get; }
+    public BindingOverlay Overlay { get; private set; }
+
+    /// <summary>Nom du profil de touches en vigueur.</summary>
+    public string BindingProfileName { get; private set; } = BindingProfileSet.DefaultName;
+
+    /// <summary>Profils installés, relus à chaque appel : le pilote peut en déposer un à la main.</summary>
+    public IReadOnlyList<BindingProfileInfo> BindingProfiles => BindingProfileSet.List();
 
     public UserProfile User { get; private set; }
 
@@ -225,6 +231,10 @@ public sealed class OptimusRuntime : IAsyncDisposable
             : CommandCatalog.Merge(
                 catalog.Value.Id, catalog.Value.Name, catalog.Value, userMacros.Value);
 
+        // Chaque profil de touches apporte sa commande de bascule : « profil minage » doit etre
+        // prononcable, sinon changer de style de vol imposerait de quitter le jeu pour cliquer.
+        merged = BindingProfileSet.Augment(merged);
+
         // Les formulations ajoutees par le pilote s'appliquent par-dessus : c'est ce qui rend
         // le reglage de la reconnaissance cumulatif d'une session a l'autre.
         string phrasePath = UserPhrases.DefaultPath();
@@ -237,7 +247,11 @@ public sealed class OptimusRuntime : IAsyncDisposable
         LoadResult<Copilot> copilot = CopilotLoader.Load(
             Path.Combine(dataRoot, "data", "copilots", user.Value.PreferredCopilot));
 
-        string overlayPath = BindingOverlay.DefaultPath();
+        // Le profil enregistre s'il existe encore, le premier venu sinon. Un pilote qui
+        // supprime a la main le profil actif doit retrouver Optimus fonctionnel, pas un ecran
+        // des touches qui enregistre dans un fichier fantome.
+        string profileName = BindingProfileSet.Resolve(user.Value.ActiveBindingProfile);
+        string overlayPath = BindingProfileSet.PathOf(profileName);
 
         return new OptimusRuntime(
             dataRoot,
@@ -255,6 +269,7 @@ public sealed class OptimusRuntime : IAsyncDisposable
             ShippedCatalog = catalog.Value,
             Aliases = aliases,
             Understanding = UnderstandingLog.Load(UnderstandingLog.DefaultPath()),
+            BindingProfileName = profileName,
         };
     }
 
@@ -320,6 +335,54 @@ public sealed class OptimusRuntime : IAsyncDisposable
         Bindings = Compose(DefaultBindings, Overlay);
         _executor = BuildExecutor();
         StateChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// Bascule vers un autre profil de touches, sans redémarrer.
+    ///
+    /// Le profil courant est enregistré d'abord : basculer ne doit jamais perdre une assignation
+    /// que le pilote vient de poser. Puis la composition et l'exécuteur sont refaits — c'est
+    /// tout ce qui dépend des touches, la grammaire n'en dépendant pas, les formulations étant
+    /// les mêmes quel que soit le raccourci derrière.
+    ///
+    /// Le choix est enregistré dans le profil utilisateur : basculer en vol, c'est aussi dire
+    /// par quoi on veut recommencer demain.
+    /// </summary>
+    public void SwitchBindingProfile(string name)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+
+        string clean = BindingProfileSet.Sanitize(name);
+
+        if (string.Equals(clean, BindingProfileName, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        SaveOverlay();
+
+        string path = BindingProfileSet.PathOf(clean);
+
+        _overlayPath = path;
+        Overlay = BindingOverlay.Load(path);
+        BindingProfileName = clean;
+
+        ReloadBindings();
+
+        try
+        {
+            SettingsWriter.SaveActiveBindingProfile(ProfilePath, clean);
+        }
+        catch (Exception exception)
+        {
+            // Le profil est bel et bien actif : ne pas pouvoir s'en souvenir est genant, pas
+            // bloquant. Le dire plutot que de defaire une bascule qui a reussi.
+            DiagnosticLog.Warn("profil de touches non mémorisé", exception.Message);
+        }
+
+        DiagnosticLog.Info(
+            $"profil de touches « {clean} »",
+            $"{Overlay.Count} assignations · {Bindings.BoundCount} actions liées");
     }
 
     /// <summary>
@@ -390,7 +453,7 @@ public sealed class OptimusRuntime : IAsyncDisposable
             : CommandCatalog.Merge(
                 ShippedCatalog.Id, ShippedCatalog.Name, ShippedCatalog, userMacros.Value);
 
-        Catalog = UserPhrases.Apply(rebuilt, Aliases);
+        Catalog = UserPhrases.Apply(BindingProfileSet.Augment(rebuilt), Aliases);
 
         _executor = BuildExecutor();
 
@@ -686,6 +749,23 @@ public sealed class OptimusRuntime : IAsyncDisposable
     {
         State.Record(result);
 
+        // Bascule de profil de touches demandee a la voix. Comme le mode de vol, elle se fait
+        // ici plutot que dans l'executeur : c'est un etat d'Optimus, pas une touche envoyee au
+        // jeu, et la commande est passive pour cette raison.
+        if (BindingProfileSet.ProfileOf(result.Command) is string profile && result.Succeeded)
+        {
+            try
+            {
+                SwitchBindingProfile(profile);
+            }
+            catch (Exception exception)
+            {
+                DiagnosticLog.Warn($"bascule vers « {profile} » impossible", exception.Message);
+            }
+
+            StateChanged?.Invoke(this, EventArgs.Empty);
+        }
+
         // Bascule declarative du mode de vol : faute de telemetrie, Optimus se fie a ce que le
         // pilote lui annonce, et lit le sens dans la phrase plutot que de basculer a l'aveugle.
         if (result.Command?.Id == MasterMode.CommandId && result.Succeeded)
@@ -874,6 +954,15 @@ public sealed class OptimusRuntime : IAsyncDisposable
                 KillSwitchEngaged: KillSwitch,
                 CombatActive: State.CombatActive);
     }
+
+    /// <summary>
+    /// Reconstruit le catalogue et la grammaire apres un changement de profils.
+    ///
+    /// L'ecoute repart : c'est elle qui porte la grammaire, et un profil cree dont Optimus
+    /// connaitrait le nom sans savoir l'entendre ne servirait a rien.
+    /// </summary>
+    public Task ReloadBindingProfilesAsync(CancellationToken cancellationToken = default) =>
+        ReloadMacrosAsync(cancellationToken);
 
     private SequenceOptions Timing() =>
         SimulationMode ? SequenceOptions.Instant : new SequenceOptions(RealTime: true);

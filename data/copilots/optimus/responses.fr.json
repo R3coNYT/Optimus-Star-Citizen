@@ -86,6 +86,16 @@
         { "text": "Tout est éteint, {pilote}." }
       ]
     },
+    "bindings.profile": {
+      "any": [
+        { "text": "{command}. Touches à jour." },
+        { "text": "Profil chargé, {pilote}." },
+        { "text": "{command} en vigueur." },
+        { "text": "Touches basculées." },
+        { "text": "{command}. Vérifiez que le jeu est sur la même disposition." }
+      ]
+    },
+
     "system.already_in_state": {
       "any": [
         { "text": "C'est déjà le cas, {pilote}." },

@@ -21,7 +21,8 @@ public sealed record UserProfile(
     bool SimulationMode = false,
     bool RequireGameForeground = true,
     bool ConfirmDangerous = true,
-    Ai.AiSettings? Ai = null)
+    Ai.AiSettings? Ai = null,
+    string? ActiveBindingProfile = null)
 {
     public static UserProfile Default { get; } =
         new("default", "Pilote", "optimus", VoiceInputSettings.Default);
@@ -76,7 +77,8 @@ public static class ProfileLoader
             GetBool(root, "safety", "simulation_mode") ?? false,
             GetBool(root, "safety", "require_game_foreground") ?? true,
             GetBool(root, "safety", "confirm_dangerous") ?? true,
-            ReadAi(root));
+            ReadAi(root),
+            GetString(root, "active_binding_profile"));
 
         return new LoadResult<UserProfile>(profile, issues);
     }

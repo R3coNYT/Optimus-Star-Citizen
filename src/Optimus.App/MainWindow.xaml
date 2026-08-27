@@ -258,11 +258,43 @@
         <Grid Margin="0,12,0,0">
           <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
           </Grid.RowDefinitions>
 
-          <Grid Grid.Row="0" Margin="0,0,0,10">
+          <Border Grid.Row="0" Style="{StaticResource Card}" Margin="0,0,0,10">
+            <StackPanel>
+              <TextBlock Text="PROFIL DE TOUCHES" Style="{StaticResource Label}" />
+
+              <Grid Margin="0,6,0,0">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="220" />
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <ComboBox Grid.Column="0" ItemsSource="{Binding Profiles}"
+                          SelectedItem="{Binding ActiveProfile}" />
+
+                <TextBox Grid.Column="1" Margin="10,0,0,0"
+                         Text="{Binding ProfileName, UpdateSourceTrigger=PropertyChanged}"
+                         ToolTip="Nom du profil a creer, dupliquer ou renommer" />
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="10,0,0,0">
+                  <Button Command="{Binding CreateProfileCommand}" Content="Creer" />
+                  <Button Command="{Binding DuplicateProfileCommand}" Content="Dupliquer" Margin="6,0,0,0" />
+                  <Button Command="{Binding RenameProfileCommand}" Content="Renommer" Margin="6,0,0,0" />
+                  <Border Width="1" Background="{StaticResource Line}" Margin="12,2" />
+                  <Button Command="{Binding DeleteProfileCommand}" Content="Supprimer" />
+                </StackPanel>
+              </Grid>
+
+              <TextBlock Text="{Binding ProfileHint}" Style="{StaticResource Hint}" />
+            </StackPanel>
+          </Border>
+
+          <Grid Grid.Row="1" Margin="0,0,0,10">
             <Grid.ColumnDefinitions>
               <ColumnDefinition Width="260" />
               <ColumnDefinition Width="*" />
@@ -273,7 +305,7 @@
                        Foreground="{StaticResource TextMuted}" VerticalAlignment="Center" />
           </Grid>
 
-          <ListView Grid.Row="1" ItemsSource="{Binding Bindings}" SelectedItem="{Binding SelectedSlot}"
+          <ListView Grid.Row="2" ItemsSource="{Binding Bindings}" SelectedItem="{Binding SelectedSlot}"
                     ItemContainerStyle="{StaticResource GridRow}">
             <ListView.View>
               <GridView>
@@ -320,7 +352,7 @@
             </ListView.View>
           </ListView>
 
-          <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,10,0,0">
+          <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,10,0,0">
             <Button Command="{Binding AssignCommand}" Content="Assigner une touche" />
             <Button Command="{Binding UnassignCommand}" Content="Retirer" Margin="8,0,0,0" />
             <Border Width="1" Background="{StaticResource Line}" Margin="14,2" />

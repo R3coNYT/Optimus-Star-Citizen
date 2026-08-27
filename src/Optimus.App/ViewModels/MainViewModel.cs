@@ -100,6 +100,9 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
     private string _bindingFilter = string.Empty;
     private GameStatus _game = GameStatus.NotRunning;
     private bool _capturing;
+    private string? _activeProfile;
+    private string _profileName = string.Empty;
+    private bool _switching;
 
     public MainViewModel(OptimusRuntime runtime)
     {
@@ -119,6 +122,10 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
         AssignCommand = new AsyncRelayCommand(AssignAsync, () => SelectedSlot is not null && !_capturing);
         UnassignCommand = new RelayCommand(Unassign, () => SelectedSlot?.Origin is not null);
         ImportLayoutCommand = new RelayCommand(ImportLayout);
+        CreateProfileCommand = new RelayCommand(() => CreateProfile(null), CanName);
+        DuplicateProfileCommand = new RelayCommand(() => CreateProfile(ActiveProfile), CanName);
+        RenameProfileCommand = new RelayCommand(RenameProfile, CanName);
+        DeleteProfileCommand = new RelayCommand(DeleteProfile, () => Profiles.Count > 1);
         ExportLayoutCommand = new RelayCommand(ExportLayout);
         TestCommandCommand = new AsyncRelayCommand(TestCommandAsync, () => SelectedCommand is not null);
         Settings = new SettingsViewModel(_runtime, Add);
@@ -136,6 +143,7 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
 
         RefreshGame();
         RefreshCommands();
+        RefreshProfiles();
         RefreshBindings();
 
         foreach (Core.Loading.LoadIssue issue in _runtime.Issues)
@@ -156,6 +164,54 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
 
     public ObservableCollection<ActionSlot> Bindings { get; } = new();
 
+    /// <summary>
+    /// Profil actif. L'affecter bascule réellement, sans redémarrer.
+    ///
+    /// Le garde-fou <c>_switching</c> n'est pas de la superstition : rafraîchir la liste
+    /// réaffecte cette propriété, ce qui relancerait une bascule, qui rafraîchirait la liste.
+    /// </summary>
+    public string? ActiveProfile
+    {
+        get => _activeProfile;
+        set
+        {
+            if (_switching || value is null || !Set(ref _activeProfile, value))
+            {
+                return;
+            }
+
+            SwitchProfile(value);
+        }
+    }
+
+    /// <summary>Nom saisi pour créer, dupliquer ou renommer.</summary>
+    public string ProfileName
+    {
+        get => _profileName;
+        set
+        {
+            if (Set(ref _profileName, value))
+            {
+                CreateProfileCommand.RaiseCanExecuteChanged();
+                DuplicateProfileCommand.RaiseCanExecuteChanged();
+                RenameProfileCommand.RaiseCanExecuteChanged();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Ce qu'un profil recouvre, dit une fois pour toutes.
+    ///
+    /// La confusion naturelle est de croire qu'un profil contient les touches du jeu. Il ne
+    /// contient que <b>vos</b> assignations : celles que vous avez posées ici ou importées
+    /// depuis Star Citizen. Les touches par défaut du jeu ne changent pas d'un style de vol à
+    /// l'autre, et les dupliquer dans chaque profil n'aurait rien apporté.
+    /// </summary>
+    public string ProfileHint =>
+        $"Un profil ne contient que vos assignations — {_runtime.Overlay.Count} pour « "
+        + $"{_runtime.BindingProfileName} ». Les touches par défaut du jeu restent communes. "
+        + "Dupliquez pour partir de celui-ci, puis ne changez que ce qui diffère.";
+
     public AsyncRelayCommand ToggleListeningCommand { get; }
 
     public AsyncRelayCommand SendCommand { get; }
@@ -174,6 +230,19 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
     public RelayCommand UnassignCommand { get; }
 
     public RelayCommand ImportLayoutCommand { get; }
+
+    /// <summary>Crée un profil vide portant le nom saisi.</summary>
+    public RelayCommand CreateProfileCommand { get; }
+
+    /// <summary>Crée un profil qui reprend les assignations du profil courant.</summary>
+    public RelayCommand DuplicateProfileCommand { get; }
+
+    public RelayCommand RenameProfileCommand { get; }
+
+    public RelayCommand DeleteProfileCommand { get; }
+
+    /// <summary>Profils de touches installés.</summary>
+    public ObservableCollection<string> Profiles { get; } = new();
 
     public RelayCommand ExportLayoutCommand { get; }
 
@@ -578,6 +647,153 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
         Raise(nameof(BlockingCount));
     }
 
+    /// <summary>
+    /// Relit la liste des profils depuis le disque, sans déclencher de bascule.
+    ///
+    /// Deux précautions, apprises à l'écran. La liste n'est reconstruite que si elle a
+    /// réellement changé : vider puis regarnir fait perdre sa sélection à la liste déroulante,
+    /// et la reposer dans la même passe ne prend pas — on obtient un sélecteur vide alors que
+    /// le profil est bel et bien actif. Quand la reconstruction est inévitable, la sélection est
+    /// réaffirmée à la passe suivante, une fois le changement de collection digéré.
+    /// </summary>
+    private void RefreshProfiles()
+    {
+        List<string> names = _runtime.BindingProfiles.Select(p => p.Name).ToList();
+
+        // Le profil actif peut ne pas encore avoir de fichier : c'est le cas au tout premier
+        // lancement, avant la premiere assignation. Il doit quand meme se voir dans la liste.
+        if (!names.Contains(_runtime.BindingProfileName, StringComparer.Ordinal))
+        {
+            names.Insert(0, _runtime.BindingProfileName);
+        }
+
+        bool rebuilt = !Profiles.SequenceEqual(names, StringComparer.Ordinal);
+
+        _switching = true;
+
+        try
+        {
+            if (rebuilt)
+            {
+                Profiles.Clear();
+
+                foreach (string name in names)
+                {
+                    Profiles.Add(name);
+                }
+            }
+
+            _activeProfile = _runtime.BindingProfileName;
+        }
+        finally
+        {
+            _switching = false;
+        }
+
+        Raise(nameof(ActiveProfile));
+        Raise(nameof(ProfileHint));
+        DeleteProfileCommand.RaiseCanExecuteChanged();
+
+        if (rebuilt)
+        {
+            _dispatcher.BeginInvoke(
+                System.Windows.Threading.DispatcherPriority.Background,
+                () => Raise(nameof(ActiveProfile)));
+        }
+    }
+
+    private bool CanName() => !string.IsNullOrWhiteSpace(ProfileName);
+
+    private void SwitchProfile(string name)
+    {
+        try
+        {
+            _runtime.SwitchBindingProfile(name);
+
+            Add($"profil de touches « {_runtime.BindingProfileName} »",
+                $"{_runtime.Overlay.Count} assignations reprises.", ActivityLevel.Normal);
+        }
+        catch (Exception exception)
+        {
+            Add("bascule de profil impossible", exception.Message, ActivityLevel.Warning);
+        }
+
+        RefreshProfiles();
+        RefreshBindings();
+        RefreshCommands();
+    }
+
+    /// <summary>Crée un profil, vide ou copié, puis bascule dessus.</summary>
+    private void CreateProfile(string? copyFrom)
+    {
+        try
+        {
+            BindingProfileSet.Create(ProfileName, copyFrom);
+        }
+        catch (Exception exception)
+        {
+            Add("création impossible", exception.Message, ActivityLevel.Warning);
+            return;
+        }
+
+        string created = BindingProfileSet.Sanitize(ProfileName);
+
+        Add($"profil « {created} » créé",
+            copyFrom is null
+                ? "Vide : importez votre disposition depuis le jeu, ou assignez à la main."
+                : $"Reprend les assignations de « {copyFrom} ».",
+            ActivityLevel.Normal);
+
+        ProfileName = string.Empty;
+        SwitchProfile(created);
+    }
+
+    private void RenameProfile()
+    {
+        string from = _runtime.BindingProfileName;
+
+        try
+        {
+            BindingProfileSet.Rename(from, ProfileName);
+        }
+        catch (Exception exception)
+        {
+            Add("renommage impossible", exception.Message, ActivityLevel.Warning);
+            return;
+        }
+
+        string to = BindingProfileSet.Sanitize(ProfileName);
+
+        // La bascule suit le renommage : le moteur tient encore l'ancien chemin, qui n'existe
+        // plus. Sans cela, la prochaine assignation recreerait un fichier au nom d'avant.
+        _runtime.SwitchBindingProfile(to);
+
+        Add($"profil renommé en « {to} »", $"Anciennement « {from} ».", ActivityLevel.Normal);
+
+        ProfileName = string.Empty;
+        RefreshProfiles();
+        RefreshBindings();
+    }
+
+    private void DeleteProfile()
+    {
+        string doomed = _runtime.BindingProfileName;
+
+        try
+        {
+            BindingProfileSet.Delete(doomed);
+        }
+        catch (Exception exception)
+        {
+            Add("suppression impossible", exception.Message, ActivityLevel.Warning);
+            return;
+        }
+
+        Add($"profil « {doomed} » supprimé", null, ActivityLevel.Warning);
+
+        SwitchProfile(BindingProfileSet.Resolve(null));
+    }
+
     private void OnActivity(object? sender, SessionActivity activity)
     {
         _dispatcher.BeginInvoke(() => Append(activity));
@@ -603,6 +819,13 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
             Raise(nameof(WakeWord));
             Raise(nameof(VoiceName));
             Raise(nameof(CopilotName));
+
+            // Le profil de touches peut avoir change sans passer par cet ecran : une bascule
+            // demandee a la voix vient du moteur, pas de la liste deroulante. Sans ce
+            // rafraichissement, l'onglet afficherait encore l'ancien profil et ses anciennes
+            // touches - un ecran qui ment sur ce qu'Optimus va reellement envoyer.
+            RefreshProfiles();
+            RefreshBindings();
         });
     }
 
