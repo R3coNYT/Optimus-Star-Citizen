@@ -112,6 +112,19 @@ suit est la file d'attente convenue avec le pilote, dans l'ordre.
 
 **Réserve sur le chantier 2.** L'étage est en place et éprouvé, mais **la conversation libre à la voix n'est pas encore atteignable**. La grammaire est fermée (D28, D30) : un énoncé hors catalogue ne parvient jamais à Optimus sous forme de texte — le moteur rend la formulation connue la plus proche, assortie d'une faible confiance, jamais ce qui a été dit. Le modèle sert donc aujourd'hui deux entrées : le champ « essayer un énoncé », et les énoncés vocaux ressortis en `Unknown`. Parler librement à son copilote demande l'étage de parole libre (Whisper, D28 phase B), qui n'est pas encore monté.
 
+**Réserve sur le chantier 7.** Repoussé à la demande du pilote le 2026-08-28, pour une raison
+qui n'est pas technique : un bot Discord exige une **application créée sur son compte Discord**,
+que personne ne peut créer ni posséder à sa place. Sans jeton, la connexion à la passerelle
+resterait non vérifiée — et un bot qui se déconnecte en silence est pire que pas de bot.
+
+Rien n'est perdu : la conception tient dans docs/12.2, et **l'API locale est déjà le socle qu'il
+lui faut** (D66 à D68). Le bot n'aura pas à réinventer la garde, les portées ni le plafond
+d'exécutions : il s'y branchera.
+
+Deux points sont acquis pour le jour où on le reprendra : **Discord.Net** comme bibliothèque
+(D69), et le jeton de bot **chiffré par DPAPI** comme les jetons d'API (D68), jamais dans
+`data/` ni dans le dépôt.
+
 **Dernier chantier, une fois tout le reste fait : la signature de code (R16).**
 
 Voie retenue le 2026-08-27 : **SignPath Foundation**, qui signe gratuitement les projets open
