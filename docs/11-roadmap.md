@@ -106,6 +106,10 @@ suit est la file d'attente convenue avec le pilote, dans l'ordre.
 | **10** | **HOTAS et périphériques** | Manette, palonnier, Stream Deck. Change la façon de déclencher, pas ce qui est déclenché. | à faire |
 | **11** | **Overlay in-game** | HUD transparent : état, dernière commande, confirmations. **Incertitude réelle** : l'interaction avec l'anti-triche reste à valider avant d'y engager quoi que ce soit. | à faire |
 
+| **12** | **Installateur** | Un seul `.exe`, installation par utilisateur sans UAC, avec une page de choix des composants : Piper et ses voix y sont **facultatifs et téléchargés** (D58 à D61). C'est aussi ce qui remplace la clé USB entre deux postes. | **fait le 2026-08-27** — voir la réserve ci-dessous |
+
+**Réserve sur le chantier 12.** L'installateur **ne résout pas R16**, il le concentre. L'exécutable n'est pas signé : SmartScreen avertira chaque personne qui le téléchargera, et Smart App Control le refusera, exactement comme il a refusé les binaires nus. Le gain est réel mais indirect — il y a désormais **un** fichier à signer au lieu de vingt-quatre, ce qui rend le problème soluble par un seul certificat. **Tant que cette signature n'existe pas, la diffusion publique reste bloquée**, et c'est le prochain verrou, pas une formalité.
+
 **Réserve sur le chantier 2.** L'étage est en place et éprouvé, mais **la conversation libre à la voix n'est pas encore atteignable**. La grammaire est fermée (D28, D30) : un énoncé hors catalogue ne parvient jamais à Optimus sous forme de texte — le moteur rend la formulation connue la plus proche, assortie d'une faible confiance, jamais ce qui a été dit. Le modèle sert donc aujourd'hui deux entrées : le champ « essayer un énoncé », et les énoncés vocaux ressortis en `Unknown`. Parler librement à son copilote demande l'étage de parole libre (Whisper, D28 phase B), qui n'est pas encore monté.
 
 **Hors file, mais ouvert** : la signature de code (R16). Sans conséquence tant qu'Optimus reste
