@@ -125,7 +125,24 @@ Name: "desktopicon"; Description: "{cm:TaskDesktop}"; Flags: unchecked
 Source: "{#SourceDir}\Optimus.App.exe"; DestDir: "{app}"; Components: app; Flags: ignoreversion
 Source: "{#SourceDir}\Lancer-Optimus.cmd"; DestDir: "{app}"; Components: app; Flags: ignoreversion skipifsourcedoesntexist
 Source: "{#SourceDir}\VERSION.txt"; DestDir: "{app}"; Components: app; Flags: ignoreversion skipifsourcedoesntexist
-Source: "{#SourceDir}\data\*"; DestDir: "{app}\data"; Components: app; Flags: ignoreversion recursesubdirs createallsubdirs
+; Le catalogue, les touches par defaut du jeu et les repliques appartiennent a Optimus :
+; ils sont remplaces a chaque mise a jour, c'est ainsi que les nouvelles commandes arrivent.
+Source: "{#SourceDir}\data\*"; DestDir: "{app}\data"; Components: app;     Excludes: "profiles\default.json,copilots\*\copilot.json,copilots\*\personality.json";     Flags: ignoreversion recursesubdirs createallsubdirs
+
+; Ces trois-la appartiennent au PILOTE : l'ecran de reglages y ecrit son mot d'eveil, sa voix,
+; ses curseurs de caractere et ses reglages d'etages facultatifs. « onlyifdoesntexist » les pose
+; a la premiere installation et n'y touche plus jamais.
+;
+; Mesure du 2026-08-28, avant correction : une mise a jour remettait le mot d'eveil a « Optimus »
+; et l'humour a 40, effacant tout ce que le pilote avait regle. C'est la meme lecon que D35, D43,
+; D46 et D70 — ce que le pilote change ne doit pas vivre la ou la publication ecrit — appliquee
+; cette fois du cote de l'installateur.
+;
+; Sans risque pour les nouveautes : les chargeurs tolerent les sections absentes et leur donnent
+; leur valeur par defaut. Un profil ecrit avant que « whisper » existe se lit tres bien.
+Source: "{#SourceDir}\data\profiles\default.json"; DestDir: "{app}\data\profiles";     Components: app; Flags: onlyifdoesntexist uninsneveruninstall
+Source: "{#SourceDir}\data\copilots\optimus\copilot.json"; DestDir: "{app}\data\copilots\optimus";     Components: app; Flags: onlyifdoesntexist uninsneveruninstall
+Source: "{#SourceDir}\data\copilots\optimus\personality.json"; DestDir: "{app}\data\copilots\optimus";     Components: app; Flags: onlyifdoesntexist uninsneveruninstall
 
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\Optimus.App.exe"
