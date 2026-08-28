@@ -106,8 +106,8 @@ fr.ExtractFailed=L'archive Piper n'a pas pu être ouverte. Optimus s'installera 
 fr.PurgeData=Supprimer aussi vos données ?%n%nCela effacerait vos assignations de touches, vos macros, les formulations apprises et les voix Piper téléchargées, dans :%n%1%n%nRépondez Non pour les conserver en vue d'une réinstallation.
 
 [Types]
-Name: "complet"; Description: "Installation complète, avec les voix neuronales"
-Name: "standard"; Description: "Installation standard"
+Name: "standard"; Description: "Optimus seul — rien à télécharger"
+Name: "complet"; Description: "Complète : voix neuronales et parole libre (~255 Mo téléchargés)"
 Name: "perso"; Description: "Installation personnalisée"; Flags: iscustom
 
 [Components]
@@ -116,7 +116,7 @@ Name: "piper"; Description: "{cm:ComponentPiper}"; Types: complet
 Name: "piper\tom"; Description: "{cm:ComponentTom}"; Types: complet
 Name: "piper\gilles"; Description: "{cm:ComponentGilles}"
 Name: "piper\siwis"; Description: "{cm:ComponentSiwis}"
-Name: "whisper"; Description: "{cm:ComponentWhisper}"
+Name: "whisper"; Description: "{cm:ComponentWhisper}"; Types: complet
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:TaskDesktop}"; Flags: unchecked
