@@ -52,6 +52,9 @@ public sealed class SettingsViewModel : ObservableObject
     private int _aiBudget = 200;
     private string _aiProbe = string.Empty;
     private bool _neuralVoice;
+    private string? _copilot;
+    private string _copilotName = string.Empty;
+    private bool _switching;
     private bool _apiEnabled;
     private int _apiPort = 8731;
     private int _apiRate = 30;
@@ -68,6 +71,9 @@ public sealed class SettingsViewModel : ObservableObject
         TestVoiceCommand = new AsyncRelayCommand(TestVoiceAsync);
         ProbeAiCommand = new AsyncRelayCommand(ProbeAiAsync, () => AiEnabled);
         RegenerateTokenCommand = new RelayCommand(RegenerateToken, () => ApiEnabled);
+        DuplicateCopilotCommand = new AsyncRelayCommand(
+            DuplicateCopilotAsync, () => !string.IsNullOrWhiteSpace(CopilotName));
+        DeleteCopilotCommand = new AsyncRelayCommand(DeleteCopilotAsync, () => CanDeleteCopilot);
 
         Revert();
     }
@@ -85,6 +91,14 @@ public sealed class SettingsViewModel : ObservableObject
 
     /// <summary>Émet un secret neuf. L'ancien cesse aussitôt de valoir.</summary>
     public RelayCommand RegenerateTokenCommand { get; }
+
+    /// <summary>Crée un copilote à partir de celui qui est actif, puis lui passe la main.</summary>
+    public AsyncRelayCommand DuplicateCopilotCommand { get; }
+
+    public AsyncRelayCommand DeleteCopilotCommand { get; }
+
+    /// <summary>Copilotes installés, les vôtres masquant ceux qui sont livrés.</summary>
+    public ObservableCollection<string> Copilots { get; } = new();
 
     public ObservableCollection<string> Voices { get; } = new();
 
@@ -252,6 +266,58 @@ public sealed class SettingsViewModel : ObservableObject
               + "jamais sur la commande. Une voix « low » divise l'attente par deux."
             : "Voix Windows : quasi instantanées (7 à 15 ms), toujours disponibles, mais au "
               + "timbre synthétique. C'est le choix sûr.";
+
+    /// <summary>
+    /// Copilote actif. L'affecter passe réellement la main, sans redémarrer.
+    ///
+    /// Contrairement aux autres réglages de cet écran, celui-ci ne passe pas par
+    /// « Enregistrer » : changer de copilote change le mot d'éveil, la voix et le caractère
+    /// d'un coup, et un aperçu à moitié appliqué n'aurait aucun sens — on veut l'entendre.
+    /// </summary>
+    public string? ActiveCopilot
+    {
+        get => _copilot;
+        set
+        {
+            if (_switching || value is null || !Set(ref _copilot, value))
+            {
+                return;
+            }
+
+            _ = SwitchCopilotAsync(value);
+        }
+    }
+
+    /// <summary>Nom du copilote à créer.</summary>
+    public string CopilotName
+    {
+        get => _copilotName;
+        set
+        {
+            if (Set(ref _copilotName, value))
+            {
+                DuplicateCopilotCommand.RaiseCanExecuteChanged();
+            }
+        }
+    }
+
+    /// <summary>Vrai si le copilote actif vous appartient, donc peut être supprimé.</summary>
+    public bool CanDeleteCopilot => _runtime.Copilots
+        .Any(c => c.IsUsers && string.Equals(c.Id, _runtime.Copilot.Id, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>
+    /// Ce qu'un copilote recouvre, et ce que dupliquer veut dire.
+    ///
+    /// La confusion naturelle est de croire qu'un copilote n'est qu'une voix. Il porte aussi son
+    /// mot d'éveil, son caractère et ses soixante-cinq répliques — c'est pourquoi on duplique
+    /// plutôt que de partir de rien : un copilote sans répliques est un copilote muet.
+    /// </summary>
+    public string CopilotHint => CanDeleteCopilot
+        ? $"« {_runtime.Copilot.Name} » vous appartient. Il répond à « {_runtime.Copilot.WakeWord} », "
+          + "et vous pouvez le supprimer — s'il masquait un copilote livré, l'original revient."
+        : $"« {_runtime.Copilot.Name} » est livré avec Optimus et ne peut pas être supprimé. "
+          + $"Il répond à « {_runtime.Copilot.WakeWord} ». Dupliquez-le pour en faire un à vous : "
+          + "voix, caractère et répliques suivront, et vous n'aurez qu'à les infléchir.";
 
     /// <summary>L'API locale est-elle demandée ?</summary>
     public bool ApiEnabled
@@ -501,6 +567,8 @@ public sealed class SettingsViewModel : ObservableObject
         _rate = voice.Rate;
         _volume = voice.Volume;
 
+        RefreshCopilots();
+
         ApiSettings api = _runtime.User.Api ?? ApiSettings.Disabled;
         _apiEnabled = api.Enabled;
         _apiPort = api.Port;
@@ -673,6 +741,136 @@ public sealed class SettingsViewModel : ObservableObject
         Raise(nameof(ApiTokenSecret));
     }
 
+    /// <summary>Relit la liste des copilotes, sans déclencher de bascule.</summary>
+    private void RefreshCopilots()
+    {
+        List<string> names = _runtime.Copilots.Select(c => c.Name).ToList();
+        bool rebuilt = !Copilots.SequenceEqual(names, StringComparer.Ordinal);
+
+        _switching = true;
+
+        try
+        {
+            if (rebuilt)
+            {
+                Copilots.Clear();
+
+                foreach (string name in names)
+                {
+                    Copilots.Add(name);
+                }
+            }
+
+            _copilot = _runtime.Copilot.Name;
+        }
+        finally
+        {
+            _switching = false;
+        }
+
+        Raise(nameof(ActiveCopilot));
+        Raise(nameof(CopilotHint));
+        Raise(nameof(CanDeleteCopilot));
+        DeleteCopilotCommand.RaiseCanExecuteChanged();
+    }
+
+    /// <summary>Identifiant du copilote portant ce nom affiché.</summary>
+    private string? IdOf(string name) => _runtime.Copilots
+        .FirstOrDefault(c => string.Equals(c.Name, name, StringComparison.Ordinal))?.Id;
+
+    private async Task SwitchCopilotAsync(string name)
+    {
+        if (IdOf(name) is not string id)
+        {
+            return;
+        }
+
+        try
+        {
+            await _runtime.SwitchCopilotAsync(id).ConfigureAwait(true);
+
+            _log($"copilote « {_runtime.Copilot.Name} »",
+                $"Répond désormais à « {_runtime.Copilot.WakeWord} ».", ActivityLevel.Normal);
+        }
+        catch (Exception exception)
+        {
+            _log("passation impossible", exception.Message, ActivityLevel.Warning);
+        }
+
+        RefreshCopilots();
+        Revert();
+    }
+
+    private async Task DuplicateCopilotAsync()
+    {
+        string id;
+
+        try
+        {
+            CopilotSet.Create(
+                CopilotName, CopilotName.Trim(), _runtime.Copilot.Id, _runtime.DataRoot);
+
+            id = CopilotSet.Sanitize(CopilotName);
+        }
+        catch (Exception exception)
+        {
+            _log("copilote non créé", exception.Message, ActivityLevel.Warning);
+            return;
+        }
+
+        _log($"copilote « {CopilotName.Trim()} » créé",
+            $"Copie de « {_runtime.Copilot.Name} ». Il répond à son propre nom.",
+            ActivityLevel.Normal);
+
+        CopilotName = string.Empty;
+
+        try
+        {
+            await _runtime.SwitchCopilotAsync(id).ConfigureAwait(true);
+        }
+        catch (Exception exception)
+        {
+            _log("passation impossible", exception.Message, ActivityLevel.Warning);
+        }
+
+        RefreshCopilots();
+        Revert();
+    }
+
+    private async Task DeleteCopilotAsync()
+    {
+        string doomed = _runtime.Copilot.Id;
+        string name = _runtime.Copilot.Name;
+
+        try
+        {
+            CopilotSet.Delete(doomed);
+        }
+        catch (Exception exception)
+        {
+            _log("suppression impossible", exception.Message, ActivityLevel.Warning);
+            return;
+        }
+
+        _log($"copilote « {name} » supprimé",
+            "S'il masquait un copilote livré, l'original reprend sa place.", ActivityLevel.Warning);
+
+        // Le copilote actif vient de disparaitre : en reprendre un, sans quoi Optimus resterait
+        // pointe sur un dossier qui n'existe plus.
+        try
+        {
+            await _runtime.SwitchCopilotAsync(
+                CopilotSet.Resolve(null, _runtime.DataRoot)).ConfigureAwait(true);
+        }
+        catch (Exception exception)
+        {
+            _log("aucun copilote de repli", exception.Message, ActivityLevel.Warning);
+        }
+
+        RefreshCopilots();
+        Revert();
+    }
+
     private PersonalityTraits CurrentTraits() =>
         _runtime.Copilot.Personality.Traits with
         {
@@ -717,6 +915,7 @@ public sealed class SettingsViewModel : ObservableObject
             nameof(NoiseFloor), nameof(ThresholdExplanation), nameof(VoiceId), nameof(Rate),
             nameof(Volume), nameof(Humor), nameof(Sarcasm), nameof(Formality), nameof(Verbosity),
             nameof(Calmness), nameof(Warmth), nameof(Preview), nameof(VerbosityEffect),
+            nameof(ActiveCopilot), nameof(CopilotName), nameof(CopilotHint), nameof(CanDeleteCopilot),
             nameof(NeuralVoice), nameof(NeuralVoiceAvailable), nameof(VoiceEngineExplanation),
             nameof(ApiEnabled), nameof(ApiPort), nameof(ApiRate), nameof(ApiAddress),
             nameof(ApiTokenSecret), nameof(ApiState), nameof(ApiExplanation),

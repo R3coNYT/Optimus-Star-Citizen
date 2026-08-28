@@ -86,6 +86,15 @@
         { "text": "Tout est éteint, {pilote}." }
       ]
     },
+    "copilot.switch": {
+      "any": [
+        { "text": "Je vous laisse avec {command}." },
+        { "text": "{command} prend le relais." },
+        { "text": "Passation. {command} vous écoute." },
+        { "text": "À {command}, donc. Bon vol." }
+      ]
+    },
+
     "bindings.profile": {
       "any": [
         { "text": "{command}. Touches à jour." },

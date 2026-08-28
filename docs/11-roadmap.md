@@ -102,7 +102,7 @@ suit est la file d'attente convenue avec le pilote, dans l'ordre.
 | **6** | **API locale** | Huit routes et un flux d'événements sur `127.0.0.1`, jeton chiffré, trois portées, plafond d'exécutions. Windows lui-même interdit l'écoute réseau à Optimus, qui n'a pas les droits pour cela (D66 à D68). | **fait le 2026-08-27** |
 | **7** | **Discord** | Bot local, appairage, notifications. Transmet des **intentions**, jamais des frappes : aucun serveur ne touche au clavier de personne. | à faire |
 | **8** | **Plugins** | Chargement à chaud, permissions, deux plugins de référence. | à faire |
-| **9** | **Multi-copilotes** | Le modèle le prévoit depuis l'origine ; seul Optimus est livré. CRUD, duplication, import et export. | à faire |
+| **9** | **Multi-copilotes** | Dupliquer, renommer, supprimer, basculer à chaud depuis l'écran **ou à la voix** (« passe à Virgil »). Le mot d'éveil, la voix et le caractère changent ensemble (D70, D71). | **fait le 2026-08-28** |
 | **10** | **HOTAS et périphériques** | Manette, palonnier, Stream Deck. Change la façon de déclencher, pas ce qui est déclenché. | à faire |
 | **11** | **Overlay in-game** | HUD transparent : état, dernière commande, confirmations. **Incertitude réelle** : l'interaction avec l'anti-triche reste à valider avant d'y engager quoi que ce soit. | à faire |
 

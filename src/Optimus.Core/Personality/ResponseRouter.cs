@@ -143,6 +143,14 @@ public static class ResponseRouter
             return [Bindings.BindingProfileSet.ResponseKey, fallback];
         }
 
+        // Meme raison pour les bascules de copilote : leur identifiant depend d'un dossier qu'on
+        // ne connait pas a l'avance. La replique est prononcee par celui qui PART, avant que le
+        // suivant ne prenne la main.
+        if (result.Command.Id.StartsWith(Loading.CopilotSet.CommandPrefix, StringComparison.Ordinal))
+        {
+            return [Loading.CopilotSet.ResponseKey, fallback];
+        }
+
         // Le sens demande prime sur la commande : « Voila de la lumiere » apres une extinction
         // sonnerait faux. On tente d'abord la cle dirigee, et l'on retombe sur la cle generale
         // pour toutes les commandes ou ecrire deux jeux de repliques ne vaut pas le detour.

@@ -121,7 +121,11 @@ public sealed class OptimusRuntime : IAsyncDisposable
 
     /// <summary>Dossier du copilote : fiche, personnalité, répliques.</summary>
     public string CopilotDirectory =>
-        Path.Combine(DataRoot, "data", "copilots", User.PreferredCopilot);
+        CopilotSet.DirectoryOf(User.PreferredCopilot, DataRoot)
+        ?? Path.Combine(DataRoot, "data", "copilots", User.PreferredCopilot);
+
+    /// <summary>Copilotes disponibles, les vôtres masquant ceux qui sont livrés.</summary>
+    public IReadOnlyList<CopilotInfo> Copilots => CopilotSet.List(DataRoot);
 
     /// <summary>Fiche du copilote : voix et mot d'éveil.</summary>
     public string CopilotPath => Path.Combine(CopilotDirectory, "copilot.json");
@@ -253,13 +257,25 @@ public sealed class OptimusRuntime : IAsyncDisposable
         // le reglage de la reconnaissance cumulatif d'une session a l'autre.
         string phrasePath = UserPhrases.DefaultPath();
         IReadOnlyList<PhraseAlias> aliases = UserPhrases.Load(phrasePath);
-        merged = UserPhrases.Apply(merged, aliases);
+
         LoadResult<BindingProfile> bindings = JsonCatalogLoader.LoadBindingProfile(
             Path.Combine(dataRoot, "data", "bindings", "starcitizen", "defaults-4.9.json"));
         LoadResult<UserProfile> user = ProfileLoader.Load(
             Path.Combine(dataRoot, "data", "profiles", "default.json"));
+        // Le copilote enregistre s'il existe encore, le premier venu sinon : un pilote qui
+        // supprime son favori doit retrouver Optimus qui parle, pas un ecran muet.
+        string copilotId = CopilotSet.Resolve(user.Value.PreferredCopilot, dataRoot);
+
         LoadResult<Copilot> copilot = CopilotLoader.Load(
-            Path.Combine(dataRoot, "data", "copilots", user.Value.PreferredCopilot));
+            CopilotSet.DirectoryOf(copilotId, dataRoot)
+            ?? Path.Combine(dataRoot, "data", "copilots", copilotId));
+
+        // « Passe a Synthia » doit se dire, plutot que de se cliquer. La fusion a lieu ici,
+        // apres le chargement : le copilote actif n'a pas de commande pour se rappeler lui-meme.
+        merged = Augment(merged, CopilotSet.Commands(CopilotSet.List(dataRoot), copilotId));
+
+        // Les formulations du pilote s'appliquent en dernier, sur le catalogue complet.
+        merged = UserPhrases.Apply(merged, aliases);
 
         // Le profil enregistre s'il existe encore, le premier venu sinon. Un pilote qui
         // supprime a la main le profil actif doit retrouver Optimus fonctionnel, pas un ecran
@@ -425,6 +441,10 @@ public sealed class OptimusRuntime : IAsyncDisposable
         Copilot = CopilotLoader.Load(CopilotDirectory).Value;
         Composer = new ResponseComposer(Copilot.Personality, Copilot.Responses);
 
+        // Le catalogue depend du copilote actif — il ne porte pas de commande pour se rappeler
+        // lui-meme — et l'ecoute repart de toute facon plus bas : c'est le moment de le refaire.
+        RebuildCatalog();
+
         // Changer de moteur demande d'en construire un autre : le precedent tient un processus
         // Piper ouvert et un lecteur audio, qu'il faut relacher plutot que d'abandonner.
         if (!string.Equals(previous.Voice.Provider, Copilot.Voice.Provider, StringComparison.OrdinalIgnoreCase))
@@ -467,9 +487,7 @@ public sealed class OptimusRuntime : IAsyncDisposable
             : CommandCatalog.Merge(
                 ShippedCatalog.Id, ShippedCatalog.Name, ShippedCatalog, userMacros.Value);
 
-        Catalog = UserPhrases.Apply(BindingProfileSet.Augment(rebuilt), Aliases);
-
-        _executor = BuildExecutor();
+        RebuildCatalog();
 
         if (wasListening)
         {
@@ -832,6 +850,22 @@ public sealed class OptimusRuntime : IAsyncDisposable
         }
 
         Report(new SessionActivity(recognition, result, said, applied));
+
+        // Passage de relais a un autre copilote, EN DERNIER et pas plus haut. Mesure du
+        // 2026-08-28 : bascule avant la replique, c'est le copilote qui ARRIVE qui annonce sa
+        // propre venue — « Optimus : je vous laisse avec Optimus », de la voix d'Optimus. Celui
+        // qui part doit avoir fini de parler avant que l'autre prenne la main.
+        if (CopilotSet.TargetOf(result.Command) is string next && result.Succeeded)
+        {
+            try
+            {
+                await SwitchCopilotAsync(next).ConfigureAwait(false);
+            }
+            catch (Exception exception)
+            {
+                DiagnosticLog.Warn($"passage vers « {next} » impossible", exception.Message);
+            }
+        }
     }
 
     /// <summary>
@@ -1015,6 +1049,71 @@ public sealed class OptimusRuntime : IAsyncDisposable
         }
 
         StateChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// Refait le catalogue depuis le disque, puis l'exécuteur.
+    ///
+    /// Un seul chemin de reconstruction, appelé par tout ce qui peut le changer : macros,
+    /// formulations, profils de touches, copilote actif. Deux chemins séparés finiraient par
+    /// oublier l'un des étages, et la commande manquante ne se verrait qu'à l'usage.
+    /// </summary>
+    private void RebuildCatalog()
+    {
+        LoadResult<CommandCatalog> userMacros = UserMacros.Load(MacroPath);
+
+        CommandCatalog rebuilt = userMacros.Value.Count == 0
+            ? ShippedCatalog
+            : CommandCatalog.Merge(
+                ShippedCatalog.Id, ShippedCatalog.Name, ShippedCatalog, userMacros.Value);
+
+        rebuilt = BindingProfileSet.Augment(rebuilt);
+        rebuilt = Augment(rebuilt, CopilotSet.Commands(Copilots, Copilot.Id));
+
+        Catalog = UserPhrases.Apply(rebuilt, Aliases);
+
+        _executor = BuildExecutor();
+    }
+
+    /// <summary>Fusionne des commandes engendrées dans le catalogue, s'il y en a.</summary>
+    private static CommandCatalog Augment(
+        CommandCatalog catalog, IReadOnlyList<CommandDefinition> commands) =>
+        commands.Count == 0
+            ? catalog
+            : CommandCatalog.Merge(
+                catalog.Id, catalog.Name, catalog,
+                new CommandCatalog("engendre", "Commandes engendrées", commands));
+
+    /// <summary>
+    /// Passe la main à un autre copilote, sans redémarrer.
+    ///
+    /// Plus lourd qu'un changement de profil de touches, et pour une raison qui se voit :
+    /// le copilote porte son <b>mot d'éveil</b>. L'écoute doit donc repartir, sinon Optimus
+    /// continuerait de répondre à un nom qui n'est plus le sien — et le nouveau ne répondrait
+    /// à rien. Le catalogue est refait au passage : le copilote actif n'a pas de commande pour
+    /// se rappeler lui-même.
+    /// </summary>
+    public async Task SwitchCopilotAsync(string id, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+
+        if (string.Equals(id, Copilot.Id, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        if (CopilotSet.DirectoryOf(id, DataRoot) is null)
+        {
+            throw new InvalidOperationException($"Aucun copilote « {id} ».");
+        }
+
+        SettingsWriter.SavePreferredCopilot(ProfilePath, id);
+
+        await ReloadSettingsAsync(cancellationToken).ConfigureAwait(false);
+
+        DiagnosticLog.Info(
+            $"copilote « {Copilot.Name} »",
+            $"mot d'éveil « {Copilot.WakeWord} » · voix {Copilot.Voice.VoiceId ?? "par défaut"}");
     }
 
     private SequenceOptions Timing() =>

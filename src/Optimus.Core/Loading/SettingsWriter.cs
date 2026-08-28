@@ -66,6 +66,35 @@ public static class SettingsWriter
         Patch(profilePath, root => root["active_binding_profile"] = name);
     }
 
+    /// <summary>Écrit le copilote actif dans le profil utilisateur.</summary>
+    public static void SavePreferredCopilot(string profilePath, string id)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(profilePath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+
+        Patch(profilePath, root => root["preferred_copilot"] = id);
+    }
+
+    /// <summary>
+    /// Écrit l'identité d'un copilote : son identifiant et son nom.
+    ///
+    /// Employée à la création d'une copie. Le mot d'éveil suit le nom, faute de quoi la copie
+    /// répondrait au même appel que son modèle et l'un des deux serait inatteignable.
+    /// </summary>
+    public static void SaveCopilotIdentity(string copilotPath, string id, string name)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(copilotPath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+
+        Patch(copilotPath, root =>
+        {
+            root["id"] = id;
+            root["name"] = name;
+            root["wake_word"] = name;
+        });
+    }
+
     /// <summary>Écrit les réglages de l'API locale.</summary>
     public static void SaveApi(string profilePath, Api.ApiSettings settings)
     {

@@ -384,6 +384,44 @@
 
                 <Border Style="{StaticResource Card}">
                   <StackPanel>
+                    <TextBlock Text="COPILOTE" Style="{StaticResource Label}" />
+
+                    <Grid>
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                      </Grid.ColumnDefinitions>
+
+                      <ComboBox Grid.Column="0" ItemsSource="{Binding Copilots}"
+                                SelectedItem="{Binding ActiveCopilot}" />
+
+                      <Button Grid.Column="1" Margin="8,0,0,0" Content="Supprimer"
+                              Command="{Binding DeleteCopilotCommand}" />
+                    </Grid>
+
+                    <TextBlock Text="{Binding CopilotHint}" Style="{StaticResource Hint}" />
+
+                    <Grid Margin="0,10,0,0">
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                      </Grid.ColumnDefinitions>
+
+                      <TextBox Grid.Column="0"
+                               Text="{Binding CopilotName, UpdateSourceTrigger=PropertyChanged}"
+                               ToolTip="Nom du copilote a creer" />
+
+                      <Button Grid.Column="1" Margin="8,0,0,0" Content="Dupliquer"
+                              Command="{Binding DuplicateCopilotCommand}" />
+                    </Grid>
+
+                    <TextBlock Style="{StaticResource Hint}"
+                               Text="Le changement prend effet aussitôt, sans passer par Enregistrer : mot d'éveil, voix et caractère changent ensemble." />
+                  </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource Card}">
+                  <StackPanel>
                     <TextBlock Text="ÉCOUTE" Style="{StaticResource Label}" />
                     <RadioButton GroupName="Mode" IsChecked="{Binding AlwaysOn}"
                                  Content="Écoute permanente, déclenchée par le mot d'éveil" />
