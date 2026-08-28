@@ -125,6 +125,18 @@ Deux points sont acquis pour le jour où on le reprendra : **Discord.Net** comme
 (D69), et le jeton de bot **chiffré par DPAPI** comme les jetons d'API (D68), jamais dans
 `data/` ni dans le dépôt.
 
+**Réserve sur le chantier 10.** Repoussé le 2026-08-28, faute de matériel à portée. Toute la
+fonction tient à une seule propriété : Optimus doit lire le manche **pendant que Star Citizen a
+le focus**. Une API qui ne délivre l'entrée qu'à la fenêtre au premier plan rendrait le chantier
+entièrement inutile — et cela ne se mesure qu'avec un périphérique branché, pas sur le papier.
+
+L'analyse est faite et consignée (D72) : trois API candidates, leurs limites, et la contrainte
+héritée de D36 — rester proportionné, un hook global de trop ayant déjà fait bloquer Optimus par
+Smart App Control.
+
+Le **Stream Deck**, lui, n'attend rien : il passe déjà par l'API locale (D66). C'est la partie du
+chantier qui est en réalité déjà livrée.
+
 **Dernier chantier, une fois tout le reste fait : la signature de code (R16).**
 
 Voie retenue le 2026-08-27 : **SignPath Foundation**, qui signe gratuitement les projets open
