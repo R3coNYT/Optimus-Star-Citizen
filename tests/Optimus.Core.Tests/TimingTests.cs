@@ -23,6 +23,7 @@ public sealed class TimingTests
     public async Task Un_maintien_est_tenu_avec_une_marge_raisonnable()
     {
         const int requested = 120;
+        const int attempts = 5;
 
         SimulatedInputEngine engine = new();
         SequenceRunner runner = new(engine, Profile);
@@ -32,16 +33,35 @@ public sealed class TimingTests
             new(ActionStepType.GameAction, "test/press", Mode: InputMode.Hold, HoldMs: requested),
         ];
 
-        Stopwatch clock = Stopwatch.StartNew();
-        await runner.RunAsync(steps, new SequenceOptions(RealTime: true));
-        clock.Stop();
+        double[] measures = new double[attempts];
 
-        double actual = clock.Elapsed.TotalMilliseconds;
+        for (int i = 0; i < attempts; i++)
+        {
+            Stopwatch clock = Stopwatch.StartNew();
+            await runner.RunAsync(steps, new SequenceOptions(RealTime: true));
+            clock.Stop();
 
-        // On vérifie l'ordre de grandeur, pas la milliseconde : une machine d'intégration
-        // continue chargée n'est pas un banc de mesure. L'ancien comportement dépassait de
-        // plus du double ; la borne haute le rattraperait.
-        Assert.InRange(actual, requested - 5, requested + 40);
+            measures[i] = clock.Elapsed.TotalMilliseconds;
+        }
+
+        // On retient le PLUS COURT des essais, et non le dernier.
+        //
+        // Ce que ce test surveille, c'est le dépassement propre à l'implémentation : le premier
+        // essai en jeu montrait un maintien de 45 ms qui en durait 96, par granularité du
+        // minuteur. Ce dépassement-là est systématique, il se retrouve dans chaque essai, donc
+        // dans le plus court. L'ordonnanceur, lui, ne fait qu'ajouter du temps quand la machine
+        // est occupée : prendre le minimum l'élimine dès qu'un essai obtient sa part.
+        //
+        // La distinction n'est pas théorique. Ce test a cédé deux fois à 173 ms, sans qu'aucune
+        // ligne du runner ait bougé : l'application tournait à côté. Une borne simplement
+        // élargie aurait tenu, mais aurait aussi laissé passer l'ancien comportement, dont le
+        // dépassement est du même ordre à cette durée. Le minimum sépare les deux causes.
+        double best = measures.Min();
+
+        Assert.True(
+            best >= requested - 5 && best <= requested + 40,
+            $"maintien de {requested} ms mesuré à {best:F0} ms au mieux "
+            + $"(essais : {string.Join(" ms, ", measures.Select(m => m.ToString("F0")))} ms)");
     }
 
     [Fact]
