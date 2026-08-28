@@ -242,6 +242,7 @@ public sealed class SettingsViewModel : ObservableObject
         {
             if (Track(ref _neuralVoice, value))
             {
+                AlignVoiceToEngine();
                 Raise(nameof(VoiceEngineExplanation));
             }
         }
@@ -369,6 +370,37 @@ public sealed class SettingsViewModel : ObservableObject
             }
         }
     }
+
+    /// <summary>
+    /// Ramène la voix choisie dans le moteur choisi.
+    ///
+    /// Décocher la voix neuronale laissait « fr_FR-tom-medium » sélectionné, que les voix
+    /// Windows ne connaissent pas : l'essai parlait alors avec la voix système, en le signalant
+    /// dans le journal mais pas à l'écran. Le pilote entendait une voix qu'il n'avait pas
+    /// choisie et ne pouvait pas savoir pourquoi.
+    /// </summary>
+    private void AlignVoiceToEngine()
+    {
+        bool selectedIsNeural = IsNeural(VoiceId);
+
+        if (selectedIsNeural == NeuralVoice)
+        {
+            return;
+        }
+
+        string? replacement = Voices.FirstOrDefault(v => IsNeural(v) == NeuralVoice);
+
+        if (replacement is not null)
+        {
+            VoiceId = replacement;
+        }
+    }
+
+    /// <summary>Cette voix appartient-elle au moteur neuronal ?</summary>
+    private static bool IsNeural(string? voiceId) =>
+        voiceId is not null
+        && (PiperInstallation.Locate()?.Voices()
+            .Any(v => string.Equals(v.Id, voiceId, StringComparison.OrdinalIgnoreCase)) ?? false);
 
     /// <summary>Vrai si une installation de Whisper est utilisable.</summary>
     public bool WhisperAvailable => WhisperInstallation.Locate() is not null;
@@ -799,8 +831,38 @@ public sealed class SettingsViewModel : ObservableObject
     {
         // On teste ce qui est A L'ECRAN, pas ce qui est enregistre : autrement, regler le debit
         // puis l'ecouter demanderait de sauvegarder d'abord, donc de valider a l'aveugle.
-        await _runtime.Speech.SpeakAsync(new SpeechRequest(
-            "Systèmes en ligne. À vos ordres, commandant.", VoiceId, Rate, Volume))
+        //
+        // LE MOTEUR AUSSI vient de l'ecran, et pas seulement la voix. C'etait le defaut signale
+        // par le pilote le 2026-08-28 : choisir une voix Piper puis « Ecouter un essai » faisait
+        // parler une voix Windows, parce que le moteur monte etait encore celui du copilote
+        // ENREGISTRE. Il fallait sauvegarder pour entendre ce qu'on venait de choisir, soit
+        // exactement l'inverse de ce que promet la phrase affichee sous le bouton.
+        //
+        // Un moteur jete apres usage, donc, comme le fait deja l'essai de connexion de l'etage
+        // conversationnel. Monter Piper coute 0,6 s de chargement — c'est le prix d'entendre la
+        // verite plutot qu'une approximation.
+        Copilot preview = _runtime.Copilot with
+        {
+            Voice = _runtime.Copilot.Voice with
+            {
+                Provider = NeuralVoice ? SpeechFactory.Piper : "windows-onecore",
+                VoiceId = VoiceId,
+                Rate = Rate,
+                Volume = Volume,
+            },
+
+            // Le caractere aussi : le curseur « calme » module le debit, et le pilote qui vient
+            // de le deplacer doit l'entendre.
+            Personality = _runtime.Copilot.Personality with { Traits = CurrentTraits() },
+        };
+
+        await using ITextToSpeechProvider engine = SpeechFactory.For(preview);
+
+        await engine.SpeakAsync(new SpeechRequest(
+            "Systèmes en ligne. À vos ordres, commandant.",
+            preview.Voice.VoiceId,
+            preview.EffectiveRate,
+            preview.Voice.Volume))
             .ConfigureAwait(true);
     }
 
