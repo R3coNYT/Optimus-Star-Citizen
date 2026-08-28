@@ -16,6 +16,16 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
 
     <!--
+      L'icone est embarquee dans l'executable, et non chargee au demarrage : c'est elle
+      que montrent la barre des taches, l'explorateur et le raccourci du Bureau, avant
+      meme qu'Optimus ait demarre. La fenetre WPF la reprend d'elle-meme, faute de
+      propriete Icon explicite - une seule source, donc, pour tous les endroits.
+
+      Le .ico se refabrique depuis le logo par tools\make-icon.ps1.
+    -->
+    <ApplicationIcon>..\..\images\Optimus.ico</ApplicationIcon>
+
+    <!--
       L'ICU doit rester active : sans elle, string.Normalize cesse de décomposer les accents
       et « lumières » devient « lumi res » - ce qui avait fait résoudre la mauvaise commande.
     -->
