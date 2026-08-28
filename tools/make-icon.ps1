@@ -92,15 +92,25 @@ function PngBytes([Drawing.Bitmap] $image) {
     return ,$stream.ToArray()
 }
 
-# 16 a 64 pixels en DIB, 128 et 256 en PNG. Les tailles intermediaires — 20, 40 — sont
-# celles que Windows reclame sur un ecran a 125 % ou 150 %.
-$sizes = @(16, 20, 24, 32, 40, 48, 64, 128, 256)
+# De la plus grande a la plus petite. L'ordre n'est pas cosmetique : Windows choisit la
+# meilleure taille quel que soit l'ordre, mais tout lecteur naif - une barre de
+# telechargement, un gestionnaire de fichiers tiers - prend la PREMIERE entree. Largest
+# first, il obtient une grande image a reduire ; dans l'autre sens, il affichait 16 pixels
+# etires, ou renoncait.
+#
+# Une seule entree reste compressee, celle de 256 : c'est la forme que Windows attend a
+# cette taille, et la seule ou le PNG soit universellement lu. Tout le reste est du DIB
+# brut, que lit meme le plus vieux code d'extraction.
+#
+# Les tailles intermediaires - 20, 40 - sont celles que Windows reclame sur un ecran a
+# 125 % ou 150 %.
+$sizes = @(256, 128, 64, 48, 40, 32, 24, 20, 16)
 $blobs = New-Object 'System.Collections.Generic.List[byte[]]'
 $frames = @()
 
 foreach ($size in $sizes) {
     $frame = Resize $logo $size
-    if ($size -ge 128) { $blobs.Add((PngBytes $frame)) } else { $blobs.Add((DibBytes $frame $size)) }
+    if ($size -ge 256) { $blobs.Add((PngBytes $frame)) } else { $blobs.Add((DibBytes $frame $size)) }
     $frames += $frame
 }
 
