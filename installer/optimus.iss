@@ -99,7 +99,7 @@ fr.ComponentPiper=Voix neuronale locale (Piper) : moteur, 37 Mo téléchargés
 fr.ComponentTom=Voix Tom : masculine, qualité medium (60 Mo)
 fr.ComponentGilles=Voix Gilles : masculine, plus rapide (60 Mo)
 fr.ComponentSiwis=Voix Siwis : féminine, qualité medium (60 Mo)
-fr.ComponentWhisper=Parole libre (Whisper) : comprendre ce qui n'est pas une commande (150 Mo)
+fr.ComponentWhisper=Parole libre (Whisper) : comprendre ce qui n'est pas une commande (161 Mo)
 fr.TaskDesktop=Créer un raccourci sur le Bureau
 fr.DownloadFailed=Le téléchargement a échoué.%n%n%1%n%nOptimus s'installera sans les voix neuronales : les voix Windows prendront le relais, et vous pourrez ajouter Piper plus tard.
 fr.ExtractFailed=L'archive Piper n'a pas pu être ouverte. Optimus s'installera sans les voix neuronales.
@@ -107,16 +107,21 @@ fr.PurgeData=Supprimer aussi vos données ?%n%nCela effacerait vos assignations 
 
 [Types]
 Name: "standard"; Description: "Optimus seul — rien à télécharger"
-Name: "complet"; Description: "Complète : voix neuronales et parole libre (~255 Mo téléchargés)"
+Name: "complet"; Description: "Complète : voix neuronales et parole libre (~380 Mo téléchargés)"
 Name: "perso"; Description: "Installation personnalisée"; Flags: iscustom
 
+; « ExtraDiskSpaceRequired » n'est pas une coquetterie : Inno calcule l'espace annonce a
+; partir des fichiers EMBARQUES, et ces composants-la sont telecharges par le code. Sans ces
+; nombres, l'assistant annoncait obstinement 79,6 Mo quoi qu'on coche — un pilote pouvait
+; demander 380 Mo en lisant « 79,6 ». Tailles relevees sur disque apres une installation
+; reelle, le 2026-08-28.
 [Components]
 Name: "app"; Description: "{cm:ComponentApp}"; Types: complet standard perso; Flags: fixed
-Name: "piper"; Description: "{cm:ComponentPiper}"; Types: complet
-Name: "piper\tom"; Description: "{cm:ComponentTom}"; Types: complet
-Name: "piper\gilles"; Description: "{cm:ComponentGilles}"
-Name: "piper\siwis"; Description: "{cm:ComponentSiwis}"
-Name: "whisper"; Description: "{cm:ComponentWhisper}"; Types: complet
+Name: "piper"; Description: "{cm:ComponentPiper}"; Types: complet; ExtraDiskSpaceRequired: 39415482
+Name: "piper\tom"; Description: "{cm:ComponentTom}"; Types: complet; ExtraDiskSpaceRequired: 63515997
+Name: "piper\gilles"; Description: "{cm:ComponentGilles}"; ExtraDiskSpaceRequired: 63515997
+Name: "piper\siwis"; Description: "{cm:ComponentSiwis}"; ExtraDiskSpaceRequired: 63515997
+Name: "whisper"; Description: "{cm:ComponentWhisper}"; Types: complet; ExtraDiskSpaceRequired: 169165161
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:TaskDesktop}"; Flags: unchecked
