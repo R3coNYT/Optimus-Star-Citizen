@@ -43,6 +43,27 @@
     "model": "llama3.1",
     "call_budget": 200
   },
+  "whisper": {
+    "notes": [
+      "Etage de parole libre, ETEINT par defaut. Il ne s'installe pas de micro : il transcrit",
+      "l'audio que le moteur rapide lui tend (RecognitionResult.Audio, mesure recuperable en",
+      "S0-7, rendu en 16 kHz 16 bits mono). Seuls les enonces qui ont deja declenche le moteur",
+      "passent donc par la.",
+      "mode = off       : grammaire fermee seulement, rien n'est jamais transcrit.",
+      "mode = rejected  : Whisper ne recoit que ce que le moteur rapide a refuse. Aucun cout",
+      "                   sur les commandes connues. C'est ce qui debloque l'etage",
+      "                   conversationnel a la voix.",
+      "mode = always    : tout est transcrit, commandes comprises. Environ 900 ms par enonce et",
+      "                   9,8 % de mots errones (S0-2, S0-7) : a essayer sur sa propre voix.",
+      "trim_context : fenetre d'encodage reduite a 768. Deux fois plus rapide, 14,8 % d'erreurs.",
+      "Le binaire et les modeles vivent dans %APPDATA%/Optimus/whisper, jamais dans data/."
+    ],
+    "mode": "off",
+    "model": "base",
+    "threads": 0,
+    "trim_context": false
+  },
+
   "api": {
     "notes": [
       "API locale, DESACTIVEE par defaut. Elle n'ecoute que 127.0.0.1 : Windows refuse a un",

@@ -52,6 +52,11 @@
 #define PiperHash "f3c58906402b24f3a96d92145f58acba6d86c9b5db896d207f78dc80811efcea"
 #define VoiceBase "https://huggingface.co/rhasspy/piper-voices/resolve/main/fr/fr_FR"
 
+#define WhisperUrl "https://github.com/ggml-org/whisper.cpp/releases/download/b4938/whisper-bin-x64.zip"
+#define WhisperHash "c2a4b60edb11f7e11a9191ffb50929535527d4d91c9903dbe3e554583bbbc63d"
+#define ModelUrl "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin"
+#define ModelHash "60ed5bc3dd14eea856493d334349b405782ddcaf0028d4b5df4088345fba2efe"
+
 [Setup]
 AppId={{7E2C4A61-8D3F-4B5E-9C1A-0F6D2B8E4A73}
 AppName={#AppName}
@@ -94,6 +99,7 @@ fr.ComponentPiper=Voix neuronale locale (Piper) : moteur, 37 Mo téléchargés
 fr.ComponentTom=Voix Tom : masculine, qualité medium (60 Mo)
 fr.ComponentGilles=Voix Gilles : masculine, plus rapide (60 Mo)
 fr.ComponentSiwis=Voix Siwis : féminine, qualité medium (60 Mo)
+fr.ComponentWhisper=Parole libre (Whisper) : comprendre ce qui n'est pas une commande (150 Mo)
 fr.TaskDesktop=Créer un raccourci sur le Bureau
 fr.DownloadFailed=Le téléchargement a échoué.%n%n%1%n%nOptimus s'installera sans les voix neuronales : les voix Windows prendront le relais, et vous pourrez ajouter Piper plus tard.
 fr.ExtractFailed=L'archive Piper n'a pas pu être ouverte. Optimus s'installera sans les voix neuronales.
@@ -110,6 +116,7 @@ Name: "piper"; Description: "{cm:ComponentPiper}"; Types: complet
 Name: "piper\tom"; Description: "{cm:ComponentTom}"; Types: complet
 Name: "piper\gilles"; Description: "{cm:ComponentGilles}"
 Name: "piper\siwis"; Description: "{cm:ComponentSiwis}"
+Name: "whisper"; Description: "{cm:ComponentWhisper}"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:TaskDesktop}"; Flags: unchecked
@@ -148,6 +155,13 @@ end;
 function DataRoot(): String;
 begin
   Result := ExpandConstant('{userappdata}\Optimus');
+end;
+
+{ Doit correspondre exactement a WhisperInstallation.DefaultRoot, sans quoi Optimus chercherait
+  le moteur ailleurs que la ou l'installateur vient de le poser. }
+function WhisperRoot(): String;
+begin
+  Result := ExpandConstant('{userappdata}\Optimus\whisper');
 end;
 
 procedure InitializeWizard();
@@ -200,9 +214,37 @@ end;
   pas NextButtonClick en installation silencieuse - il n'y a pas de page a
   quitter - et le telechargement ne se serait jamais fait pour qui script son
   deploiement. PrepareToInstall, elle, est appelee dans les deux modes. }
-procedure FetchPiper(const Interactive: Boolean);
+procedure FetchExtras(const Interactive: Boolean);
 begin
   DownloadPage.Clear;
+
+  if WizardIsComponentSelected('whisper') then
+  begin
+    DownloadPage.Add('{#WhisperUrl}', 'whisper.zip', '{#WhisperHash}');
+    DownloadPage.Add('{#ModelUrl}', 'ggml-base.bin', '{#ModelHash}');
+  end;
+
+  if not WizardIsComponentSelected('piper') then
+  begin
+    if Interactive then
+      DownloadPage.Show;
+
+    try
+      try
+        DownloadPage.Download;
+      except
+        SuppressibleMsgBox(
+          FmtMessage(CustomMessage('DownloadFailed'), [GetExceptionMessage]),
+          mbInformation, MB_OK, IDOK);
+      end;
+    finally
+      if Interactive then
+        DownloadPage.Hide;
+    end;
+
+    Exit;
+  end;
+
   DownloadPage.Add('{#PiperUrl}', 'piper.zip', '{#PiperHash}');
 
   if WizardIsComponentSelected('piper\tom') then
@@ -237,22 +279,47 @@ function NextButtonClick(CurPageID: Integer): Boolean;
 begin
   Result := True;
 
-  if (CurPageID = wpReady) and WizardIsComponentSelected('piper') then
-    FetchPiper(True);
+  if (CurPageID = wpReady)
+     and (WizardIsComponentSelected('piper') or WizardIsComponentSelected('whisper')) then
+    FetchExtras(True);
 end;
 
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 begin
   Result := '';
 
-  if WizardSilent and WizardIsComponentSelected('piper') then
-    FetchPiper(False);
+  if WizardSilent
+     and (WizardIsComponentSelected('piper') or WizardIsComponentSelected('whisper')) then
+    FetchExtras(False);
+end;
+
+procedure InstallWhisper();
+var
+  Models: String;
+begin
+  if not FileExists(ExpandConstant('{tmp}\whisper.zip')) then
+    Exit;
+
+  { L'archive place tout sous « Release\ » : --strip-components=1 le retire, comme pour Piper. }
+  if not ExtractPiper(ExpandConstant('{tmp}\whisper.zip'), WhisperRoot()) then
+  begin
+    SuppressibleMsgBox(CustomMessage('ExtractFailed'), mbInformation, MB_OK, IDOK);
+    Exit;
+  end;
+
+  Models := WhisperRoot() + '\models';
+  ForceDirectories(Models);
+
+  CopyFile(ExpandConstant('{tmp}\ggml-base.bin'), Models + '\ggml-base.bin', False);
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
 begin
   if CurStep <> ssPostInstall then
     Exit;
+
+  if WizardIsComponentSelected('whisper') then
+    InstallWhisper();
 
   if not WizardIsComponentSelected('piper') then
     Exit;

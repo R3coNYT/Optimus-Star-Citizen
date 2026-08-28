@@ -550,6 +550,26 @@
 
                 <Border Style="{StaticResource Card}">
                   <StackPanel>
+                    <TextBlock Text="PAROLE LIBRE (WHISPER)" Style="{StaticResource Label}" />
+
+                    <StackPanel IsEnabled="{Binding WhisperAvailable}">
+                      <RadioButton GroupName="Whisper" IsChecked="{Binding WhisperOff}"
+                                   Content="Éteint — grammaire fermée seulement" />
+                      <RadioButton GroupName="Whisper" IsChecked="{Binding WhisperOnRejects}"
+                                   Content="Quand le moteur rapide doute — vos commandes restent instantanées" />
+                      <RadioButton GroupName="Whisper" IsChecked="{Binding WhisperOnEverything}"
+                                   Content="Sur tout — commandes comprises, plus lent" />
+
+                      <CheckBox IsChecked="{Binding WhisperTrimContext}" Margin="0,8,0,0"
+                                Content="Fenêtre réduite (plus rapide, moins sûr)" />
+                    </StackPanel>
+
+                    <TextBlock Text="{Binding WhisperExplanation}" Style="{StaticResource Hint}" />
+                  </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource Card}">
+                  <StackPanel>
                     <TextBlock Text="ÉTAGE CONVERSATIONNEL" Style="{StaticResource Label}" />
                     <CheckBox IsChecked="{Binding AiEnabled}"
                               Content="Faire appel à un modèle quand rien n'est compris" />

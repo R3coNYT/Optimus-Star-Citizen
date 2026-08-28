@@ -1,6 +1,7 @@
 ﻿using Optimus.Core.Abstractions;
 using Optimus.Core.Ai;
 using Optimus.Core.Api;
+using Optimus.Core.Speech;
 using Optimus.Infrastructure.Ai;
 using Optimus.Infrastructure.Api;
 using Optimus.Core.Bindings;
@@ -172,6 +173,17 @@ public sealed class OptimusRuntime : IAsyncDisposable
 
     /// <summary>Jetons d'accès en vigueur. Vide tant que l'API n'a jamais été activée.</summary>
     public IReadOnlyList<ApiToken> ApiTokens { get; private set; } = [];
+
+    /// <summary>
+    /// L'étage de parole libre, ou <c>null</c> tant qu'il n'est pas demandé.
+    ///
+    /// Éteint par défaut, comme les deux autres étages facultatifs : sans lui, la grammaire
+    /// fermée garde sa promesse — ce qui n'est pas une commande connue n'est jamais transcrit.
+    /// </summary>
+    public WhisperTranscriber? Transcriber { get; private set; }
+
+    /// <summary>Vrai si une installation de Whisper est utilisable sur cette machine.</summary>
+    public static bool WhisperAvailable => WhisperInstallation.Locate() is not null;
 
     /// <summary>Profil du jeu seul, sans les choix du pilote. Sert à savoir ce qui manque.</summary>
     public BindingProfile DefaultBindings { get; }
@@ -663,6 +675,104 @@ public sealed class OptimusRuntime : IAsyncDisposable
 
     private async Task HandleRecognitionAsync(VoiceRecognition recognition)
     {
+        try
+        {
+            recognition = await TranscribeAsync(recognition).ConfigureAwait(false);
+
+            await DispatchAsync(recognition).ConfigureAwait(false);
+        }
+        finally
+        {
+            // Le WAV temporaire appartient a celui qui le consomme. Ne pas l'effacer laisserait
+            // s'accumuler, dans le dossier temporaire du pilote, l'enregistrement de tout ce
+            // qu'il a dit a son copilote.
+            Forget(recognition.AudioPath);
+        }
+    }
+
+    /// <summary>
+    /// Fait transcrire l'énoncé par l'étage de parole libre, selon le mode choisi.
+    ///
+    /// <b>Sur les rejets</b> : le moteur rapide garde la main sur les commandes du catalogue, et
+    /// Whisper ne reçoit que ce qu'il a refusé — ce qui aujourd'hui ne produit rien du tout. Coût
+    /// sur les commandes connues : aucun.
+    ///
+    /// <b>Sur tout</b> : chaque énoncé paie la transcription (~900 ms, mesuré en S0-7), mais le
+    /// rapprochement flou travaille alors sur ce qui a été dit plutôt que sur une liste
+    /// d'alternatives. C'est un échange que le pilote doit pouvoir faire sur sa propre voix.
+    ///
+    /// Un énoncé transcrit repart <b>de zéro</b> dans le chemin ordinaire : il n'a plus ni
+    /// commande ni confiance du moteur rapide, et c'est le rapprochement flou qui tranche.
+    /// </summary>
+    private async Task<VoiceRecognition> TranscribeAsync(VoiceRecognition recognition)
+    {
+        if (Transcriber is null || !recognition.HasAudio)
+        {
+            return recognition;
+        }
+
+        WhisperMode mode = (User.Whisper ?? WhisperSettings.Disabled).Mode;
+
+        // Tout ce dont le moteur rapide n'est pas sur, et pas seulement ce qu'il rejette :
+        // mesure du 2026-08-28, un enonce hors catalogue ressort souvent en « douteux » plutot
+        // qu'en « bruit », rattache a une phrase voisine avec une confiance moyenne. S'en tenir
+        // aux rejets aurait laisse passer le cas le plus frequent.
+        bool wanted = mode == WhisperMode.Always
+                      || (mode == WhisperMode.Rejected
+                          && recognition.Outcome != RecognitionOutcome.Accepted);
+
+        if (!wanted)
+        {
+            return recognition;
+        }
+
+        Transcription heard = await Transcriber
+            .TranscribeAsync(recognition.AudioPath!, Copilot.Language)
+            .ConfigureAwait(false);
+
+        if (!heard.HasText)
+        {
+            // Rien de prononcable : c'etait bien du bruit. On garde l'enonce d'origine, qui sera
+            // traite comme avant — se taire.
+            return recognition;
+        }
+
+        DiagnosticLog.Info(
+            "parole libre transcrite",
+            $"{heard.ElapsedMs:F0} ms · « {heard.Text} »");
+
+        // La confiance vient d'un autre moteur : la reporter telle quelle serait comparer deux
+        // echelles sans rapport. Un enonce transcrit est tenu pour clair — c'est le
+        // rapprochement flou, et lui seul, qui decidera de la suite.
+        return recognition with
+        {
+            Text = heard.Text,
+            Confidence = 1.0,
+            CommandId = null,
+            Outcome = RecognitionOutcome.Accepted,
+            Polarity = CommandPolarity.Neutral,
+        };
+    }
+
+    private static void Forget(string? audioPath)
+    {
+        if (audioPath is null)
+        {
+            return;
+        }
+
+        try
+        {
+            File.Delete(audioPath);
+        }
+        catch (IOException)
+        {
+            // Un fichier temporaire qui survit une fois de trop n'est pas une panne.
+        }
+    }
+
+    private async Task DispatchAsync(VoiceRecognition recognition)
+    {
         switch (recognition.Outcome)
         {
             case RecognitionOutcome.Noise:
@@ -1114,6 +1224,55 @@ public sealed class OptimusRuntime : IAsyncDisposable
         DiagnosticLog.Info(
             $"copilote « {Copilot.Name} »",
             $"mot d'éveil « {Copilot.WakeWord} » · voix {Copilot.Voice.VoiceId ?? "par défaut"}");
+    }
+
+    /// <summary>
+    /// Aligne l'étage de parole libre sur les réglages.
+    ///
+    /// Appelé au démarrage et après chaque enregistrement. C'est aussi ici que l'écoute apprend
+    /// si elle doit conserver l'audio : sans étage monté, écrire un WAV par énoncé — bruit
+    /// ambiant compris — serait de l'écriture pure perte et du son posé sur le disque du pilote
+    /// sans que rien ne le justifie.
+    /// </summary>
+    public void ApplyWhisperSettings()
+    {
+        WhisperSettings settings = User.Whisper ?? WhisperSettings.Disabled;
+
+        Transcriber = null;
+
+        if (settings.Enabled)
+        {
+            if (WhisperInstallation.Locate() is WhisperInstallation installation)
+            {
+                try
+                {
+                    Transcriber = new WhisperTranscriber(installation, settings);
+
+                    DiagnosticLog.Info(
+                        $"parole libre · {settings.Mode}",
+                        $"modèle {Transcriber.ModelName} · {settings.EffectiveThreads} fils"
+                        + (settings.TrimContext ? " · fenêtre réduite" : string.Empty));
+                }
+                catch (Exception exception)
+                {
+                    DiagnosticLog.Warn("étage de parole libre indisponible", exception.Message);
+                }
+            }
+            else
+            {
+                DiagnosticLog.Warn(
+                    "Whisper demandé mais introuvable",
+                    $"Rien d'utilisable dans {WhisperInstallation.DefaultRoot}. "
+                    + "Optimus s'en tient à sa grammaire fermée.");
+            }
+        }
+
+        if (_listener is WindowsGrammarListener listener)
+        {
+            listener.CaptureAudio = Transcriber is not null;
+        }
+
+        StateChanged?.Invoke(this, EventArgs.Empty);
     }
 
     private SequenceOptions Timing() =>

@@ -95,6 +95,29 @@ public static class SettingsWriter
         });
     }
 
+    /// <summary>Écrit les réglages de l'étage de parole libre.</summary>
+    public static void SaveWhisper(string profilePath, Speech.WhisperSettings settings)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(profilePath);
+        ArgumentNullException.ThrowIfNull(settings);
+
+        Patch(profilePath, root =>
+        {
+            JsonObject whisper = Section(root, "whisper");
+
+            whisper["mode"] = settings.Mode switch
+            {
+                Speech.WhisperMode.Rejected => "rejected",
+                Speech.WhisperMode.Always => "always",
+                _ => "off",
+            };
+
+            whisper["model"] = settings.Model;
+            whisper["threads"] = settings.Threads;
+            whisper["trim_context"] = settings.TrimContext;
+        });
+    }
+
     /// <summary>Écrit les réglages de l'API locale.</summary>
     public static void SaveApi(string profilePath, Api.ApiSettings settings)
     {

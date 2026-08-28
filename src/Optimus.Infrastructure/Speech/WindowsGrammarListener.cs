@@ -2,6 +2,7 @@
 using System.Runtime.Versioning;
 using System.Speech.Recognition;
 using Optimus.Core.Abstractions;
+using Optimus.Core.Diagnostics;
 using Optimus.Core.Domain.Commands;
 using Optimus.Core.Intent;
 
@@ -155,7 +156,8 @@ public sealed class WindowsGrammarListener : IVoiceCommandListener
             commandId,
             Classify(confidence, commandId),
             DateTimeOffset.UtcNow,
-            target?.Polarity ?? CommandPolarity.Neutral));
+            target?.Polarity ?? CommandPolarity.Neutral,
+            Capture(e.Result)));
     }
 
     /// <summary>
@@ -184,6 +186,50 @@ public sealed class WindowsGrammarListener : IVoiceCommandListener
     /// remonté malgré tout : c'est en observant ces rejets qu'on calibrera le seuil, et c'est
     /// ainsi que le mode debug pourra expliquer « je t'ai entendu mais je n'ai pas compris ».
     /// </summary>
+    /// <summary>
+    /// Écrire l'audio de chaque énoncé dans un fichier temporaire.
+    ///
+    /// Faux par défaut, et c'est important : sans étage de parole libre, écrire un WAV par
+    /// énoncé — bruit ambiant compris — serait de l'écriture disque pure perte, et du son du
+    /// pilote posé sur son disque sans que rien ne le justifie.
+    /// </summary>
+    public bool CaptureAudio { get; set; }
+
+    /// <summary>
+    /// Dépose l'audio d'une reconnaissance dans un fichier temporaire, ou rend <c>null</c>.
+    ///
+    /// Le moteur Windows le rend en 16 kHz 16 bits mono — mesuré en S0-7 — soit exactement le
+    /// format que whisper.cpp attend, sans rééchantillonnage.
+    /// </summary>
+    private string? Capture(RecognitionResult? result)
+    {
+        if (!CaptureAudio || result?.Audio is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            string directory = Path.Combine(Path.GetTempPath(), "optimus-ecoute");
+            Directory.CreateDirectory(directory);
+
+            string path = Path.Combine(directory, $"{Guid.NewGuid():N}.wav");
+
+            using (FileStream file = File.Create(path))
+            {
+                result.Audio.WriteToWaveStream(file);
+            }
+
+            return path;
+        }
+        catch (Exception exception)
+        {
+            // Un enonce sans audio se traite comme avant : le chemin rapide n'en depend pas.
+            DiagnosticLog.Warn("audio de l'énoncé non conservé", exception.Message);
+            return null;
+        }
+    }
+
     private void OnRejected(object? sender, SpeechRecognitionRejectedEventArgs e)
     {
         if (!_active)
@@ -198,7 +244,8 @@ public sealed class WindowsGrammarListener : IVoiceCommandListener
             Math.Round(e.Result?.Confidence ?? 0, 3),
             CommandId: null,
             RecognitionOutcome.Noise,
-            DateTimeOffset.UtcNow));
+            DateTimeOffset.UtcNow,
+            AudioPath: Capture(e.Result)));
     }
 
     /// <summary>Moteurs de reconnaissance installés, toutes langues confondues.</summary>

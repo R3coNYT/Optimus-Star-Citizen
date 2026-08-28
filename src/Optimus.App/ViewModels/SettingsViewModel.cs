@@ -5,6 +5,7 @@ using Optimus.App.Mvvm;
 using Optimus.Core.Abstractions;
 using Optimus.Core.Ai;
 using Optimus.Core.Api;
+using Optimus.Core.Speech;
 using Optimus.Core.Domain.Copilots;
 using Optimus.Core.Domain.Personality;
 using Optimus.Core.Domain.Profiles;
@@ -55,6 +56,8 @@ public sealed class SettingsViewModel : ObservableObject
     private string? _copilot;
     private string _copilotName = string.Empty;
     private bool _switching;
+    private WhisperMode _whisper = WhisperMode.Off;
+    private bool _trimContext;
     private bool _apiEnabled;
     private int _apiPort = 8731;
     private int _apiRate = 30;
@@ -319,6 +322,103 @@ public sealed class SettingsViewModel : ObservableObject
           + $"Il répond à « {_runtime.Copilot.WakeWord} ». Dupliquez-le pour en faire un à vous : "
           + "voix, caractère et répliques suivront, et vous n'aurez qu'à les infléchir.";
 
+    /// <summary>Quand l'étage de parole libre intervient.</summary>
+    public WhisperMode Whisper
+    {
+        get => _whisper;
+        set
+        {
+            if (Track(ref _whisper, value))
+            {
+                Raise(nameof(WhisperOff));
+                Raise(nameof(WhisperOnRejects));
+                Raise(nameof(WhisperOnEverything));
+                Raise(nameof(WhisperExplanation));
+            }
+        }
+    }
+
+    /// <summary>Les trois positions, liées à trois boutons radio.</summary>
+    public bool WhisperOff
+    {
+        get => Whisper == WhisperMode.Off;
+        set { if (value) { Whisper = WhisperMode.Off; } }
+    }
+
+    public bool WhisperOnRejects
+    {
+        get => Whisper == WhisperMode.Rejected;
+        set { if (value) { Whisper = WhisperMode.Rejected; } }
+    }
+
+    public bool WhisperOnEverything
+    {
+        get => Whisper == WhisperMode.Always;
+        set { if (value) { Whisper = WhisperMode.Always; } }
+    }
+
+    /// <summary>Réduire la fenêtre d'encodage : deux fois plus rapide, nettement moins sûr.</summary>
+    public bool WhisperTrimContext
+    {
+        get => _trimContext;
+        set
+        {
+            if (Track(ref _trimContext, value))
+            {
+                Raise(nameof(WhisperExplanation));
+            }
+        }
+    }
+
+    /// <summary>Vrai si une installation de Whisper est utilisable.</summary>
+    public bool WhisperAvailable => WhisperInstallation.Locate() is not null;
+
+    /// <summary>
+    /// Ce que chaque position coûte, en chiffres mesurés.
+    ///
+    /// Le pilote a demandé à pouvoir choisir « sur tout » : l'écran doit donc lui dire ce que ça
+    /// vaut, sans l'enjoliver. Les nombres viennent du spike S0-7 et du spike S0-2 — d'une
+    /// machine réelle, pas d'une brochure.
+    /// </summary>
+    public string WhisperExplanation
+    {
+        get
+        {
+            if (!WhisperAvailable)
+            {
+                return "Whisper n'est pas installé. Placez whisper-cli.exe et au moins un modèle "
+                     + $"ggml-*.bin dans {WhisperInstallation.DefaultRoot} — l'installateur "
+                     + "d'Optimus sait le faire pour vous.";
+            }
+
+            string trimmed = WhisperTrimContext
+                ? " Fenêtre réduite : environ deux fois plus rapide, mais le taux de mots erronés "
+                  + "passe de 9,8 % à 14,8 %."
+                : string.Empty;
+
+            return Whisper switch
+            {
+                WhisperMode.Rejected =>
+                    "Le moteur rapide garde la main sur ce qu'il reconnaît franchement — "
+                    + "instantané, comme aujourd'hui. Whisper reçoit tout le reste : les rejets, "
+                    + "mais aussi les énoncés douteux, où se trouve en réalité l'essentiel de la "
+                    + "parole libre. Comptez environ 900 ms dans ces cas-là, et rien sur vos "
+                    + "commandes bien entendues." + trimmed,
+
+                WhisperMode.Always =>
+                    "Chaque énoncé est transcrit, commandes comprises. Mesuré : environ 900 ms "
+                    + "par commande, et 9,8 % de mots erronés là où la grammaire fermée rend "
+                    + "0,825 de confiance — « allume les lumières » peut devenir « aume les "
+                    + "lumiere ». Le rapprochement flou en rattrape une partie. À essayer sur "
+                    + "votre voix avant de vous y tenir." + trimmed,
+
+                _ => "Éteint. Optimus s'en tient à sa grammaire fermée : ce qui n'est pas une "
+                   + "commande connue n'est jamais transcrit, nulle part. L'étage conversationnel "
+                   + "reste alors inatteignable à la voix.",
+            };
+        }
+    }
+
     /// <summary>L'API locale est-elle demandée ?</summary>
     public bool ApiEnabled
     {
@@ -569,6 +669,10 @@ public sealed class SettingsViewModel : ObservableObject
 
         RefreshCopilots();
 
+        WhisperSettings whisper = _runtime.User.Whisper ?? WhisperSettings.Disabled;
+        _whisper = whisper.Mode;
+        _trimContext = whisper.TrimContext;
+
         ApiSettings api = _runtime.User.Api ?? ApiSettings.Disabled;
         _apiEnabled = api.Enabled;
         _apiPort = api.Port;
@@ -634,6 +738,12 @@ public sealed class SettingsViewModel : ObservableObject
 
         SettingsWriter.SaveTraits(_runtime.PersonalityPath, CurrentTraits());
 
+        SettingsWriter.SaveWhisper(_runtime.ProfilePath, new WhisperSettings(
+            Whisper,
+            (_runtime.User.Whisper ?? WhisperSettings.Disabled).Model,
+            (_runtime.User.Whisper ?? WhisperSettings.Disabled).Threads,
+            WhisperTrimContext));
+
         SettingsWriter.SaveApi(_runtime.ProfilePath, new ApiSettings(
             ApiEnabled, Math.Clamp(ApiPort, 1024, 65535), Math.Max(1, ApiRate)));
 
@@ -644,6 +754,8 @@ public sealed class SettingsViewModel : ObservableObject
 
         // L'API suit le reglage : l'allumer, l'eteindre ou changer son port prend effet tout de
         // suite, sans redemarrer.
+        _runtime.ApplyWhisperSettings();
+
         await _runtime.ApplyApiSettingsAsync().ConfigureAwait(true);
 
         IsDirty = false;
@@ -917,6 +1029,9 @@ public sealed class SettingsViewModel : ObservableObject
             nameof(Calmness), nameof(Warmth), nameof(Preview), nameof(VerbosityEffect),
             nameof(ActiveCopilot), nameof(CopilotName), nameof(CopilotHint), nameof(CanDeleteCopilot),
             nameof(NeuralVoice), nameof(NeuralVoiceAvailable), nameof(VoiceEngineExplanation),
+            nameof(Whisper), nameof(WhisperOff), nameof(WhisperOnRejects),
+            nameof(WhisperOnEverything), nameof(WhisperTrimContext),
+            nameof(WhisperAvailable), nameof(WhisperExplanation),
             nameof(ApiEnabled), nameof(ApiPort), nameof(ApiRate), nameof(ApiAddress),
             nameof(ApiTokenSecret), nameof(ApiState), nameof(ApiExplanation),
             nameof(AiEnabled), nameof(AiProvider), nameof(AiEndpoint), nameof(AiModel),

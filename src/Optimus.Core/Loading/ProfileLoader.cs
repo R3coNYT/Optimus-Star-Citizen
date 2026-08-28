@@ -23,7 +23,8 @@ public sealed record UserProfile(
     bool ConfirmDangerous = true,
     Ai.AiSettings? Ai = null,
     string? ActiveBindingProfile = null,
-    Api.ApiSettings? Api = null)
+    Api.ApiSettings? Api = null,
+    Speech.WhisperSettings? Whisper = null)
 {
     public static UserProfile Default { get; } =
         new("default", "Pilote", "optimus", VoiceInputSettings.Default);
@@ -80,7 +81,8 @@ public static class ProfileLoader
             GetBool(root, "safety", "confirm_dangerous") ?? true,
             ReadAi(root),
             GetString(root, "active_binding_profile"),
-            ReadApi(root));
+            ReadApi(root),
+            ReadWhisper(root));
 
         return new LoadResult<UserProfile>(profile, issues);
     }
@@ -101,6 +103,31 @@ public static class ProfileLoader
     /// Absent du fichier vaut désactivé : c'est l'exigence §84, et le comportement par défaut
     /// doit être celui qui ne dépend de rien.
     /// </summary>
+    /// <summary>
+    /// Lit la section « whisper ». Absente, l'étage de parole libre reste éteint.
+    /// </summary>
+    private static Speech.WhisperSettings ReadWhisper(JsonElement root)
+    {
+        if (!root.TryGetProperty("whisper", out JsonElement whisper)
+            || whisper.ValueKind != JsonValueKind.Object)
+        {
+            return Speech.WhisperSettings.Disabled;
+        }
+
+        Speech.WhisperMode mode = GetString(whisper, "mode")?.ToLowerInvariant() switch
+        {
+            "rejected" or "rejets" => Speech.WhisperMode.Rejected,
+            "always" or "tout" => Speech.WhisperMode.Always,
+            _ => Speech.WhisperMode.Off,
+        };
+
+        return new Speech.WhisperSettings(
+            mode,
+            GetString(whisper, "model") ?? "base",
+            GetInt(whisper, "threads") ?? 0,
+            GetBool(whisper, "trim_context") ?? false);
+    }
+
     /// <summary>
     /// Lit la section « api ». Absente, l'API reste éteinte — c'est le défaut voulu.
     /// </summary>

@@ -110,7 +110,19 @@ suit est la file d'attente convenue avec le pilote, dans l'ordre.
 
 **Réserve sur le chantier 12.** L'installateur **ne résout pas R16**, il le concentre. L'exécutable n'est pas signé : SmartScreen avertira chaque personne qui le téléchargera, et Smart App Control le refusera, exactement comme il a refusé les binaires nus. Le gain est réel mais indirect — il y a désormais **un** fichier à signer au lieu de vingt-quatre, ce qui rend le problème soluble par un seul certificat. **Tant que cette signature n'existe pas, la diffusion publique reste bloquée**, et c'est le prochain verrou, pas une formalité.
 
-**Réserve sur le chantier 2.** L'étage est en place et éprouvé, mais **la conversation libre à la voix n'est pas encore atteignable**. La grammaire est fermée (D28, D30) : un énoncé hors catalogue ne parvient jamais à Optimus sous forme de texte — le moteur rend la formulation connue la plus proche, assortie d'une faible confiance, jamais ce qui a été dit. Le modèle sert donc aujourd'hui deux entrées : le champ « essayer un énoncé », et les énoncés vocaux ressortis en `Unknown`. Parler librement à son copilote demande l'étage de parole libre (Whisper, D28 phase B), qui n'est pas encore monté.
+**Chantier 13 — parole libre (Whisper) : fait le 2026-08-28.** L'étage de parole libre est monté,
+et la réserve du chantier 2 est levée. Trois positions au choix du pilote, avec leur coût mesuré
+affiché à l'écran : éteint, quand le moteur rapide doute, ou sur tout. Whisper n'ouvre jamais de
+micro — il transcrit l'audio que le moteur rapide lui tend (D74 à D76).
+
+**Ce qui reste à éprouver** : la chaîne complète micro → doute → transcription → escalade, sur une
+voix réelle. Le transcripteur est vérifié contre le vrai binaire, l'installateur pose le moteur en
+soixante secondes, et le montage se voit dans le journal — mais l'essai en boucle
+haut-parleur/micro n'est pas concluant sur ce portable, dont l'annulation d'écho filtre la
+lecture. Cette mesure-là demande de parler dans le micro.
+
+*Réserve historique du chantier 2, conservée pour mémoire.* L'étage conversationnel était en place
+mais **la conversation libre à la voix n'était pas atteignable**. La grammaire est fermée (D28, D30) : un énoncé hors catalogue ne parvient jamais à Optimus sous forme de texte — le moteur rend la formulation connue la plus proche, assortie d'une faible confiance, jamais ce qui a été dit. Le modèle sert donc aujourd'hui deux entrées : le champ « essayer un énoncé », et les énoncés vocaux ressortis en `Unknown`. Parler librement à son copilote demande l'étage de parole libre (Whisper, D28 phase B), qui n'est pas encore monté.
 
 **Réserve sur le chantier 7.** Repoussé à la demande du pilote le 2026-08-28, pour une raison
 qui n'est pas technique : un bot Discord exige une **application créée sur son compte Discord**,

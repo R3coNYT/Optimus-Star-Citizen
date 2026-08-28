@@ -42,8 +42,18 @@ public sealed record VoiceRecognition(
     string? CommandId,
     RecognitionOutcome Outcome,
     DateTimeOffset RecognizedAt,
-    CommandPolarity Polarity = CommandPolarity.Neutral)
+    CommandPolarity Polarity = CommandPolarity.Neutral,
+    string? AudioPath = null)
 {
+    /// <summary>
+    /// Fichier WAV de ce qui a été entendu, quand l'étage de parole libre le demande.
+    ///
+    /// Un chemin et non des octets : c'est ce qu'attend whisper.cpp, et cela évite de porter
+    /// plusieurs secondes de son dans un enregistrement qui traverse trois couches. Le fichier
+    /// est temporaire et appartient à celui qui le consomme — à lui de l'effacer.
+    /// </summary>
+    public bool HasAudio => AudioPath is not null && File.Exists(AudioPath);
+
     public bool Accepted => Outcome == RecognitionOutcome.Accepted;
 
     public override string ToString() => $"« {Text} » conf {Confidence:F2}" + Outcome switch
