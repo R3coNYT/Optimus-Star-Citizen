@@ -137,6 +137,24 @@ Smart App Control.
 Le **Stream Deck**, lui, n'attend rien : il passe déjà par l'API locale (D66). C'est la partie du
 chantier qui est en réalité déjà livrée.
 
+**Réserve sur le chantier 11.** Retiré de la file à la demande du pilote le 2026-08-28, et
+gardé comme fonctionnalité **facultative, sans échéance**. Le calcul n'est pas technique mais
+asymétrique : le gain est un confort — ne pas quitter le jeu des yeux — la perte possible est un
+compte banni, sur lequel des vaisseaux ont été achetés avec de l'argent réel.
+
+Pour le jour où la question se rouvrira, une distinction que la décision doit garder en tête :
+« overlay » recouvre **deux techniques que rien ne rapproche**.
+
+- L'**injection** dans la chaîne de présentation du jeu, comme le font Steam et Discord. C'est
+  ce que l'anti-triche surveille, et c'est elle qui justifie la prudence. **Écartée.**
+- Une **fenêtre séparée, transparente et toujours au-dessus**, qui n'entre jamais dans le
+  processus du jeu — indiscernable d'un navigateur posé par-dessus. Elle ne fonctionne qu'en
+  fenêtré sans bordure, jamais en plein écran exclusif : c'est sa seule vraie limite. **Reste
+  ouverte.**
+
+En attendant, l'état d'Optimus se lit dans sa fenêtre, et un client branché sur `/ws/events`
+(D66) peut déjà l'afficher où il veut — sur un second écran, une tablette, un Stream Deck.
+
 **Dernier chantier, une fois tout le reste fait : la signature de code (R16).**
 
 Voie retenue le 2026-08-27 : **SignPath Foundation**, qui signe gratuitement les projets open
