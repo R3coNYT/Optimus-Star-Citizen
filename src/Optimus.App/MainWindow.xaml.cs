@@ -1,5 +1,7 @@
 using System.Collections.Specialized;
+using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Interop;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -24,8 +26,42 @@ public partial class MainWindow : Window
 
         ((INotifyCollectionChanged)_model.Journal).CollectionChanged += OnJournalChanged;
 
+        SourceInitialized += (_, _) => PaintTitleBarDark();
         Loaded += async (_, _) => await _model.WarmUpAsync();
         Closed += async (_, _) => await _model.DisposeAsync();
+    }
+
+    /// <summary>Attribut DWM qui bascule la barre de titre en sombre (Windows 10 20H1 et suite).</summary>
+    private const int UseImmersiveDarkMode = 20;
+
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmSetWindowAttribute(nint window, int attribute, ref int value, int size);
+
+    /// <summary>
+    /// Assombrit la barre de titre, que WPF laisse au thème du système.
+    ///
+    /// Sans cela, une bande blanche coiffe une fenêtre entièrement noire : c'est la seule
+    /// chose éblouissante de l'écran, et elle casse net l'illusion d'un instrument de bord.
+    /// WPF n'expose rien pour cela — la barre appartient au gestionnaire de fenêtres, pas à
+    /// l'application — d'où cet appel au seul endroit où le handle existe déjà, mais où la
+    /// fenêtre n'est pas encore peinte.
+    ///
+    /// L'échec est sans conséquence et donc silencieux : sur un Windows plus ancien que
+    /// 20H1, l'attribut n'existe pas et la barre reste claire. Rien d'autre ne change.
+    /// </summary>
+    private void PaintTitleBarDark()
+    {
+        try
+        {
+            nint handle = new WindowInteropHelper(this).Handle;
+            int enabled = 1;
+
+            DwmSetWindowAttribute(handle, UseImmersiveDarkMode, ref enabled, sizeof(int));
+        }
+        catch (DllNotFoundException)
+        {
+            // Pas de dwmapi : la barre reste celle du système, et c'est tout.
+        }
     }
 
     /// <summary>
