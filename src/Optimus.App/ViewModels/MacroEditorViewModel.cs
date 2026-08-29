@@ -296,7 +296,7 @@ public sealed class MacroEditorViewModel : ObservableObject
         Selected = Macros[^1];
         IsDirty = true;
 
-        _log("macro créée", "Nommez-la, donnez-lui des formulations, puis enregistrez.",
+        _log(Localization.Localizer.T("Log.MacroCreated"), Localization.Localizer.T("Log.MacroCreatedHint"),
             ActivityLevel.Normal);
     }
 
@@ -323,7 +323,7 @@ public sealed class MacroEditorViewModel : ObservableObject
         Selected = Macros[^1];
         IsDirty = true;
 
-        _log("macro dupliquée", "Donnez-lui ses propres formulations avant d'enregistrer.",
+        _log(Localization.Localizer.T("Log.MacroDuplicated"), Localization.Localizer.T("Log.MacroDuplicatedHint"),
             ActivityLevel.Normal);
     }
 
@@ -352,7 +352,7 @@ public sealed class MacroEditorViewModel : ObservableObject
         UserMacros.Save(_runtime.MacroPath, remaining);
         await _afterChange().ConfigureAwait(true);
 
-        _log(shipped ? $"« {row.Name} » revenue à la version livrée" : $"« {row.Name} » supprimée",
+        _log(Localization.Localizer.T(shipped ? "Log.MacroReverted" : "Log.MacroDeleted", row.Name),
             null, ActivityLevel.Normal);
 
         Refresh();
@@ -396,7 +396,7 @@ public sealed class MacroEditorViewModel : ObservableObject
             ? "Enregistrée."
             : "Enregistrée. À savoir :\n• " + string.Join("\n• ", verdict.Warnings);
 
-        _log($"macro « {edited.Name} » enregistrée",
+        _log(Localization.Localizer.T("Log.MacroSaved", edited.Name),
             verdict.Warnings.Count == 0 ? null : verdict.Warnings[0],
             verdict.Warnings.Count == 0 ? ActivityLevel.Normal : ActivityLevel.Warning);
 
@@ -432,8 +432,8 @@ public sealed class MacroEditorViewModel : ObservableObject
             }
         }
 
-        _log($"essai de « {Selected.Name} »",
-            "Joué en simulation : la trace est dans le journal, aucune touche n'est partie.",
+        _log(Localization.Localizer.T("Log.MacroTried", Selected.Name),
+            Localization.Localizer.T("Log.MacroTriedHint"),
             ActivityLevel.Muted);
     }
 

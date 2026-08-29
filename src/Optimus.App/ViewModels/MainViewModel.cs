@@ -12,6 +12,7 @@ using Optimus.Core.Domain.Commands;
 using Optimus.Core.Execution;
 using Optimus.Infrastructure.Game;
 using Optimus.Infrastructure.Hosting;
+using Optimus.Infrastructure.Speech;
 
 namespace Optimus.App.ViewModels;
 
@@ -407,14 +408,31 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
         if (_runtime.IsListening)
         {
             await _runtime.StopListeningAsync().ConfigureAwait(true);
-            Add("écoute arrêtée", null, ActivityLevel.Muted);
+            Add(Localization.Localizer.T("Log.ListeningStopped"), null, ActivityLevel.Muted);
             return;
         }
 
-        await _runtime.StartListeningAsync().ConfigureAwait(true);
+        try
+        {
+            await _runtime.StartListeningAsync().ConfigureAwait(true);
+        }
+        catch (MissingRecognizerException missing)
+        {
+            // Cet echec-la est PREVISIBLE : il suffit que Windows n'ait pas le module vocal de
+            // la langue choisie. Le laisser remonter au filet a plantages le presentait comme
+            // une defaillance d'Optimus, avec un message qui nommait la mauvaise langue.
+            string advice = Localization.Localizer.T("Log.NoRecognizerHint", missing.Culture);
 
-        Add("écoute démarrée",
-            $"{_runtime.RecognizerName} · {_runtime.GrammarSize} alternatives · « {WakeWord} » obligatoire",
+            Add(Localization.Localizer.T("Log.NoRecognizer", missing.Culture),
+                advice, ActivityLevel.Warning);
+
+            MessageBox.Show(advice, "Optimus", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        Add(Localization.Localizer.T("Log.ListeningStarted"),
+            Localization.Localizer.T("Log.ListeningStartedDetail",
+                _runtime.RecognizerName, _runtime.GrammarSize, WakeWord),
             ActivityLevel.Normal);
     }
 
@@ -485,7 +503,7 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
 
             if (captured is null)
             {
-                Add("capture abandonnée", null, ActivityLevel.Muted);
+                Add(Localization.Localizer.T("Log.CaptureCancelled"), null, ActivityLevel.Muted);
                 return;
             }
 
@@ -585,7 +603,7 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
 
         if (manual.Length == 0)
         {
-            Add("rien à exporter", "Aucune assignation manuelle : les réglages importés du jeu y sont déjà.",
+            Add(Localization.Localizer.T("Log.NothingToExport"), Localization.Localizer.T("Log.NothingToExportHint"),
                 ActivityLevel.Muted);
             return;
         }
@@ -741,7 +759,7 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
         }
         catch (Exception exception)
         {
-            Add("bascule de profil impossible", exception.Message, ActivityLevel.Warning);
+            Add(Localization.Localizer.T("Log.ProfileSwitchFailed"), exception.Message, ActivityLevel.Warning);
         }
 
         RefreshProfiles();
@@ -758,7 +776,7 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
         }
         catch (Exception exception)
         {
-            Add("création impossible", exception.Message, ActivityLevel.Warning);
+            Add(Localization.Localizer.T("Log.CreateFailed"), exception.Message, ActivityLevel.Warning);
             return;
         }
 
@@ -784,7 +802,7 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
         }
         catch (Exception exception)
         {
-            Add("renommage impossible", exception.Message, ActivityLevel.Warning);
+            Add(Localization.Localizer.T("Log.RenameFailed"), exception.Message, ActivityLevel.Warning);
             return;
         }
 
@@ -811,7 +829,7 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
         }
         catch (Exception exception)
         {
-            Add("suppression impossible", exception.Message, ActivityLevel.Warning);
+            Add(Localization.Localizer.T("Log.DeleteFailed"), exception.Message, ActivityLevel.Warning);
             return;
         }
 
@@ -827,7 +845,8 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
 
     private void OnMicrophone(object? sender, bool open)
     {
-        _dispatcher.BeginInvoke(() => Add(open ? "micro ouvert" : "micro fermé", null, ActivityLevel.Muted));
+        _dispatcher.BeginInvoke(() => Add(
+            Localization.Localizer.T(open ? "Log.MicOpen" : "Log.MicClosed"), null, ActivityLevel.Muted));
     }
 
     private void RefreshLanguage() => _dispatcher.BeginInvoke(() => Raise(null));

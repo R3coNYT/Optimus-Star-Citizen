@@ -267,8 +267,8 @@ public sealed class UnderstandingViewModel : ObservableObject
 
         await _afterChange().ConfigureAwait(true);
 
-        _log($"« {phrase} » ajoutée à {TargetCommand}",
-            "La grammaire a été reconstruite ; l'écoute a redémarré si elle courait.",
+        _log(Localization.Localizer.T("Log.PhraseAdded", phrase, TargetCommand),
+            Localization.Localizer.T("Log.PhraseAddedHint"),
             ActivityLevel.Normal);
 
         Phrase = string.Empty;
@@ -309,7 +309,7 @@ public sealed class UnderstandingViewModel : ObservableObject
         await _runtime.SaveAliasesAsync(remaining).ConfigureAwait(true);
         await _afterChange().ConfigureAwait(true);
 
-        _log($"« {row.Phrase} » retirée", null, ActivityLevel.Muted);
+        _log(Localization.Localizer.T("Log.PhraseRemoved", row.Phrase), null, ActivityLevel.Muted);
         Refresh();
     }
 }

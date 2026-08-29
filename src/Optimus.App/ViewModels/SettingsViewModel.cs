@@ -806,8 +806,8 @@ public sealed class SettingsViewModel : ObservableObject
         IsDirty = false;
         RaiseAll();
 
-        _log("réglages enregistrés",
-            _runtime.IsListening ? "L'écoute a redémarré pour les prendre en compte." : null,
+        _log(Localization.Localizer.T("Log.SettingsSaved"),
+            _runtime.IsListening ? Localization.Localizer.T("Log.ListeningRestarted") : null,
             ActivityLevel.Normal);
     }
 
@@ -818,7 +818,7 @@ public sealed class SettingsViewModel : ObservableObject
             return;
         }
 
-        _log("pressez la touche de push-to-talk", "Échap pour renoncer", ActivityLevel.Speech);
+        _log(Localization.Localizer.T("Log.PressPtt"), Localization.Localizer.T("Log.EscapeToCancel"), ActivityLevel.Speech);
 
         Core.Domain.Bindings.InputSpec? captured = await WindowKeyCapture
             .CaptureAsync(Owner, TimeSpan.FromSeconds(20))
@@ -831,8 +831,8 @@ public sealed class SettingsViewModel : ObservableObject
 
         if (!PushToTalkWatcher.IsSupported(captured.Key))
         {
-            _log($"« {captured.Key} » ne convient pas comme touche de push-to-talk",
-                "Choisissez une touche ordinaire, une touche de fonction, ou Inser / Suppr.",
+            _log(Localization.Localizer.T("Log.KeyUnsuitable", captured.Key),
+                Localization.Localizer.T("Log.KeyUnsuitableHint"),
                 ActivityLevel.Warning);
             return;
         }
@@ -915,11 +915,11 @@ public sealed class SettingsViewModel : ObservableObject
         }
         catch (Exception exception)
         {
-            _log("jeton non régénéré", exception.Message, ActivityLevel.Warning);
+            _log(Localization.Localizer.T("Log.TokenNotRenewed"), exception.Message, ActivityLevel.Warning);
             return;
         }
 
-        _log("jeton d'API régénéré", "Les clients qui portaient l'ancien sont refusés.",
+        _log(Localization.Localizer.T("Log.TokenRenewed"), Localization.Localizer.T("Log.TokenRenewedHint"),
             ActivityLevel.Warning);
 
         // Le serveur tient la liste chargee : sans relecture, l'ancien jeton continuerait
@@ -981,13 +981,13 @@ public sealed class SettingsViewModel : ObservableObject
             // anglais derriere une interface restee francaise.
             Localization.Localizer.Apply(language);
 
-            _log($"langue « {displayName} »",
-                $"{_runtime.Catalog.Count} commandes · {_runtime.Copilot.Language}",
+            _log(Localization.Localizer.T("Log.Language", displayName),
+                Localization.Localizer.T("Log.LanguageDetail", _runtime.Catalog.Count, _runtime.Copilot.Language),
                 ActivityLevel.Normal);
         }
         catch (Exception exception)
         {
-            _log("changement de langue impossible", exception.Message, ActivityLevel.Warning);
+            _log(Localization.Localizer.T("Log.LanguageFailed"), exception.Message, ActivityLevel.Warning);
         }
 
         Raise(nameof(LanguageWarning));
@@ -1006,12 +1006,12 @@ public sealed class SettingsViewModel : ObservableObject
         {
             await _runtime.SwitchCopilotAsync(id).ConfigureAwait(true);
 
-            _log($"copilote « {_runtime.Copilot.Name} »",
-                $"Répond désormais à « {_runtime.Copilot.WakeWord} ».", ActivityLevel.Normal);
+            _log(Localization.Localizer.T("Log.Copilot", _runtime.Copilot.Name),
+                Localization.Localizer.T("Log.CopilotDetail", _runtime.Copilot.WakeWord), ActivityLevel.Normal);
         }
         catch (Exception exception)
         {
-            _log("passation impossible", exception.Message, ActivityLevel.Warning);
+            _log(Localization.Localizer.T("Log.HandoverFailed"), exception.Message, ActivityLevel.Warning);
         }
 
         RefreshCopilots();
@@ -1031,12 +1031,12 @@ public sealed class SettingsViewModel : ObservableObject
         }
         catch (Exception exception)
         {
-            _log("copilote non créé", exception.Message, ActivityLevel.Warning);
+            _log(Localization.Localizer.T("Log.CopilotNotCreated"), exception.Message, ActivityLevel.Warning);
             return;
         }
 
-        _log($"copilote « {CopilotName.Trim()} » créé",
-            $"Copie de « {_runtime.Copilot.Name} ». Il répond à son propre nom.",
+        _log(Localization.Localizer.T("Log.CopilotCreated", CopilotName.Trim()),
+            Localization.Localizer.T("Log.CopilotCreatedDetail", _runtime.Copilot.Name),
             ActivityLevel.Normal);
 
         CopilotName = string.Empty;
@@ -1047,7 +1047,7 @@ public sealed class SettingsViewModel : ObservableObject
         }
         catch (Exception exception)
         {
-            _log("passation impossible", exception.Message, ActivityLevel.Warning);
+            _log(Localization.Localizer.T("Log.HandoverFailed"), exception.Message, ActivityLevel.Warning);
         }
 
         RefreshCopilots();
@@ -1065,12 +1065,12 @@ public sealed class SettingsViewModel : ObservableObject
         }
         catch (Exception exception)
         {
-            _log("suppression impossible", exception.Message, ActivityLevel.Warning);
+            _log(Localization.Localizer.T("Log.DeleteFailed"), exception.Message, ActivityLevel.Warning);
             return;
         }
 
-        _log($"copilote « {name} » supprimé",
-            "S'il masquait un copilote livré, l'original reprend sa place.", ActivityLevel.Warning);
+        _log(Localization.Localizer.T("Log.CopilotDeleted", name),
+            Localization.Localizer.T("Log.CopilotDeletedDetail"), ActivityLevel.Warning);
 
         // Le copilote actif vient de disparaitre : en reprendre un, sans quoi Optimus resterait
         // pointe sur un dossier qui n'existe plus.
@@ -1081,7 +1081,7 @@ public sealed class SettingsViewModel : ObservableObject
         }
         catch (Exception exception)
         {
-            _log("aucun copilote de repli", exception.Message, ActivityLevel.Warning);
+            _log(Localization.Localizer.T("Log.NoFallbackCopilot"), exception.Message, ActivityLevel.Warning);
         }
 
         RefreshCopilots();

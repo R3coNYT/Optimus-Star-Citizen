@@ -594,10 +594,10 @@ public sealed class OptimusRuntime : IAsyncDisposable
             // reconnaissance installe pour cette langue. Le dire vaut mieux que de tomber.
             DiagnosticLog.Error(
                 "impossible d'ouvrir le moteur de reconnaissance", exception);
-            throw new InvalidOperationException(
-                "Le moteur de reconnaissance vocale n'a pas pu démarrer. Vérifiez qu'un microphone "
-                + "est branché et que la reconnaissance vocale Windows est installée pour le français.",
-                exception);
+            // La langue est nommee, et non presumee : le message disait « pour le francais »
+            // meme quand l'anglais avait ete demande, ce qui envoyait chercher le mauvais
+            // module dans les parametres de Windows.
+            throw new MissingRecognizerException(Copilot.Language, exception);
         }
 
         _listener.Recognized += OnRecognized;
