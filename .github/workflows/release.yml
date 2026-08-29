@@ -54,6 +54,26 @@ jobs:
             throw "version « $version » : attendu trois nombres séparés par des points"
           }
 
+          # Le tag fait foi, mais il ne commande rien : c'est l'assembly qui porte le
+          # numéro, et l'installateur le lit sur l'exécutable publié. Sans cette
+          # vérification, taguer v0.2.0 sur un code resté en 0.1.0 produirait un
+          # installateur nommé 0.1.0 que la publication chercherait en vain — un échec
+          # en toute fin de chaîne, après les tests et la compilation.
+          $props = [xml](Get-Content Directory.Build.props -Raw)
+          $declared = $props.Project.PropertyGroup.Version |
+                      Where-Object { $_ } | Select-Object -First 1
+
+          if ($declared -ne $version) {
+            throw @"
+          Le tag et le code ne disent pas la même version.
+
+              tag                   : $version
+              Directory.Build.props : $declared
+
+          Corrigez <Version> dans Directory.Build.props, committez, puis retaguez.
+          "@
+          }
+
           "value=$version" >> $env:GITHUB_OUTPUT
           Write-Host "version : $version"
 
@@ -176,3 +196,49 @@ jobs:
           files: |
             publish/Optimus-${{ steps.version.outputs.value }}-installateur.exe
             publish/SHA256SUMS.txt
+          body: |
+            An offline AI voice copilot for Star Citizen. Optimus listens, understands,
+            and presses **your own** key bindings — imported from the game, never
+            hardcoded. Speech recognition runs locally; the LLM is optional and is never
+            at the controls.
+
+            ### Install
+
+            Download `Optimus-${{ steps.version.outputs.value }}-installateur.exe` and run
+            it. Per-user install, no administrator rights, into
+            `%LOCALAPPDATA%\Programs\Optimus`.
+
+            One page of the wizard offers the optional components — neural voices and
+            free-speech recognition. They are downloaded then, each verified against its
+            SHA-256. Without them Optimus works in full, on Windows voices and a closed
+            grammar.
+
+            ### Windows will warn you
+
+            **This build is not code-signed.** SmartScreen will show *"Windows protected
+            your PC"*: click **More info**, then **Run anyway**. Smart App Control, if you
+            have it on, will refuse the file outright.
+
+            That warning is honest — nothing vouches for this binary yet. A signing
+            request is with the [SignPath Foundation](https://signpath.org/), which signs
+            open-source projects free of charge from its own infrastructure. Until it
+            lands, verify what you downloaded:
+
+            ```powershell
+            Get-FileHash .\Optimus-${{ steps.version.outputs.value }}-installateur.exe -Algorithm SHA256
+            ```
+
+            and compare it with `SHA256SUMS.txt`, published beside the installer.
+
+            ### Good to know
+
+            - Windows 10 2004 (19041) or later.
+            - **Simulation mode** is available from the first run: Optimus resolves and
+              announces every command without touching the keyboard. Use it to watch the
+              thing work before you let it type.
+            - A **kill switch** cuts all input injection, from anywhere in the interface.
+            - Interface and voice in **English or French**, switchable hot in Settings.
+              The English speech recognizer needs the matching Windows language pack.
+
+            Licensed under GPL-3.0. Bug reports and keybind oddities are welcome in
+            [the issues](../../issues).

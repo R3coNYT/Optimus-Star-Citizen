@@ -25,7 +25,7 @@
     -->
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 
-    <NeutralLanguage>fr-FR</NeutralLanguage>
+    <NeutralLanguage>en-US</NeutralLanguage>
     <Company>Optimus</Company>
     <Product>Optimus</Product>
     <Version>0.1.0</Version>
