@@ -50,7 +50,7 @@
 ; ------------------------------------------------------------- telechargements
 #define PiperUrl "https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_windows_amd64.zip"
 #define PiperHash "f3c58906402b24f3a96d92145f58acba6d86c9b5db896d207f78dc80811efcea"
-#define VoiceBase "https://huggingface.co/rhasspy/piper-voices/resolve/main/fr/fr_FR"
+#define VoiceBase "https://huggingface.co/rhasspy/piper-voices/resolve/main"
 
 #define WhisperUrl "https://github.com/ggml-org/whisper.cpp/releases/download/b4938/whisper-bin-x64.zip"
 #define WhisperHash "c2a4b60edb11f7e11a9191ffb50929535527d4d91c9903dbe3e554583bbbc63d"
@@ -111,9 +111,12 @@ Name: "en"; MessagesFile: "compiler:Default.isl"
 [CustomMessages]
 en.ComponentApp=Optimus (required)
 en.ComponentPiper=Local neural voice (Piper): engine, 37 MB downloaded
-en.ComponentTom=Tom voice: male, medium quality (60 MB)
-en.ComponentGilles=Gilles voice: male, faster (60 MB)
-en.ComponentSiwis=Siwis voice: female, medium quality (60 MB)
+en.ComponentTom=Tom voice: French, male, medium quality (60 MB)
+en.ComponentGilles=Gilles voice: French, male, faster (60 MB)
+en.ComponentSiwis=Siwis voice: French, female, medium quality (60 MB)
+en.ComponentRyan=Ryan voice: English, male, medium quality (60 MB)
+en.ComponentAlan=Alan voice: British English, male, medium quality (60 MB)
+en.ComponentAmy=Amy voice: English, female, medium quality (60 MB)
 en.ComponentWhisper=Free speech (Whisper): understand what isn't a command (161 MB)
 en.TaskDesktop=Create a desktop shortcut
 en.DownloadFailed=The download failed.%n%n%1%n%nOptimus will install without the neural voices: Windows voices take over, and you can add Piper later.
@@ -122,7 +125,7 @@ en.PurgeData=Also delete your data?%n%nThis would erase your key bindings, your 
 
 [Types]
 Name: "standard"; Description: "Optimus alone — nothing to download"
-Name: "complet"; Description: "Complete: neural voices and free speech (~380 MB downloaded)"
+Name: "complet"; Description: "Complete: one voice per language and free speech (~320 MB downloaded)"
 Name: "perso"; Description: "Custom installation"; Flags: iscustom
 
 ; « ExtraDiskSpaceRequired » n'est pas une coquetterie : Inno calcule l'espace annonce a
@@ -136,6 +139,9 @@ Name: "piper"; Description: "{cm:ComponentPiper}"; Types: complet; ExtraDiskSpac
 Name: "piper\tom"; Description: "{cm:ComponentTom}"; Types: complet; ExtraDiskSpaceRequired: 63515997
 Name: "piper\gilles"; Description: "{cm:ComponentGilles}"; ExtraDiskSpaceRequired: 63515997
 Name: "piper\siwis"; Description: "{cm:ComponentSiwis}"; ExtraDiskSpaceRequired: 63515997
+Name: "piper\ryan"; Description: "{cm:ComponentRyan}"; Types: complet; ExtraDiskSpaceRequired: 63515997
+Name: "piper\alan"; Description: "{cm:ComponentAlan}"; ExtraDiskSpaceRequired: 63515997
+Name: "piper\amy"; Description: "{cm:ComponentAmy}"; ExtraDiskSpaceRequired: 63515997
 Name: "whisper"; Description: "{cm:ComponentWhisper}"; Types: complet; ExtraDiskSpaceRequired: 169165161
 
 [Tasks]
@@ -212,17 +218,22 @@ end;
   Le test compte lors des mises a jour : les composants deja choisis restent coches d'une
   installation a l'autre, et sans lui chaque mise a jour retelechargerait 60 Mo par voix pour
   rien. }
-function QueueVoice(const Dataset, Quality, Name: String): Integer;
+function QueueVoice(const Folder, Dataset, Quality, Name: String): Integer;
+var
+  Path: String;
 begin
   Result := 0;
 
   if FileExists(PiperRoot() + '\voices\' + Name + '.onnx') then
     Exit;
 
-  DownloadPage.Add(
-    '{#VoiceBase}/' + Dataset + '/' + Quality + '/' + Name + '.onnx', Name + '.onnx', '');
-  DownloadPage.Add(
-    '{#VoiceBase}/' + Dataset + '/' + Quality + '/' + Name + '.onnx.json', Name + '.onnx.json', '');
+  { << Folder >> porte la langue - << fr/fr_FR >>, << en/en_US >>. Elle vivait dans la
+    base tant qu'Optimus ne parlait que francais ; l'y laisser aurait impose une base
+    par langue, donc une troisieme le jour ou une troisieme langue arrive. }
+  Path := '{#VoiceBase}/' + Folder + '/' + Dataset + '/' + Quality + '/' + Name;
+
+  DownloadPage.Add(Path + '.onnx', Name + '.onnx', '');
+  DownloadPage.Add(Path + '.onnx.json', Name + '.onnx.json', '');
 
   Result := 2;
 end;
@@ -290,11 +301,18 @@ begin
   end;
 
   if WizardIsComponentSelected('piper\tom') then
-    Queued := Queued + QueueVoice('tom', 'medium', 'fr_FR-tom-medium');
+    Queued := Queued + QueueVoice('fr/fr_FR', 'tom', 'medium', 'fr_FR-tom-medium');
   if WizardIsComponentSelected('piper\gilles') then
-    Queued := Queued + QueueVoice('gilles', 'low', 'fr_FR-gilles-low');
+    Queued := Queued + QueueVoice('fr/fr_FR', 'gilles', 'low', 'fr_FR-gilles-low');
   if WizardIsComponentSelected('piper\siwis') then
-    Queued := Queued + QueueVoice('siwis', 'medium', 'fr_FR-siwis-medium');
+    Queued := Queued + QueueVoice('fr/fr_FR', 'siwis', 'medium', 'fr_FR-siwis-medium');
+
+  if WizardIsComponentSelected('piper\ryan') then
+    Queued := Queued + QueueVoice('en/en_US', 'ryan', 'medium', 'en_US-ryan-medium');
+  if WizardIsComponentSelected('piper\alan') then
+    Queued := Queued + QueueVoice('en/en_GB', 'alan', 'medium', 'en_GB-alan-medium');
+  if WizardIsComponentSelected('piper\amy') then
+    Queued := Queued + QueueVoice('en/en_US', 'amy', 'medium', 'en_US-amy-medium');
 
   if WizardIsComponentSelected('whisper') then
   begin
@@ -402,6 +420,12 @@ begin
     InstallVoice('fr_FR-gilles-low');
   if WizardIsComponentSelected('piper\siwis') then
     InstallVoice('fr_FR-siwis-medium');
+  if WizardIsComponentSelected('piper\ryan') then
+    InstallVoice('en_US-ryan-medium');
+  if WizardIsComponentSelected('piper\alan') then
+    InstallVoice('en_GB-alan-medium');
+  if WizardIsComponentSelected('piper\amy') then
+    InstallVoice('en_US-amy-medium');
 end;
 
 { Desinstallation : le programme s'en va, les donnees du pilote restent, sauf
