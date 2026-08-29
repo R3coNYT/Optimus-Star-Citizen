@@ -110,7 +110,7 @@ risques et les décisions.
 
 Les binaires publiés seront signés par la [SignPath Foundation](https://signpath.org), qui offre
 ce service aux projets libres. La **politique de signature** — qui signe, ce qui est signé, ce qui
-ne l'est jamais — vit dans [docs/14](docs/14-signature-de-code.md).
+ne l'est jamais — vit dans [docs/15](docs/15-signature-de-code.md).
 
 Rien n'est signé depuis un poste de développement : seule la [chaîne de
 compilation](.github/workflows/release.yml), déclenchée par un tag de ce dépôt, peut soumettre un
