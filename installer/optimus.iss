@@ -47,6 +47,19 @@
 #define AppName "Optimus"
 #define Publisher "Optimus"
 
+; ------------------------------------------------------------- le plugin Stream Deck
+;
+; Un plugin Stream Deck est un dossier, pas un programme : l'application Elgato le
+; trouve en demarrant s'il porte le bon nom au bon endroit. Rien a compiler, rien a
+; enregistrer, rien qui passe par la boutique d'Elgato.
+;
+; Il est EMBARQUE et non telecharge, contrairement a Piper : 510 Ko contre 37 Mo, et
+; il n'a pas de version propre a suivre.
+; Le dossier et le nom separement : un antislash colle au guillemet fermant passe
+; pour une echappement chez le preprocesseur, et la definition part de travers.
+#define PluginId "com.optimus.copilot.sdPlugin"
+#define PluginRoot "..\tools\streamdeck"
+
 ; ------------------------------------------------------------- telechargements
 #define PiperUrl "https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_windows_amd64.zip"
 #define PiperHash "f3c58906402b24f3a96d92145f58acba6d86c9b5db896d207f78dc80811efcea"
@@ -118,9 +131,12 @@ en.ComponentRyan=Ryan voice: English, male, medium quality (60 MB)
 en.ComponentAlan=Alan voice: British English, male, medium quality (60 MB)
 en.ComponentAmy=Amy voice: English, female, medium quality (60 MB)
 en.ComponentWhisper=Free speech (Whisper): understand what isn't a command (161 MB)
+en.ComponentStreamDeck=Stream Deck plugin: five keys that drive Optimus and show its state (0.5 MB, nothing downloaded)
 en.TaskDesktop=Create a desktop shortcut
 en.DownloadFailed=The download failed.%n%n%1%n%nOptimus will install without the neural voices: Windows voices take over, and you can add Piper later.
 en.ExtractFailed=The Piper archive could not be opened. Optimus will install without the neural voices.
+en.StreamDeckDone=The Stream Deck plugin is installed, in:%n%1%n%nQuit the Stream Deck application and open it again: it only looks for plugins when it starts. The five Optimus actions then appear under an "Optimus" category.%n%nPaste the local API token into any Optimus key: Settings, Local API.
+en.StreamDeckAbsent=The Stream Deck plugin was not installed: no Stream Deck application was found on this machine.%n%nNothing was written where it does not belong. Install the Stream Deck software, then run this installer again to add the plugin.
 en.PurgeData=Also delete your data?%n%nThis would erase your key bindings, your macros, the phrasings Optimus has learned, and the Piper voices you downloaded, in:%n%1%n%nAnswer No to keep them for a reinstall.
 
 [Types]
@@ -143,6 +159,13 @@ Name: "piper\ryan"; Description: "{cm:ComponentRyan}"; Types: complet; ExtraDisk
 Name: "piper\alan"; Description: "{cm:ComponentAlan}"; ExtraDiskSpaceRequired: 63515997
 Name: "piper\amy"; Description: "{cm:ComponentAmy}"; ExtraDiskSpaceRequired: 63515997
 Name: "whisper"; Description: "{cm:ComponentWhisper}"; Types: complet; ExtraDiskSpaceRequired: 169165161
+
+; Coche dans « Complete », mais les fichiers ne partent QUE si un Stream Deck existe :
+; voir « Check: StreamDeckPresent » plus bas. Sans cette garde, choisir l'installation
+; complete creait une arborescence Elgato dans les donnees d'un pilote qui n'a jamais eu
+; de boitier - inoffensif, mais c'est exactement le genre de trace qu'on reproche a un
+; installateur.
+Name: "streamdeck"; Description: "{cm:ComponentStreamDeck}"; Types: complet
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:TaskDesktop}"; Flags: unchecked
@@ -169,6 +192,15 @@ Source: "{#SourceDir}\data\*"; DestDir: "{app}\data"; Components: app;     Exclu
 Source: "{#SourceDir}\data\profiles\default.json"; DestDir: "{app}\data\profiles";     Components: app; Flags: onlyifdoesntexist uninsneveruninstall
 Source: "{#SourceDir}\data\copilots\optimus\copilot.json"; DestDir: "{app}\data\copilots\optimus";     Components: app; Flags: onlyifdoesntexist uninsneveruninstall
 Source: "{#SourceDir}\data\copilots\optimus\personality.json"; DestDir: "{app}\data\copilots\optimus";     Components: app; Flags: onlyifdoesntexist uninsneveruninstall
+
+; Le plugin ne va pas dans le dossier d'installation : l'application Elgato ne regarde
+; que le sien. Il est donc pose ailleurs, et retire a la desinstallation - « filesandordirs »
+; plutot que la simple reprise des fichiers, pour emporter aussi ce qu'une copie manuelle
+; anterieure aurait laisse a cote.
+Source: "{#PluginRoot}\{#PluginId}\*"; DestDir: "{userappdata}\Elgato\StreamDeck\Plugins\{#PluginId}";     Components: streamdeck; Check: StreamDeckPresent;     Flags: ignoreversion recursesubdirs createallsubdirs
+
+[UninstallDelete]
+Type: filesandordirs; Name: "{userappdata}\Elgato\StreamDeck\Plugins\{#PluginId}"; Components: streamdeck
 
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\Optimus.App.exe"
@@ -202,6 +234,24 @@ end;
 
 { Doit correspondre exactement a WhisperInstallation.DefaultRoot, sans quoi Optimus chercherait
   le moteur ailleurs que la ou l'installateur vient de le poser. }
+{ Le Stream Deck est-il installe ?
+
+  Deux indices, et il en suffit d'un. Le dossier de donnees est cree des le premier
+  demarrage de l'application et survit a sa mise a jour ; l'executable, lui, repond
+  encore quand ce dossier a ete efface. Chercher les deux evite de conclure « absent »
+  sur une installation neuve qu'on n'a pas encore lancee, ou sur un profil nettoye. }
+function StreamDeckPresent(): Boolean;
+begin
+  Result := DirExists(ExpandConstant('{userappdata}\Elgato\StreamDeck'))
+         or FileExists(ExpandConstant('{commonpf}\Elgato\StreamDeck\StreamDeck.exe'))
+         or FileExists(ExpandConstant('{commonpf32}\Elgato\StreamDeck\StreamDeck.exe'));
+end;
+
+function StreamDeckPlugin(): String;
+begin
+  Result := ExpandConstant('{userappdata}\Elgato\StreamDeck\Plugins\{#PluginId}');
+end;
+
 function WhisperRoot(): String;
 begin
   Result := ExpandConstant('{userappdata}\Optimus\whisper');
@@ -399,6 +449,18 @@ begin
 
   if WizardIsComponentSelected('whisper') then
     InstallWhisper();
+
+  { Le dire, parce que rien ne le laisse deviner : l'application Elgato ne cherche ses
+    plugins qu'au demarrage. Un pilote qui vient de cocher la case ouvrirait son Stream
+    Deck, n'y verrait rien, et conclurait que l'installation a echoue. }
+  if WizardIsComponentSelected('streamdeck') then
+  begin
+    if StreamDeckPresent() then
+      SuppressibleMsgBox(FmtMessage(CustomMessage('StreamDeckDone'), [StreamDeckPlugin()]),
+                         mbInformation, MB_OK, IDOK)
+    else
+      SuppressibleMsgBox(CustomMessage('StreamDeckAbsent'), mbInformation, MB_OK, IDOK);
+  end;
 
   if not WizardIsComponentSelected('piper') then
     Exit;
