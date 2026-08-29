@@ -188,6 +188,10 @@
   <sys:String x:Key="App.COMBAT">COMBAT</sys:String>
 
   <!-- ============ Composed in C# ============ -->
+  <sys:String x:Key="Commands.CatalogSummary">{0} commands · {1} phrasings</sys:String>
+  <sys:String x:Key="Commands.SpokenOnly">spoken reply only</sys:String>
+  <sys:String x:Key="Commands.NotInjectable">not injectable</sys:String>
+  <sys:String x:Key="Commands.UnknownAction">unknown action</sys:String>
   <sys:String x:Key="Log.NoRecognizer">no recognition engine for “{0}”</sys:String>
   <sys:String x:Key="Log.NoRecognizerHint">Windows has no speech pack for “{0}” on this machine. Check that a microphone is plugged in, then add the pack under Settings > Time &amp; language > Language, ticking “Speech recognition” among the features. Optimus keeps writing and answering in this language in the meantime.</sys:String>
   <sys:String x:Key="Log.SettingsSaved">settings saved</sys:String>

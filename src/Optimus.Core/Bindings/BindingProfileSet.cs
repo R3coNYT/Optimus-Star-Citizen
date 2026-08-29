@@ -221,19 +221,8 @@ public static class BindingProfileSet
     /// vol se fait en vol. Basculer sans quitter le jeu est exactement ce qu'on attend d'un
     /// copilote — alt-tabber pour cliquer dans une liste déroulante annulerait le bénéfice.
     /// </summary>
-    public static IReadOnlyList<string> Phrases(string name)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(name);
-
-        string spoken = name.Trim();
-
-        return
-        [
-            $"profil {spoken}",
-            $"passe en profil {spoken}",
-            $"touches {spoken}",
-        ];
-    }
+    public static IReadOnlyList<string> Phrases(string name, string? language = null) =>
+        Localization.GeneratedPhrases.ForBindingProfile(name, language);
 
     /// <summary>Prefixe des commandes de bascule, pour les reconnaitre a l'execution.</summary>
     public const string CommandPrefix = "bindings.profile.";
@@ -257,7 +246,8 @@ public static class BindingProfileSet
     /// est normalise, donc irreversible, et le retrouver par recherche inverse serait fragile
     /// le jour ou deux profils normaliseraient pareil.
     /// </summary>
-    public static IReadOnlyList<CommandDefinition> Commands(IEnumerable<BindingProfileInfo> profiles)
+    public static IReadOnlyList<CommandDefinition> Commands(
+        IEnumerable<BindingProfileInfo> profiles, string? language = null)
     {
         ArgumentNullException.ThrowIfNull(profiles);
 
@@ -279,9 +269,9 @@ public static class BindingProfileSet
             commands.Add(new CommandDefinition(
                 id,
                 CommandKind.Query,
-                $"Profil {profile.Name}",
-                "touches",
-                Phrases(profile.Name),
+                Localization.GeneratedPhrases.BindingProfileName(profile.Name, language),
+                Localization.GeneratedPhrases.BindingProfileCategory(language),
+                Phrases(profile.Name, language),
                 Array.Empty<ActionStep>(),
                 Description: profile.Name));
         }
@@ -296,11 +286,12 @@ public static class BindingProfileSet
     /// diverger, et le banc dirait alors qu'une formulation n'est pas comprise la ou
     /// l'application l'execute - ou l'inverse, ce qui est pire.
     /// </summary>
-    public static CommandCatalog Augment(CommandCatalog catalog, string? root = null)
+    public static CommandCatalog Augment(
+        CommandCatalog catalog, string? root = null, string? language = null)
     {
         ArgumentNullException.ThrowIfNull(catalog);
 
-        IReadOnlyList<CommandDefinition> commands = Commands(List(root));
+        IReadOnlyList<CommandDefinition> commands = Commands(List(root), language);
 
         return commands.Count == 0
             ? catalog

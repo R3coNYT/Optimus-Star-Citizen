@@ -59,7 +59,7 @@ public sealed class CommandRow(CommandDefinition command, BindingProfile binding
         {
             if (Command.IsPassive)
             {
-                return "réponse seule";
+                return Localization.Localizer.T("Commands.SpokenOnly");
             }
 
             string? actionId = Command.ReferencedActionIds.FirstOrDefault();
@@ -68,17 +68,36 @@ public sealed class CommandRow(CommandDefinition command, BindingProfile binding
                 return "—";
             }
 
-            return bindings.Resolve(actionId, out Binding? binding) switch
+            Lookup = bindings.Resolve(actionId, out Binding? binding);
+
+            return Lookup switch
             {
-                BindingLookup.Bound => binding!.Input.ToString(),
-                BindingLookup.NotBound => "à configurer",
-                BindingLookup.Unsupported => "non injectable",
-                _ => "action inconnue",
+                BindingLookup.Bound => binding!.Input.Describe(Localization.Localizer.Current),
+                BindingLookup.NotBound => Localization.Localizer.T("Keys.Configurer"),
+                BindingLookup.Unsupported => Localization.Localizer.T("Commands.NotInjectable"),
+                _ => Localization.Localizer.T("Commands.UnknownAction"),
             };
         }
     }
 
-    public bool NeedsBinding => Binding == "à configurer";
+    /// <summary>Ce que la recherche a rendu, retenu au passage.</summary>
+    private BindingLookup Lookup { get; set; }
+
+    /// <summary>
+    /// La touche reste-t-elle à configurer ?
+    ///
+    /// Sur le RÉSULTAT de la recherche, et non sur le texte affiché. La version précédente
+    /// comparait la chaîne à « à configurer » : traduire l'écran l'aurait rendue fausse en
+    /// anglais, sans que rien ne le signale.
+    /// </summary>
+    public bool NeedsBinding
+    {
+        get
+        {
+            _ = Binding;
+            return Lookup == BindingLookup.NotBound;
+        }
+    }
 }
 
 /// <summary>
@@ -293,7 +312,10 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
     public string WakeHint => Localization.Localizer.T("Cockpit.WakeHint", WakeWord);
 
     public string CatalogSummary =>
-        $"{_runtime.Catalog.Count} commandes · {_runtime.Catalog.Commands.Sum(c => c.AllPhrases.Count())} formulations";
+        Localization.Localizer.T(
+            "Commands.CatalogSummary",
+            _runtime.Catalog.Count,
+            _runtime.Catalog.Commands.Sum(c => c.AllPhrases.Count()));
 
     /// <summary>
     /// Compte ce que la liste montre, et rien d'autre.
@@ -849,7 +871,20 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
             Localization.Localizer.T(open ? "Log.MicOpen" : "Log.MicClosed"), null, ActivityLevel.Muted));
     }
 
-    private void RefreshLanguage() => _dispatcher.BeginInvoke(() => Raise(null));
+    /// <summary>
+    /// Tout ce que l'écran doit relire quand la langue change.
+    ///
+    /// « null » suffit pour les propriétés — WPF y lit « toutes ». Il ne suffit pas pour les
+    /// COLLECTIONS : une liste déjà remplie ne se vide pas parce qu'on la déclare périmée.
+    /// Le catalogue anglais était bien chargé — le journal l'annonçait — mais l'onglet des
+    /// commandes continuait d'afficher les noms français, faute d'avoir été repeuplé.
+    /// </summary>
+    private void RefreshLanguage() => _dispatcher.BeginInvoke(() =>
+    {
+        Raise(null);
+        RefreshCommands();
+        RefreshBindings();
+    });
 
     private void OnStateChanged(object? sender, EventArgs e)
     {

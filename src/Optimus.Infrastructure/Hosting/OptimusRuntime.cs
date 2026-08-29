@@ -274,7 +274,7 @@ public sealed class OptimusRuntime : IAsyncDisposable
 
         // Chaque profil de touches apporte sa commande de bascule : « profil minage » doit etre
         // prononcable, sinon changer de style de vol imposerait de quitter le jeu pour cliquer.
-        merged = BindingProfileSet.Augment(merged);
+        merged = BindingProfileSet.Augment(merged, language: language);
 
         // Les formulations ajoutees par le pilote s'appliquent par-dessus : c'est ce qui rend
         // le reglage de la reconnaissance cumulatif d'une session a l'autre.
@@ -294,7 +294,7 @@ public sealed class OptimusRuntime : IAsyncDisposable
 
         // « Passe a Synthia » doit se dire, plutot que de se cliquer. La fusion a lieu ici,
         // apres le chargement : le copilote actif n'a pas de commande pour se rappeler lui-meme.
-        merged = Augment(merged, CopilotSet.Commands(CopilotSet.List(dataRoot), copilotId));
+        merged = Augment(merged, CopilotSet.Commands(CopilotSet.List(dataRoot), copilotId, language));
 
         // Les formulations du pilote s'appliquent en dernier, sur le catalogue complet.
         merged = UserPhrases.Apply(merged, aliases);
@@ -1205,8 +1205,8 @@ public sealed class OptimusRuntime : IAsyncDisposable
             : CommandCatalog.Merge(
                 ShippedCatalog.Id, ShippedCatalog.Name, ShippedCatalog, userMacros.Value);
 
-        rebuilt = BindingProfileSet.Augment(rebuilt);
-        rebuilt = Augment(rebuilt, CopilotSet.Commands(Copilots, Copilot.Id));
+        rebuilt = BindingProfileSet.Augment(rebuilt, language: User.Language);
+        rebuilt = Augment(rebuilt, CopilotSet.Commands(Copilots, Copilot.Id, User.Language));
 
         Catalog = UserPhrases.Apply(rebuilt, Aliases);
 

@@ -92,20 +92,31 @@ public sealed record InputSpec(
     public static InputSpec Simple(string key, InputMode mode = InputMode.Tap) =>
         new(key, Array.Empty<string>(), InputDevice.Keyboard, mode);
 
-    /// <summary>Représentation lisible, telle qu'affichée dans l'interface et les journaux.</summary>
-    public override string ToString()
+    /// <summary>
+    /// Représentation lisible, dans la langue demandée.
+    ///
+    /// La combinaison ne change jamais — « LALT + X » se lit partout pareil. Seule
+    /// l'annotation entre parenthèses, qui dit COMMENT la touche est envoyée, a besoin d'une
+    /// langue.
+    /// </summary>
+    public string Describe(string? language)
     {
         string combination = Modifiers.Count == 0
             ? Key
             : string.Join(" + ", Modifiers.Append(Key));
 
+        bool english = Localization.Language.Resolve(language) == Localization.Language.English;
+
         return Mode switch
         {
-            InputMode.Hold => $"{combination} (maintien {HoldMs} ms)",
-            InputMode.DoubleTap => $"{combination} (double appui)",
-            InputMode.Press => $"{combination} (enfoncé)",
-            InputMode.Release => $"{combination} (relâché)",
+            InputMode.Hold => $"{combination} ({(english ? "hold" : "maintien")} {HoldMs} ms)",
+            InputMode.DoubleTap => $"{combination} ({(english ? "double tap" : "double appui")})",
+            InputMode.Press => $"{combination} ({(english ? "pressed" : "enfoncé")})",
+            InputMode.Release => $"{combination} ({(english ? "released" : "relâché")})",
             _ => Repeat > 1 ? $"{combination} ×{Repeat}" : combination,
         };
     }
+
+    /// <summary>Représentation lisible, en français : celle des journaux sur disque.</summary>
+    public override string ToString() => Describe(null);
 }

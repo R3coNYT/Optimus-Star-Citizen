@@ -210,7 +210,7 @@ public static class CopilotSet
     /// déjà n'apporte rien, et occuperait une formulation dans la grammaire pour ne rien faire.
     /// </summary>
     public static IReadOnlyList<CommandDefinition> Commands(
-        IEnumerable<CopilotInfo> copilots, string activeId)
+        IEnumerable<CopilotInfo> copilots, string activeId, string? language = null)
     {
         ArgumentNullException.ThrowIfNull(copilots);
 
@@ -235,12 +235,8 @@ public static class CopilotSet
                 command,
                 CommandKind.Query,
                 copilot.Name,
-                "copilotes",
-                [
-                    $"passe à {copilot.Name}",
-                    $"appelle {copilot.Name}",
-                    $"copilote {copilot.Name}",
-                ],
+                Localization.GeneratedPhrases.CopilotCategory(language),
+                Localization.GeneratedPhrases.ForCopilot(copilot.Name, language),
                 Array.Empty<ActionStep>(),
                 Description: copilot.Id));
         }

@@ -184,6 +184,10 @@
   <sys:String x:Key="App.COMBAT">COMBAT</sys:String>
 
   <!-- ============ Composé en C# ============ -->
+  <sys:String x:Key="Commands.CatalogSummary">{0} commandes · {1} formulations</sys:String>
+  <sys:String x:Key="Commands.SpokenOnly">réponse seule</sys:String>
+  <sys:String x:Key="Commands.NotInjectable">non injectable</sys:String>
+  <sys:String x:Key="Commands.UnknownAction">action inconnue</sys:String>
   <sys:String x:Key="Log.NoRecognizer">aucun moteur de reconnaissance pour « {0} »</sys:String>
   <sys:String x:Key="Log.NoRecognizerHint">Windows n'a pas de module vocal pour « {0} » sur cette machine. Vérifiez qu'un microphone est branché, puis ajoutez le module dans Paramètres > Heure et langue > Langue, en cochant « Reconnaissance vocale » parmi les fonctionnalités. Optimus continue d'écrire et de répondre dans cette langue en attendant.</sys:String>
   <sys:String x:Key="Log.SettingsSaved">réglages enregistrés</sys:String>
