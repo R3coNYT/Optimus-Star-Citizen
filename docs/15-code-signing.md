@@ -1,139 +1,134 @@
-# Signature de code
+# Code signing
 
-*Dernier chantier de la feuille de route. Ouvert le 2026-08-29.*
+*The last item on the roadmap. Opened on 2026-08-29.*
 
-## Le problème, en une phrase
+## The problem, in one sentence
 
-L'installateur d'Optimus n'est pas signé. SmartScreen avertit donc chaque personne qui le
-télécharge — « Windows a protégé votre ordinateur », un bouton *Ne pas exécuter* mis en avant et
-*Informations complémentaires* caché — et Smart App Control, actif par défaut sur certaines
-installations de Windows 11, le refuse purement et simplement. **Tant que cette signature
-n'existe pas, la diffusion publique reste bloquée** (risque R16).
+The Optimus installer is not signed. SmartScreen therefore warns everyone who downloads it —
+“Windows protected your PC”, with a *Don't run* button up front and *More info* hidden — and
+Smart App Control, on by default on some Windows 11 installations, refuses it outright. **Until
+that signature exists, public distribution stays blocked** (risk R16).
 
-L'installateur n'a pas résolu ce problème, il l'a concentré : il y a désormais **un** fichier à
-signer au lieu de vingt-quatre.
+The installer did not solve this problem, it concentrated it: there is now **one** file to sign
+instead of twenty-four.
 
-## Pourquoi SignPath, et pas un certificat acheté
+## Why SignPath, and not a purchased certificate
 
-Depuis juin 2023, le CA/Browser Forum impose que la clé privée d'un certificat de signature de
-code vive dans un matériel certifié — jeton USB ou HSM infonuagique. Le prix a suivi : compter
-**200 à 600 € par an**, ce que le pilote a explicitement écarté.
+Since June 2023 the CA/Browser Forum requires the private key of a code signing certificate to
+live in certified hardware — a USB token or a cloud HSM. Prices followed: reckon on **€200 to
+€600 a year**, which the maintainer explicitly ruled out.
 
-Un certificat auto-signé ne sert à rien : SmartScreen ne juge pas la présence d'une signature
-mais la **réputation** de l'autorité qui l'a émise, et une autorité inconnue n'en a aucune.
+A self-signed certificate is useless: SmartScreen does not judge the presence of a signature but
+the **reputation** of the authority that issued it, and an unknown authority has none.
 
-Reste la **SignPath Foundation**, qui signe gratuitement pour les projets libres. Elle ne délivre
-pas de certificat : elle signe elle-même, depuis son infrastructure, des artefacts qu'une chaîne
-de compilation publique lui soumet. Personne — le mainteneur compris — ne détient jamais la clé.
-C'est ce qui rend le service tenable pour elle, et c'est aussi ce qui dicte tout le reste de ce
+That leaves the **SignPath Foundation**, which signs free of charge for open source projects. It
+does not issue a certificate: it signs itself, from its own infrastructure, artefacts submitted
+to it by a public build pipeline. Nobody — the maintainer included — ever holds the key. That is
+what makes the service sustainable for them, and it is also what dictates everything else in this
 document.
 
-## Ce que la fondation exige
+## What the foundation requires
 
-Relevé sur [signpath.org/terms.html](https://signpath.org/terms.html) le 2026-08-29.
+Taken from [signpath.org/terms.html](https://signpath.org/terms.html) on 2026-08-29.
 
-| Condition | Où en est Optimus |
+| Condition | Where Optimus stands |
 |---|---|
-| Pas de logiciel malveillant | ✅ |
-| **Licence libre approuvée par l'OSI**, sans double licence commerciale | ✅ GPL-3.0, choisie le 2026-08-29 |
-| Aucun composant propriétaire | ✅ Piper et whisper.cpp sont sous MIT, téléchargés et non embarqués |
-| Projet activement maintenu | ✅ |
-| **Base de code publiquement accessible** | ⚠️ décidé le 2026-08-29, reste à basculer |
-| **Déjà publié sous la forme à signer** | ❌ aucune publication publique |
-| Fonctionnement décrit sur la page de téléchargement | ✅ README refait pour ça le 2026-08-29 |
-| L'équipe qui signe est celle qui développe, et possède le dépôt | ✅ |
-| Ne signer que ce qu'on a compilé soi-même | ✅ |
-| **Double authentification** pour tous les contributeurs | ⚠️ à vérifier sur le compte GitHub |
-| Rôles définis : auteurs, relecteurs, approbateurs | ✅ voir plus bas |
-| **Politique de signature publiée** sur la page d'accueil du projet | ✅ voir plus bas |
-| Compilations automatisées et vérifiables | ✅ `.github/workflows/release.yml` |
+| No malware | ✅ |
+| **OSI-approved open source licence**, without commercial dual licensing | ✅ GPL-3.0, chosen on 2026-08-29 |
+| No proprietary component | ✅ Piper and whisper.cpp are MIT, downloaded rather than embedded |
+| Actively maintained project | ✅ |
+| **Publicly available codebase** | ✅ public since 2026-08-29 |
+| **Already released in the form to be signed** | ❌ no public release yet |
+| Functionality described on the download page | ✅ README rewritten for it on 2026-08-29 |
+| The signing team is the development team, and owns the repository | ✅ |
+| Only sign what you built yourself | ✅ |
+| **Multi-factor authentication** for every contributor | ⚠️ to be confirmed on the GitHub account |
+| Defined roles: authors, reviewers, approvers | ✅ see below |
+| **Signing policy published** on the project's home page | ✅ see below |
+| Automated, verifiable builds | ✅ `.github/workflows/release.yml` |
 
-**Décision du pilote, le 2026-08-29 : dépôt public sous GPL-3.0.** Le copyleft a été préféré aux
-licences permissives pour une raison précise — il empêche qu'on reprenne Optimus pour en faire un
-produit fermé et payant, sans rien contraindre à qui l'utilise simplement. À noter : la fondation
-interdisant la double licence commerciale, cette voie est fermée pour de bon, et c'est assumé.
+**Maintainer's decision, 2026-08-29: public repository under GPL-3.0.** Copyleft was preferred
+over permissive licences for one precise reason — it prevents anyone taking Optimus and turning
+it into a closed, paid product, while constraining nobody who simply uses it. Worth noting: since
+the foundation forbids commercial dual licensing, that road is closed for good, and that is
+accepted.
 
-Il ne reste donc qu'un geste : **basculer le dépôt en public**, une fois la licence et le README
-en place — ce qui est fait.
+## The build pipeline
 
-## La chaîne de compilation
+`.github/workflows/release.yml` triggers on a `vX.Y.Z` tag and runs, in order:
 
-`.github/workflows/release.yml` se déclenche sur un tag `vX.Y.Z` et enchaîne :
+1. the tests — an installer does not come out of code that fails;
+2. publishing the application;
+3. **signing the executable**;
+4. building the installer, which therefore contains an **already signed** executable;
+5. **signing the installer**;
+6. the SHA-256 hash and the release.
 
-1. les tests — un installateur ne sort pas d'un code qui échoue ;
-2. la publication de l'application ;
-3. **la signature de l'exécutable** ;
-4. la construction de l'installateur, qui contient donc un exécutable **déjà signé** ;
-5. **la signature de l'installateur** ;
-6. l'empreinte SHA-256 et la publication.
+The order of steps 3 and 4 is not negotiable. Signing only the installer would leave Smart App
+Control refusing the application once installed: it inspects the executable at launch, not the
+thing that put it there.
 
-L'ordre des points 3 et 4 n'est pas négociable. Signer seulement l'installateur laisserait Smart
-App Control refuser l'application une fois installée : c'est l'exécutable qu'il inspecte au
-lancement, pas ce qui l'a posé.
+Both signing steps skip themselves as long as the `SIGNPATH_PROJECT` variable does not exist.
+**The pipeline therefore works today**, producing an unsigned installer — exactly the one built
+by hand — which makes it testable before the foundation has answered.
 
-Les deux étapes de signature se sautent d'elles-mêmes tant que la variable `SIGNPATH_PROJECT`
-n'existe pas. **La chaîne fonctionne donc dès aujourd'hui**, et produit un installateur non signé,
-exactement celui qu'on construit à la main — ce qui permet de l'éprouver avant que la fondation
-ait répondu.
+### What will have to be filled in, once the project is accepted
 
-### Ce qu'il faudra renseigner, une fois le projet accepté
-
-| | Où | Quoi |
+| | Where | What |
 |---|---|---|
-| `SIGNPATH_API_TOKEN` | secret du dépôt | jeton d'API SignPath |
-| `SIGNPATH_ORGANIZATION_ID` | variable du dépôt | identifiant de l'organisation |
-| `SIGNPATH_PROJECT` | variable du dépôt | abrégé du projet |
+| `SIGNPATH_API_TOKEN` | repository secret | SignPath API token |
+| `SIGNPATH_ORGANIZATION_ID` | repository variable | organisation identifier |
+| `SIGNPATH_PROJECT` | repository variable | project slug |
 
-Et côté SignPath, deux **configurations d'artefact** nommées `app` et `installateur`, décrivant
-respectivement l'archive contenant `Optimus.App.exe` et l'installateur nu.
+And on the SignPath side, two **artifact configurations** named `app` and `installateur`,
+describing respectively the archive holding `Optimus.App.exe` and the bare installer.
 
-## Politique de signature de code
+## Code signing policy
 
-*Cette section répond à l'exigence de la fondation. Elle doit rester accessible publiquement.*
+*This section answers the foundation's requirement. It must stay publicly available.*
 
-**Projet.** Optimus — copilote vocal pour Star Citizen.
-**Dépôt.** https://github.com/R3coNYT/Optimus-Star-Citizen
+**Project.** Optimus — a voice copilot for Star Citizen.
+**Repository.** https://github.com/R3coNYT/Optimus-Star-Citizen
 
-**Rôles.**
+**Roles.**
 
-| Rôle | Qui | Responsabilité |
+| Role | Who | Responsibility |
 |---|---|---|
-| Auteur | R3coN | écrit et publie le code, déclenche les compilations |
-| Relecteur | R3coN | relit les changements avant qu'ils entrent dans une version |
-| Approbateur | R3coN | approuve chaque demande de signature dans SignPath |
+| Author | R3coN | writes and publishes the code, triggers the builds |
+| Reviewer | R3coN | reviews changes before they enter a release |
+| Approver | R3coN | approves every signing request in SignPath |
 
-*Projet à mainteneur unique : les trois rôles sont tenus par la même personne, ce que la
-fondation admet. Le contrôle réel ne vient alors pas de la séparation des rôles mais de la
-chaîne — seul un tag poussé sur le dépôt public peut déclencher une signature, et le contenu
-signé est reconstructible par quiconque à partir du code.*
+*Single-maintainer project: all three roles are held by the same person, which the foundation
+allows. The real control then does not come from separating roles but from the pipeline — only a
+tag pushed to the public repository can trigger a signature, and the signed content is
+reproducible by anyone from the source.*
 
-**Ce qui est signé.** L'exécutable `Optimus.App.exe` et l'installateur
-`Optimus-X.Y.Z-installateur.exe`, tous deux produits par
-[`.github/workflows/release.yml`](../.github/workflows/release.yml) sur un exécuteur GitHub, à
-partir du code de ce dépôt et de lui seul.
+**What is signed.** The executable `Optimus.App.exe` and the installer
+`Optimus-X.Y.Z-installateur.exe`, both produced by
+[`.github/workflows/release.yml`](../.github/workflows/release.yml) on a GitHub runner, from the
+code in this repository and nothing else.
 
-**Ce qui n'est jamais signé.** Les composants tiers téléchargés à l'installation — le moteur
-Piper, ses voix, whisper.cpp et son modèle — ne sont ni recompilés ni signés par ce projet. Ils
-sont vérifiés par empreinte SHA-256 déclarée dans le script d'installation, et conservent la
-signature que leurs auteurs leur ont donnée, ou son absence.
+**What is never signed.** The third-party components downloaded at install time — the Piper
+engine, its voices, whisper.cpp and its model — are neither rebuilt nor signed by this project.
+They are verified against a SHA-256 hash declared in the install script, and keep whatever
+signature their authors gave them, or its absence.
 
-**Données personnelles.** Aucune. Optimus fonctionne entièrement en local et n'émet aucune
-requête réseau de lui-même. Ni le projet ni la fondation ne collectent de données auprès des
-personnes qui installent le logiciel.
+**Personal data.** None. Optimus runs entirely locally and makes no network request of its own.
+Neither the project nor the foundation collects data from the people who install the software.
 
-**Contact.** Par les issues du dépôt.
+**Contact.** Through the repository's issues.
 
-## Ce qui reste à faire, dans l'ordre
+## What is left to do, in order
 
-1. ~~Décider de la licence.~~ **GPL-3.0**, le 2026-08-29.
-2. ~~Poser le fichier `LICENSE` et lier la politique depuis le README.~~ Fait.
-3. **Basculer le dépôt en public.** *Pilote.*
-4. Vérifier que la double authentification est active sur le compte GitHub. *Pilote.*
-5. Publier une première version **non signée** par la chaîne, pour satisfaire « déjà publié sous
-   la forme à signer » et éprouver le pipeline.
-6. **Déposer la demande** sur signpath.org. *Pilote — je ne peux ni créer le compte ni signer la
-   demande à sa place.* Délai annoncé : de quelques jours à quelques semaines.
-7. Une fois acceptée : renseigner le secret et les deux variables, créer les configurations
-   d'artefact, retagger.
-8. Vérifier sur une machine tierce que SmartScreen se tait et que Smart App Control laisse
-   passer.
+1. ~~Decide on the licence.~~ **GPL-3.0**, on 2026-08-29.
+2. ~~Add the `LICENSE` file and link the policy from the README.~~ Done.
+3. ~~Make the repository public.~~ Done on 2026-08-29.
+4. Confirm that multi-factor authentication is on for the GitHub account. *Maintainer.*
+5. Publish a first **unsigned** release through the pipeline, to satisfy “already released in the
+   form to be signed” and to put the pipeline to work.
+6. **Submit the application** on signpath.org. *Maintainer — I can neither create the account nor
+   sign the application on their behalf.* Stated turnaround: a few days to a few weeks.
+7. Once accepted: fill in the secret and the two variables, create the artifact configurations,
+   re-tag.
+8. Check on a third-party machine that SmartScreen stays quiet and Smart App Control lets it
+   through.
