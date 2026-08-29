@@ -879,11 +879,28 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
     /// Le catalogue anglais était bien chargé — le journal l'annonçait — mais l'onglet des
     /// commandes continuait d'afficher les noms français, faute d'avoir été repeuplé.
     /// </summary>
+    /// <summary>
+    /// Rejoue tout ce que la langue touche.
+    ///
+    /// <c>Raise(null)</c> dit à WPF que « toutes les propriétés ont changé » et suffit aux
+    /// libellés. Il ne repeuple <b>aucune</b> ObservableCollection : leurs éléments sont des
+    /// objets déjà construits, portant des noms lus dans le catalogue de l'ancienne langue.
+    ///
+    /// Chaque liste oubliée ici reste donc affichée dans la langue précédente jusqu'au
+    /// redémarrage. Les commandes et les touches l'ont été le 2026-08-28, les macros et les
+    /// hésitations le 2026-08-29 — signalées par le pilote, qui voyait « Procédure
+    /// d'atterrissage » dans un écran par ailleurs anglais.
+    ///
+    /// Toute nouvelle liste tirée du catalogue doit être ajoutée ici. C'est la seule
+    /// précaution qui tienne : rien dans WPF ne signalera l'oubli.
+    /// </summary>
     private void RefreshLanguage() => _dispatcher.BeginInvoke(() =>
     {
         Raise(null);
         RefreshCommands();
         RefreshBindings();
+        MacroEditor.Refresh();
+        Understanding.Refresh();
     });
 
     private void OnStateChanged(object? sender, EventArgs e)
