@@ -63,7 +63,6 @@
     "threads": 0,
     "trim_context": false
   },
-
   "api": {
     "notes": [
       "API locale, DESACTIVEE par defaut. Elle n'ecoute que 127.0.0.1 : Windows refuse a un",

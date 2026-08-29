@@ -388,6 +388,22 @@
 
                 <ContentControl Style="{StaticResource Card}">
                   <StackPanel>
+                    <TextBlock Text="LANGUE — LANGUAGE" Style="{StaticResource Label}" />
+
+                    <ComboBox ItemsSource="{Binding Languages}"
+                              SelectedItem="{Binding ActiveLanguage}" />
+
+                    <TextBlock Style="{StaticResource Hint}"
+                               Text="Le changement prend effet aussitôt, sans passer par Enregistrer : l'écran, les commandes que vous prononcez et les réponses d'Optimus changent ensemble." />
+
+                    <TextBlock Style="{StaticResource Hint}" Foreground="{StaticResource Warn}"
+                               Text="{Binding LanguageWarning}"
+                               Visibility="{Binding HasLanguageWarning, Converter={StaticResource BoolToVisible}}" />
+                  </StackPanel>
+                </ContentControl>
+
+                <ContentControl Style="{StaticResource Card}">
+                  <StackPanel>
                     <TextBlock Text="COPILOTE" Style="{StaticResource Label}" />
 
                     <Grid>

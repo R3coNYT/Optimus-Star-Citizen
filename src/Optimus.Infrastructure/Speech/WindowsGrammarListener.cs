@@ -248,6 +248,16 @@ public sealed class WindowsGrammarListener : IVoiceCommandListener
             AudioPath: Capture(e.Result)));
     }
 
+    /// <summary>
+    /// Windows sait-il reconnaître cette langue sur cette machine ?
+    ///
+    /// La question se pose <b>avant</b> de basculer, pas au premier appui sur « Écouter ».
+    /// Un module vocal ne s'installe pas depuis Optimus — il se prend dans les paramètres de
+    /// Windows — et l'apprendre au moment de parler serait le découvrir trop tard.
+    /// </summary>
+    public static bool HasRecognizer(string culture) =>
+        !string.IsNullOrWhiteSpace(culture) && FindRecognizer(culture) is not null;
+
     /// <summary>Moteurs de reconnaissance installés, toutes langues confondues.</summary>
     public static IReadOnlyList<string> InstalledRecognizers() =>
         SpeechRecognitionEngine.InstalledRecognizers()

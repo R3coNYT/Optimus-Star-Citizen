@@ -138,7 +138,7 @@ public sealed class OptimusRuntime : IAsyncDisposable
     public CommandCatalog Catalog { get; private set; }
 
     /// <summary>Catalogue livré seul, sans les macros du pilote. Sert à savoir ce qui lui appartient.</summary>
-    public CommandCatalog ShippedCatalog { get; private init; } = CommandCatalog.Empty;
+    public CommandCatalog ShippedCatalog { get; private set; } = CommandCatalog.Empty;
 
     /// <summary>Fichier des macros du pilote.</summary>
     public string MacroPath { get; private init; } = string.Empty;
@@ -457,7 +457,25 @@ public sealed class OptimusRuntime : IAsyncDisposable
             await StopListeningAsync().ConfigureAwait(false);
         }
 
+        string spoken = User.Language;
         User = ProfileLoader.Load(ProfilePath).Value;
+
+        // Changer de langue change le CATALOGUE, pas seulement les repliques : « allume les
+        // lumieres » et « lights on » ne sont pas deux formulations d'une meme entree, ce sont
+        // deux fichiers. Le relire ici est le seul moyen ; RebuildCatalog, lui, repart du
+        // catalogue deja en memoire et ne verrait rien.
+        if (!string.Equals(spoken, User.Language, StringComparison.OrdinalIgnoreCase))
+        {
+            ShippedCatalog = JsonCatalogLoader.LoadCatalog(
+                Language.Localized(
+                    Path.Combine(DataRoot, "data", "commands"),
+                    "starcitizen.core", ".json", User.Language)
+                ?? Path.Combine(DataRoot, "data", "commands", "starcitizen.core.json")).Value;
+
+            DiagnosticLog.Info(
+                "langue changée",
+                $"{spoken} → {User.Language} · {ShippedCatalog.Count} commandes rechargées");
+        }
 
         Copilot previous = Copilot;
         Copilot = CopilotLoader.Load(CopilotDirectory, User.Language).Value;
@@ -1234,6 +1252,27 @@ public sealed class OptimusRuntime : IAsyncDisposable
         DiagnosticLog.Info(
             $"copilote « {Copilot.Name} »",
             $"mot d'éveil « {Copilot.WakeWord} » · voix {Copilot.Voice.VoiceId ?? "par défaut"}");
+    }
+
+    /// <summary>
+    /// Change la langue, sans redémarrer.
+    ///
+    /// Aussi lourd qu'un changement de copilote, et pour la même raison : ce n'est pas un
+    /// habillage. Le catalogue, les répliques, la grammaire de reconnaissance et la langue
+    /// passée à Whisper changent d'un coup. L'écoute repart donc forcément.
+    /// </summary>
+    public async Task SwitchLanguageAsync(string language, CancellationToken cancellationToken = default)
+    {
+        string wanted = Language.Resolve(language);
+
+        if (string.Equals(wanted, User.Language, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        SettingsWriter.SaveLanguage(ProfilePath, wanted);
+
+        await ReloadSettingsAsync(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>

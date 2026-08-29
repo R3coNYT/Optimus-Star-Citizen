@@ -10,6 +10,7 @@ using Optimus.Core.Domain.Copilots;
 using Optimus.Core.Domain.Personality;
 using Optimus.Core.Domain.Profiles;
 using Optimus.Core.Loading;
+using Optimus.Core.Localization;
 using Optimus.Core.Personality;
 using Optimus.Infrastructure.Hosting;
 using Optimus.Infrastructure.Input;
@@ -62,6 +63,7 @@ public sealed class SettingsViewModel : ObservableObject
     private int _apiPort = 8731;
     private int _apiRate = 30;
     private bool _dirty;
+    private string? _language;
 
     public SettingsViewModel(OptimusRuntime runtime, Action<string, string?, ActivityLevel> log)
     {
@@ -99,6 +101,60 @@ public sealed class SettingsViewModel : ObservableObject
     public AsyncRelayCommand DuplicateCopilotCommand { get; }
 
     public AsyncRelayCommand DeleteCopilotCommand { get; }
+
+    /// <summary>Langues proposées, écrites chacune dans sa propre langue.</summary>
+    public IReadOnlyList<string> Languages { get; } =
+        Language.Known.Select(Language.DisplayName).ToList();
+
+    /// <summary>
+    /// Langue active. L'affecter bascule réellement, sans redémarrer.
+    ///
+    /// Comme le copilote, et pour la même raison : ce n'est pas un habillage. L'écran, les
+    /// commandes qu'on prononce et les réponses changent d'un coup. Un aperçu à moitié
+    /// appliqué — écran anglais, grammaire française — n'aurait aucun sens.
+    /// </summary>
+    public string? ActiveLanguage
+    {
+        get => _language;
+        set
+        {
+            if (_switching || value is null || !Set(ref _language, value))
+            {
+                return;
+            }
+
+            _ = SwitchLanguageAsync(value);
+        }
+    }
+
+    /// <summary>
+    /// Ce qui manque à Windows pour entendre cette langue, ou <c>null</c> si rien ne manque.
+    ///
+    /// Dit <b>avant</b> de basculer, et non au premier appui sur « Écouter ». Un module vocal
+    /// ne s'installe pas depuis Optimus : l'apprendre au moment de parler serait le découvrir
+    /// trop tard.
+    /// </summary>
+    public string? LanguageWarning
+    {
+        get
+        {
+            string wanted = Language.Resolve(
+                Language.Known.FirstOrDefault(l => Language.DisplayName(l) == _language));
+
+            if (WindowsGrammarListener.HasRecognizer(wanted))
+            {
+                return null;
+            }
+
+            return $"Windows n'a pas de module vocal pour « {wanted} » sur cette machine : "
+                 + "Optimus écrira et répondra dans cette langue, mais ne pourra pas vous "
+                 + "entendre. Ajoutez-le dans Paramètres > Heure et langue > Langue, en "
+                 + "cochant « Reconnaissance vocale » parmi les fonctionnalités.";
+        }
+    }
+
+    /// <summary>Vrai s'il manque quelque chose à Windows pour entendre la langue choisie.</summary>
+    public bool HasLanguageWarning => LanguageWarning is not null;
 
     /// <summary>Copilotes installés, les vôtres masquant ceux qui sont livrés.</summary>
     public ObservableCollection<string> Copilots { get; } = new();
@@ -687,6 +743,8 @@ public sealed class SettingsViewModel : ObservableObject
         VoiceConfig voice = _runtime.Copilot.Voice;
         PersonalityTraits traits = _runtime.Copilot.Personality.Traits;
 
+        _language = Language.DisplayName(_runtime.User.Language);
+
         _pushToTalk = input.Mode == ListeningMode.PushToTalk;
         _pushToTalkKey = input.PushToTalkKey;
         _requireWakeWordInPushToTalk = input.RequireWakeWordInPushToTalk;
@@ -951,6 +1009,32 @@ public sealed class SettingsViewModel : ObservableObject
     /// <summary>Identifiant du copilote portant ce nom affiché.</summary>
     private string? IdOf(string name) => _runtime.Copilots
         .FirstOrDefault(c => string.Equals(c.Name, name, StringComparison.Ordinal))?.Id;
+
+    private async Task SwitchLanguageAsync(string displayName)
+    {
+        if (Language.Known.FirstOrDefault(l => Language.DisplayName(l) == displayName)
+            is not string language)
+        {
+            return;
+        }
+
+        try
+        {
+            await _runtime.SwitchLanguageAsync(language).ConfigureAwait(true);
+
+            _log($"langue « {displayName} »",
+                $"{_runtime.Catalog.Count} commandes · {_runtime.Copilot.Language}",
+                ActivityLevel.Normal);
+        }
+        catch (Exception exception)
+        {
+            _log("changement de langue impossible", exception.Message, ActivityLevel.Warning);
+        }
+
+        Raise(nameof(LanguageWarning));
+        Raise(nameof(HasLanguageWarning));
+        Revert();
+    }
 
     private async Task SwitchCopilotAsync(string name)
     {

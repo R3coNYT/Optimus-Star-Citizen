@@ -66,6 +66,19 @@ public static class SettingsWriter
         Patch(profilePath, root => root["active_binding_profile"] = name);
     }
 
+    /// <summary>
+    /// Écrit la langue dans le profil utilisateur.
+    ///
+    /// Dans le profil et non dans le copilote : elle vaut pour l'écran autant que pour la
+    /// voix, et le pilote la choisit une fois pour tous ses copilotes.
+    /// </summary>
+    public static void SaveLanguage(string profilePath, string language)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(profilePath);
+
+        Patch(profilePath, root => root["language"] = Localization.Language.Resolve(language));
+    }
+
     /// <summary>Écrit le copilote actif dans le profil utilisateur.</summary>
     public static void SavePreferredCopilot(string profilePath, string id)
     {
