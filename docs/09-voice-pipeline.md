@@ -1,182 +1,182 @@
-# PHASE 8 — Architecture vocale et budget de latence
+# PHASE 8 — Voice architecture and latency budget
 
-## 9.1 Chaîne complète
+## 9.1 The whole chain
 
 ```
- ┌──────────┐   PCM 16 kHz mono, trames de 20 ms
- │ MICRO    │──────────────┐
+ ┌──────────┐   PCM 16 kHz mono, 20 ms frames
+ │ MIC      │──────────────┐
  └──────────┘              ▼
-                    ┌─────────────┐  buffer circulaire de 3 s (pré-roll)
-                    │ AudioBuffer │  → permet de récupérer le début de phrase
-                    └──────┬──────┘     même si le déclenchement arrive tard
+                    ┌─────────────┐  a 3 s ring buffer (pre-roll)
+                    │ AudioBuffer │  → lets us recover the start of a sentence
+                    └──────┬──────┘     even when the trigger arrives late
                            ▼
          ┌────────────────────────────────────┐
-         │ Déclencheur (3 modes exclusifs)    │
-         │  • PTT      : touche maintenue     │  ← le plus fiable, défaut du MVP
-         │  • Wake word: "Optimus" détecté    │
-         │  • Always   : VAD seul             │
+         │ Trigger (3 exclusive modes)        │
+         │  • PTT      : a key held down      │  ← the most reliable, the MVP default
+         │  • Wake word: "Optimus" detected   │
+         │  • Always   : VAD alone            │
          └──────┬─────────────────────────────┘
                 ▼
-         ┌─────────────┐  Silero VAD : speech_start / speech_end
-         │     VAD     │  silence de fin 280 ms (paramétrable 150–600)
-         └──────┬──────┘  durée min 250 ms · durée max 12 s (garde-fou)
+         ┌─────────────┐  Silero VAD: speech_start / speech_end
+         │     VAD     │  280 ms of trailing silence (configurable 150–600)
+         └──────┬──────┘  minimum 250 ms · maximum 12 s (a guard rail)
                 ▼
-         ┌─────────────┐  Whisper small Q5, langue forcée (pas d'autodétection : +150 ms)
-         │     STT     │  prompt d'amorçage = vocabulaire du domaine
-         └──────┬──────┘  (noms de vaisseaux, « quantum », « boucliers », « mobiGlas »…)
+         ┌─────────────┐  Whisper small Q5, language forced (no autodetection: +150 ms)
+         │     STT     │  priming prompt = the domain's vocabulary
+         └──────┬──────┘  (ship names, “quantum”, “shields”, “mobiGlas”…)
                 ▼
-         ┌──────────────────┐  retire le wake word, normalise
-         │   NORMALISATION  │
+         ┌──────────────────┐  strips the wake word, normalises
+         │  NORMALISATION   │
          └──────┬───────────┘
                 ▼
-         ┌─────────────┐  exact → flou → (LLM optionnel)
+         ┌─────────────┐  exact → fuzzy → (optional LLM)
          │   INTENT    │
          └──────┬──────┘
-                ├──────────────► EXÉCUTION (prioritaire, ne dépend jamais du TTS)
+                ├──────────────► EXECUTION (takes priority, never waits on the TTS)
                 ▼
-         ┌─────────────┐  personnalité → variante → interpolation
-         │  RÉPONSE    │
+         ┌─────────────┐  character → variant → interpolation
+         │   REPLY     │
          └──────┬──────┘
                 ▼
-         ┌─────────────┐  streaming si le provider le permet
+         ┌─────────────┐  streamed when the provider allows it
          │     TTS     │
          └──────┬──────┘
                 ▼
-         ┌─────────────┐  file d'attente priorisée, ducking, barge-in
+         ┌─────────────┐  a prioritised queue, ducking, barge-in
          │  PLAYBACK   │
          └─────────────┘
 ```
 
-**Décision structurante : l'action ne dépend jamais du TTS.** On appuie sur la touche, *puis* on
-parle. Un TTS lent dégrade le confort, jamais la réactivité du jeu.
+**A structuring decision: the action never depends on the TTS.** We press the key, *then* speak.
+A slow TTS degrades comfort, never the game's responsiveness.
 
 ---
 
-## 9.2 Budget de latence
+## 9.2 Latency budget
 
-Mesuré depuis `speech_end` (fin de parole détectée) jusqu'à l'événement clavier.
+Measured from `speech_end` (end of speech detected) to the keyboard event.
 
-| Étape | Cible p50 | Cible p95 | Comment on la tient |
+| Stage | p50 target | p95 target | How we hold it |
 |---|---|---|---|
-| VAD → décision de fin | 280 ms | 350 ms | silence de fin paramétrable ; PTT = 0 ms (fin au relâchement) |
-| Transcription (Whisper small, 1,5 s d'audio, CPU 8 cœurs) | 250 ms | 500 ms | modèle quantisé, `n_threads` adapté, contexte réduit, pas d'autodétection de langue |
-| Normalisation + matching local | 3 ms | 10 ms | index en mémoire, aucune I/O |
-| Guard + résolution de binding | 1 ms | 3 ms | tables en mémoire |
-| Injection (tap 45 ms) | 45 ms | 50 ms | `SendInput` direct |
-| **Total voix → touche** | **≈ 580 ms** | **≈ 900 ms** | **conforme à RNF-01** |
-| *(bonus)* premier son du TTS | **7 ms** | **15 ms** | **Mesuré (S0-5)** : RTF 0,001–0,003 avec les voix OneCore. Le TTS est hors sujet côté latence — à condition de préchauffer le moteur (429 ms sur la toute première synthèse) |
-| *(si LLM local Ollama 7B)* | +400 à 900 ms | — | uniquement sur échec du matcher local |
-| *(si LLM cloud)* | +600 à 2 000 ms | — | jamais sur le chemin des commandes connues |
+| VAD → end decision | 280 ms | 350 ms | configurable trailing silence; PTT = 0 ms (it ends on release) |
+| Transcription (Whisper small, 1.5 s of audio, 8-core CPU) | 250 ms | 500 ms | quantised model, tuned `n_threads`, reduced context, no language autodetection |
+| Normalisation + local matching | 3 ms | 10 ms | an in-memory index, no I/O |
+| Guard + binding resolution | 1 ms | 3 ms | in-memory tables |
+| Injection (45 ms tap) | 45 ms | 50 ms | `SendInput` directly |
+| **Total voice → key** | **≈ 580 ms** | **≈ 900 ms** | **within RNF-01** |
+| *(bonus)* first TTS sound | **7 ms** | **15 ms** | **Measured (S0-5)**: RTF 0.001–0.003 with the OneCore voices. The TTS is beside the point for latency — provided the engine is warmed up (429 ms on the very first synthesis) |
+| *(with a local Ollama 7B)* | +400 to 900 ms | — | only when the local matcher fails |
+| *(with a cloud LLM)* | +600 to 2,000 ms | — | never on the path of known commands |
 
-### La voix neuronale locale (Piper)
+### The local neural voice (Piper)
 
-Les voix Windows sont irréprochables en latence et discutables en timbre. Piper renverse
-exactement ce rapport, et le pilote choisit lequel des deux compromis il préfère —
-`voice.provider` dans le fichier du copilote, ou la case dans les réglages.
+Windows voices are beyond reproach on latency and arguable on timbre. Piper reverses exactly that
+trade-off, and the pilot picks which of the two they prefer — `voice.provider` in the copilot's
+file, or the checkbox in the settings.
 
-**Locale au sens fort** : le modèle tourne sur la machine du pilote. Rien ne part sur le réseau,
-Optimus reste utilisable hors ligne, et ce que dit le copilote ne parvient à personne. C'est ce
-qui distingue Piper d'un service de synthèse en ligne, dont le timbre serait peut-être meilleur.
+**Local in the strong sense**: the model runs on the pilot's machine. Nothing goes over the
+network, Optimus stays usable offline, and what the copilot says reaches nobody. That is what
+separates Piper from an online synthesis service, whose timbre might well be better.
 
-#### Mesures du 2026-08-27 (12 cœurs, modèles français)
+#### Measurements from 2026-08-27 (12 cores, French models)
 
-| | Chargement de la voix | Synthèse par réplique | Facteur temps réel |
+| | Loading the voice | Synthesis per reply | Real-time factor |
 |---|---|---|---|
-| Voix Windows OneCore | 429 ms, une fois (D23) | **7 à 15 ms** | 0,003 |
-| Piper `fr_FR-tom-medium` | **620 à 785 ms** | **377 à 455 ms** | 0,113 |
-| Piper `fr_FR-gilles-low` | **318 ms** | **214 ms** | 0,047 |
+| Windows OneCore voice | 429 ms, once (D23) | **7 to 15 ms** | 0.003 |
+| Piper `fr_FR-tom-medium` | **620 to 785 ms** | **377 to 455 ms** | 0.113 |
+| Piper `fr_FR-gilles-low` | **318 ms** | **214 ms** | 0.047 |
 
-Piper coûte donc environ **quarante fois** plus qu'une voix Windows par réplique. Ce qui rend
-l'échange acceptable est écrit plus haut, et c'est la décision structurante du pipeline :
-**l'action ne dépend jamais du TTS**. La touche est déjà partie quand Optimus commente. Le délai
-porte sur le commentaire, jamais sur la réactivité du jeu.
+Piper therefore costs about **forty times** a Windows voice per reply. What makes the trade
+acceptable is written above, and it is the pipeline's structuring decision: **the action never
+depends on the TTS**. The key has already been sent when Optimus comments. The delay lands on the
+comment, never on the game's responsiveness.
 
-Une voix `low` divise l'attente par deux pour un timbre à peine moins riche : c'est le réglage à
-essayer avant de renoncer.
+A `low` voice halves the wait for a barely less rich timbre: that is the setting to try before
+giving up.
 
-#### Un processus persistant, et pourquoi
+#### A persistent process, and why
 
-Relancer `piper.exe` à chaque phrase ferait payer le chargement du modèle — 0,6 s — **avant
-chaque mot**, soit près d'une seconde d'attente par réplique. Le processus reste donc ouvert, la
-voix chargée, et le préchauffage du démarrage attend réellement l'annonce de disponibilité :
-sans cette attente, la première réplique payait 740 ms, ce qui vidait D23 de son sens.
+Restarting `piper.exe` for every sentence would pay the model loading cost — 0.6 s — **before
+every word**, which is nearly a second of waiting per reply. The process therefore stays open with
+the voice loaded, and the startup warm-up genuinely waits for the readiness announcement: without
+that wait, the first reply cost 740 ms, which emptied D23 of its meaning.
 
-Le protocole retenu est celui qui a été vérifié : **une ligne de texte** sur l'entrée standard,
-**un chemin de fichier WAV** sur la sortie standard, les journaux sur l'erreur standard. Le mode
-`--json-input` a été essayé et écarté — il ignore `length_scale` dans cette version, ce qui
-aurait rendu le réglage de débit inopérant sans que rien ne le signale.
+The protocol chosen is the one that was verified: **one line of text** on standard input, **one
+WAV file path** on standard output, logs on standard error. The `--json-input` mode was tried and
+rejected — it ignores `length_scale` in this version, which would have made the rate setting
+useless without anything saying so.
 
 #### Installation
 
-Piper n'est pas livré avec Optimus : 22 Mo de binaire et 63 Mo par voix, pour une fonction dont
-on peut se passer. L'installation vit dans `%APPDATA%\Optimus\piper`, hors de `data/` que le
-script de publication remplace (même principe que D35, D43 et D46).
+Piper does not ship with Optimus: 22 MB of binary and 63 MB per voice, for a feature you can do
+without. The installation lives in `%APPDATA%\Optimus\piper`, outside the `data/` that the publish
+script overwrites (the same principle as D35, D43 and D46).
 
 ```
 %APPDATA%\Optimus\piper\
-├── piper.exe            (+ ses DLL et espeak-ng-data, tels que livrés dans l'archive)
+├── piper.exe            (+ its DLLs and espeak-ng-data, as shipped in the archive)
 └── voices\
     ├── fr_FR-tom-medium.onnx
     └── fr_FR-tom-medium.onnx.json
 ```
 
-Le binaire vient des versions publiées de `rhasspy/piper` (`piper_windows_amd64.zip`), les voix
-de `huggingface.co/rhasspy/piper-voices` — chaque voix étant un `.onnx` **et** son `.onnx.json`,
-les deux étant nécessaires. Optimus n'accepte l'installation que si les deux sont là : un Piper
-sans modèle est une installation à moitié faite, et la retenir rendrait le copilote muet le
-temps que le pilote comprenne pourquoi.
+The binary comes from the `rhasspy/piper` releases (`piper_windows_amd64.zip`), the voices from
+`huggingface.co/rhasspy/piper-voices` — each voice being a `.onnx` **and** its `.onnx.json`, both
+required. Optimus only accepts the installation when both are there: a Piper with no model is a
+half-done installation, and accepting it would leave the copilot mute while the pilot works out
+why.
 
-**Cette installation est propre à chaque machine.** Le dossier ne suit pas la publication : sur
-un second poste, il faut soit le recopier, soit décocher la case — auquel cas les voix Windows
-reprennent la main, avec une ligne de journal qui le dit.
+**This installation is specific to each machine.** The folder does not follow the publish: on a
+second machine you either copy it across or untick the box — in which case the Windows voices take
+over, with a log line saying so.
 
-#### Rien ne peut rendre le copilote muet
+#### Nothing can leave the copilot mute
 
-Piper est un processus externe : un antivirus qui le tue, un modèle corrompu, un disque plein.
-Les voix Windows, elles, sont toujours là. Le moteur principal est donc doublé, et **abandonné
-après deux échecs consécutifs** — réessayer indéfiniment ferait payer son délai d'attente à
-chaque réplique, ce qui serait bien pire qu'un changement de timbre. Le pilote entend une autre
-voix, ce qui est un signal en soi, et le journal dit pourquoi.
+Piper is an external process: an antivirus can kill it, a model can be corrupt, a disk can fill up.
+The Windows voices, on the other hand, are always there. The main engine is therefore doubled, and
+**abandoned after two consecutive failures** — retrying forever would make every reply pay its
+timeout, which would be far worse than a change of timbre. The pilot hears a different voice,
+which is a signal in itself, and the log says why.
 
 ---
 
-### Optimisations prévues
+### Planned optimisations
 
-| Technique | Gain | Complexité |
+| Technique | Gain | Complexity |
 |---|---|---|
-| **Pré-roll de 3 s** : on transcrit depuis avant le déclenchement | évite les débuts coupés (première cause d'échec de reconnaissance). **Mesuré (S0-3) : ouvrir le périphérique de capture coûte 419 ms** — ouvrir au moment du PTT ferait perdre le premier tiers de seconde de chaque phrase | faible |
-| **PTT par défaut au MVP** | supprime les 280 ms de VAD et les faux déclenchements | nulle |
-| **Modèle chargé et « chauffé » au démarrage** | évite 800 ms sur la 1ʳᵉ commande | faible |
-| **Transcription incrémentale** (décoder pendant que l'utilisateur parle) | −100 à 200 ms | moyenne, V1 |
-| **Cache des réponses TTS fréquentes** (WAV en cache par hash de texte + voix) | premier son quasi instantané sur les 30 réponses les plus utilisées | faible, gros effet perçu |
-| **Bip d'accusé de réception** (10 ms, immédiat au déclenchement) | latence *perçue* divisée, coût nul | trivial — à faire dès le MVP |
-| **Choix auto du modèle** par benchmark au 1ᵉʳ lancement | évite de mettre `medium` sur un CPU faible | faible |
+| **A 3 s pre-roll**: we transcribe from before the trigger | avoids clipped openings (the leading cause of recognition failure). **Measured (S0-3): opening the capture device costs 419 ms** — opening it on the PTT press would lose the first third of a second of every sentence | low |
+| **PTT by default in the MVP** | removes the 280 ms of VAD and the false triggers | none |
+| **Model loaded and “warmed” at startup** | avoids 800 ms on the first command | low |
+| **Incremental transcription** (decoding while the user is still speaking) | −100 to 200 ms | medium, V1 |
+| **A cache of frequent TTS replies** (WAV cached by hash of text + voice) | a near-instant first sound on the 30 most used replies | low, large perceived effect |
+| **An acknowledgement beep** (10 ms, immediate on trigger) | halves *perceived* latency at no cost | trivial — to do from the MVP |
+| **Automatic model choice** by benchmark at first launch | avoids putting `medium` on a weak CPU | low |
 
 ---
 
-## 9.3 Modes d'écoute
+## 9.3 Listening modes
 
-| Mode | Déclenchement | Fin | Avantages | Inconvénients | Statut |
+| Mode | Trigger | End | Advantages | Drawbacks | Status |
 |---|---|---|---|---|---|
-| **Push-to-talk** | touche maintenue | relâchement | zéro faux positif, latence minimale, robuste au bruit | occupe une touche/un doigt | **défaut MVP** |
-| **Wake word** | « Optimus » | VAD | mains libres, immersif | faux positifs, coût CPU permanent | MVP dégradé, V1 natif |
-| **Always listening** | VAD seul | VAD | le plus naturel | tout ce que vous dites est transcrit (vocal Discord !) | V1, opt-in explicite |
-| **Toggle** | touche = on/off | touche | compromis | oubli possible | V1 |
+| **Push-to-talk** | a key held down | release | zero false positives, minimal latency, robust to noise | occupies a key and a finger | **MVP default** |
+| **Wake word** | “Optimus” | VAD | hands free, immersive | false positives, constant CPU cost | degraded in the MVP, native in V1 |
+| **Always listening** | VAD alone | VAD | the most natural | everything you say gets transcribed (Discord voice!) | V1, explicit opt-in |
+| **Toggle** | a key = on/off | the key | a compromise | easy to forget | V1 |
 
-**Wake word en v0.1 (mode dégradé, coût nul)** : on transcrit l'utterance complète et on vérifie
-que le texte commence par le wake word (avec tolérance floue : « optimus », « optimousse »,
-« optimus, », « ok optimus »). Coût : une transcription inutile quand ce n'était pas pour lui —
-acceptable en PTT, discutable en always-on, d'où la priorité au détecteur natif en V1.
+**Wake word in v0.1 (degraded mode, free)**: we transcribe the whole utterance and check that the
+text starts with the wake word (with fuzzy tolerance: “optimus”, “optimouse”, “optimus,”, “ok
+optimus”). The cost: one useless transcription when it was not meant for him — acceptable with
+PTT, arguable in always-on, hence the priority given to a native detector in V1.
 
 ---
 
-## 9.4 Interfaces des providers
+## 9.4 Provider interfaces
 
 ```csharp
 public interface ISpeechToTextProvider : IAsyncDisposable
 {
     string Id { get; }                       // "whisper-local", "windows-speech", "azure"
-    SttCapabilities Capabilities { get; }     // langues, streaming, offline, GPU
+    SttCapabilities Capabilities { get; }     // languages, streaming, offline, GPU
     Task InitializeAsync(SttOptions o, CancellationToken ct);
     Task<TranscriptionResult> TranscribeAsync(AudioSegment audio, CancellationToken ct);
     IAsyncEnumerable<PartialTranscription> StreamAsync(IAsyncEnumerable<AudioFrame> f, CancellationToken ct);
@@ -186,7 +186,7 @@ public interface ITextToSpeechProvider : IAsyncDisposable
 {
     string Id { get; }
     Task<IReadOnlyList<VoiceInfo>> GetVoicesAsync(CancellationToken ct);
-    Task<SynthesisResult> SynthesizeAsync(SynthesisRequest r, CancellationToken ct); // stream possible
+    Task<SynthesisResult> SynthesizeAsync(SynthesisRequest r, CancellationToken ct); // may stream
 }
 
 public interface ILlmProvider
@@ -200,49 +200,49 @@ public interface IVoiceActivityDetector { VadEvent Process(ReadOnlySpan<float> f
 public interface IWakeWordDetector      { bool Process(ReadOnlySpan<float> frame, out float score); }
 ```
 
-**Politique de repli automatique** : chaque provider déclare un fallback. En cas d'échec
-d'initialisation ou de 3 erreurs consécutives, Optimus bascule sur le repli, l'annonce
-visuellement (pastille orange sur le dashboard) et le journalise. Il ne se met jamais en panne
-silencieuse.
+**Automatic fallback policy**: every provider declares a fallback. On an initialisation failure or
+three consecutive errors, Optimus switches to the fallback, announces it visually (an amber pill on
+the dashboard) and logs it. It never fails silently.
 
 ---
 
-## 9.5 Traitement audio et pièges connus
+## 9.5 Audio processing and known pitfalls
 
-| Problème | Solution retenue |
+| Problem | Chosen solution |
 |---|---|
-| **La voix du TTS déclenche Optimus** | Fenêtre de suppression : le VAD ignore l'entrée pendant la lecture TTS + 200 ms (et non pas simple AEC, inutilement complexe) |
-| **Le jeu ou Discord occupe le micro** | WASAPI en mode **partagé** exclusivement ; jamais de mode exclusif |
-| **Bruit de ventilateur / clavier mécanique** | VAD neural (Silero) plutôt qu'un seuil d'énergie ; gain d'entrée normalisé (AGC douce) |
-| **Micro débranché / changé en cours de session** | `MMDeviceEnumerator` + notification de changement → reconnexion auto, message UI |
-| **Plusieurs personnes parlent (Discord en fond)** | PTT résout tout ; en always-on, seuil de confiance STT relevé + rejet des phrases sans wake word |
-| **Sortie audio à router vers OBS/stream** | Choix du périphérique de sortie par copilote ; support des câbles virtuels |
-| **Phrase coupée au début** | Pré-roll de 3 s (voir §9.2) |
-| **Termes du jeu mal transcrits** (« quantum », « Crusader », « mobiGlas ») | `initial_prompt` Whisper contenant le lexique du domaine + post-correction par dictionnaire phonétique du jeu |
+| **The TTS voice triggers Optimus** | A suppression window: the VAD ignores input while the TTS plays, plus 200 ms (rather than plain AEC, needlessly complex) |
+| **The game or Discord holds the microphone** | WASAPI in **shared** mode only; never exclusive mode |
+| **Fan noise / a mechanical keyboard** | A neural VAD (Silero) rather than an energy threshold; normalised input gain (gentle AGC) |
+| **The microphone unplugged or changed mid-session** | `MMDeviceEnumerator` + a change notification → automatic reconnection, a UI message |
+| **Several people talking (Discord in the background)** | PTT solves everything; in always-on, a raised STT confidence threshold + rejection of phrases without the wake word |
+| **Audio output to route to OBS/stream** | Output device chosen per copilot; virtual cables supported |
+| **A sentence clipped at the start** | The 3 s pre-roll (see §9.2) |
+| **Game terms badly transcribed** (“quantum”, “Crusader”, “mobiGlas”) | A Whisper `initial_prompt` holding the domain lexicon + post-correction through a phonetic dictionary of the game |
 
 ---
 
-## 9.6 Mode debug de la chaîne vocale (§23)
+## 9.6 Debug mode for the voice chain (§23)
 
 ```
 ┌─ PIPELINE TRACE ──────────────────────── trace 7f3a ── 21:42:15.318 ─┐
-│ MICRO      Realtek Array   −18 dBFS   ▇▇▇▇▇▅▂                        │
-│ VAD        speech_start 15.114 → speech_end 16.294   (1 180 ms)      │
+│ MIC        Realtek Array   −18 dBFS   ▇▇▇▇▇▅▂                        │
+│ VAD        speech_start 15.114 → speech_end 16.294   (1,180 ms)      │
 │ TRIGGER    push_to_talk (F10)                                        │
 │ STT        whisper-small-q5 · fr-FR · 268 ms                         │
-│            « optimus ouvre les portes »          conf 0.94           │
-│ WAKE       préfixe « optimus » retiré                                │
-│ NORMALISÉ  « ouvre les portes »                                      │
+│            “optimus ouvre les portes”            conf 0.94           │
+│ WAKE       prefix “optimus” stripped                                 │
+│ NORMALISED “ouvre les portes”                                        │
 │ INTENT     ship.doors.toggle          score 1.00  (exact)            │
-│            2ᵉ : ship.doors.close      score 0.71   Δ 0.29 → OK       │
+│            2nd: ship.doors.close      score 0.71   Δ 0.29 → OK       │
 │ GUARD      killswitch off · sim off · SC foreground ✓ · cooldown ✓   │
 │ BINDING    spaceship_general/v_toggle_all_doors → L                  │
 │ EXEC       scancode 0x26 ↓ 45 ms ↑                       128 ms      │
-│ RESPONSE   « Compartiments déverrouillés. »   (var. 2/3, humor 40)   │
+│ RESPONSE   “Compartiments déverrouillés.”     (var. 2/3, humor 40)   │
 │ TTS        windows-onecore · Denise · 141 ms                          │
-│ TOTAL      voix → touche 585 ms │ voix → parole 742 ms               │
+│ TOTAL      voice → key 585 ms │ voice → speech 742 ms                │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
-C'est l'écran qui répond à « pourquoi ma commande n'a pas marché ? » — donc l'écran le plus
-rentable du produit. Il doit être copiable en un clic (support Discord) et exportable en JSON.
+This is the screen that answers “why didn't my command work?” — and therefore the most profitable
+screen in the product. It must be copyable in one click (for Discord support) and exportable as
+JSON.
