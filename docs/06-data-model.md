@@ -1,22 +1,22 @@
-# PHASE 5 — Architecture des données
+# PHASE 5 — Data architecture
 
-## 6.1 Principe : deux natures de données
+## 6.1 The principle: two kinds of data
 
-| Nature | Contenu | Support | Pourquoi |
+| Kind | Content | Medium | Why |
 |---|---|---|---|
-| **Configuration** (déclarative, versionnable, partageable, éditable à la main) | copilotes, personnalités, commandes, bindings, macros, profils, paramètres | **Fichiers JSON** (+ import/export YAML) sous `%APPDATA%\Optimus\` | Diffable, sauvegardable, partageable, lisible sans outil, réparable à la main |
-| **Runtime** (volumineux, indexé, requêté) | historique, analytics, cache d'embeddings, appairages Discord, statistiques | **SQLite** (`optimus.db`, WAL) | Requêtes, agrégations, volume |
+| **Configuration** (declarative, versionable, shareable, hand-editable) | copilots, characters, commands, bindings, macros, profiles, settings | **JSON files** (+ YAML import/export) under `%APPDATA%\Optimus\` | Diffable, backupable, shareable, readable without a tool, repairable by hand |
+| **Runtime** (bulky, indexed, queried) | history, analytics, embedding cache, Discord pairings, statistics | **SQLite** (`optimus.db`, WAL) | Queries, aggregations, volume |
 
-Règle : **aucune donnée de configuration n'existe *uniquement* en base**. La base peut être
-supprimée sans perdre la configuration.
+The rule: **no configuration data exists *only* in the database.** The database can be deleted
+without losing the configuration.
 
 ---
 
-## 6.2 ERD logique
+## 6.2 Logical ERD
 
 ```
                        ┌──────────────┐
-                       │ UserProfile  │  (Flavien, langue, PTT, wake word…)
+                       │ UserProfile  │  (Flavien, language, PTT, wake word…)
                        └──────┬───────┘
              preferred_copilot│        │active_binding_profile
                  ┌────────────┘        └────────────┐
@@ -33,9 +33,9 @@ supprimée sans perdre la configuration.
 │ traits{}  │ │ provider,    │    │           │ actionmap    │
 │ style{}   │ │ voice_id,    │    │           │ InputSpec    │
 │ rules[]   │ │ speed, pitch │    │           └──────┬───────┘
-│ lexicon{} │ └──────────────┘    │                  │ résolu par
+│ lexicon{} │ └──────────────┘    │                  │ resolved by
 └─────┬─────┘                     │                  │
-      │ sélectionne               ▼                  │
+      │ selects                   ▼                  │
       │                    ┌─────────────┐           │
       │                    │  Command    │───────────┘
       │                    │ id, kind    │  action_ref
@@ -43,12 +43,12 @@ supprimée sans perdre la configuration.
       │                    │ voice_      │──────┐ 1..n
       │                    │  phrases[]  │      ▼
       │                    │ requirements│  ┌────────────┐
-      │                    │ cooldown    │  │  Action    │ (étape de séquence)
+      │                    │ cooldown    │  │  Action    │ (a sequence step)
       │                    └──────┬──────┘  │ type, mode │
       │                           │         │ target, ms │
       │  1..n                     │ 1..n    └────────────┘
       ▼                           ▼               ▲
-┌──────────────┐          ┌──────────────┐        │ réutilise
+┌──────────────┐          ┌──────────────┐        │ reuses
 │ResponseSet   │          │    Macro     │────────┘
 │ success[]    │          │ steps[], if  │
 │ fail[] …     │          └──────────────┘
@@ -63,50 +63,50 @@ supprimée sans perdre la configuration.
 
 ---
 
-## 6.3 Arborescence des fichiers utilisateur
+## 6.3 User file tree
 
 ```
 %APPDATA%\Optimus\
 ├── config\
-│   ├── settings.json            paramètres application (audio, providers, hotkeys, simulation)
-│   ├── secrets.dat              clés API / token Bridge — chiffré DPAPI, jamais en clair
+│   ├── settings.json            application settings (audio, providers, hotkeys, simulation)
+│   ├── secrets.dat              API keys / Bridge token — DPAPI-encrypted, never in clear
 │   └── schema-version.json
 ├── profiles\
 │   ├── flavien.json             UserProfile
 │   └── default.json
 ├── copilots\
 │   ├── optimus\
-│   │   ├── copilot.json         identité, capacités, voix, langue
-│   │   ├── personality.json     traits, style, règles, lexique
-│   │   ├── responses.fr.json    variantes de réponses par événement
-│   │   ├── prompts\system.md    prompt système (si LLM activé)
+│   │   ├── copilot.json         identity, abilities, voice, language
+│   │   ├── personality.json     traits, style, rules, lexicon
+│   │   ├── responses.fr.json    reply variants per event
+│   │   ├── prompts\system.md    system prompt (when the LLM is enabled)
 │   │   └── assets\avatar.png
 │   └── synthia\…
 ├── commands\
-│   ├── starcitizen.core.json    catalogue livré (signé, non modifiable)
+│   ├── starcitizen.core.json    shipped catalogue (signed, not modifiable)
 │   ├── starcitizen.mining.json
-│   └── user.custom.json         commandes créées par l'utilisateur
+│   └── user.custom.json         commands created by the user
 ├── bindings\
 │   ├── starcitizen\
-│   │   ├── defaults-4.9.json    extrait de defaultProfile.xml
-│   │   ├── default.json         profil actif  (defaults ⊕ overrides)
+│   │   ├── defaults-4.9.json    extracted from defaultProfile.xml
+│   │   ├── default.json         active profile  (defaults ⊕ overrides)
 │   │   ├── fighter.json
 │   │   └── mining.json
 ├── macros\
 │   └── combat-mode.json
 ├── plugins\
 │   └── spotify\ (plugin.json, Optimus.Plugin.Spotify.dll)
-├── voices\                      modèles Piper téléchargés
-├── models\                      modèles Whisper / VAD / wake word
+├── voices\                      downloaded Piper models
+├── models\                      Whisper / VAD / wake word models
 ├── cache\
-├── backups\                     snapshots automatiques avant toute opération destructive
+├── backups\                     automatic snapshots before any destructive operation
 ├── logs\optimus-2026-08-23.log
 └── optimus.db                   SQLite
 ```
 
 ---
 
-## 6.4 Schémas et exemples
+## 6.4 Schemas and examples
 
 ### `Copilot`
 
@@ -116,7 +116,7 @@ supprimée sans perdre la configuration.
   "id": "optimus",
   "name": "Optimus",
   "version": "1.0.0",
-  "description": "Copilote militaire, calme, loyal, humour sec.",
+  "description": "Military copilot, calm, loyal, dry humour.",
   "avatar": "assets/avatar.png",
   "accent_color": "#22d3ee",
   "language": "fr-FR",
@@ -144,8 +144,8 @@ supprimée sans perdre la configuration.
 }
 ```
 
-`enabled_commands.mode` ∈ `all` | `all_except` | `only` — permet de fabriquer trivialement des
-variantes (« Optimus Lite », « Optimus Combat ») **sans code spécifique** (§30 du brief).
+`enabled_commands.mode` ∈ `all` | `all_except` | `only` — this makes variants (“Optimus Lite”,
+“Optimus Combat”) trivial to build **with no special code** (§30 of the brief).
 
 ### `Personality`
 
@@ -180,13 +180,13 @@ variantes (« Optimus Lite », « Optimus Combat ») **sans code spécifique** (
 {
   "id": "ship.doors.toggle",
   "kind": "action",
-  "name": "Ouvrir / fermer les portes",
-  "description": "Bascule l'état de tous les sas du vaisseau.",
+  "name": "Open / close the doors",
+  "description": "Toggles the state of every airlock on the ship.",
   "category": "ship",
-  "tags": ["porte", "sas"],
+  "tags": ["door", "airlock"],
   "voice_phrases": [
-    "ouvre les portes", "ouvre-moi les portes", "ouverture des portes",
-    "déverrouille les portes", "ferme les portes", "les portes"
+    "open the doors", "open the doors for me", "doors open",
+    "unlock the doors", "close the doors", "the doors"
   ],
   "parameters": [],
   "actions": [
@@ -205,8 +205,8 @@ variantes (« Optimus Lite », « Optimus Combat ») **sans code spécifique** (
 }
 ```
 
-> Noter ce qui **n'est pas** dans la commande : aucune touche. La commande référence une
-> `action_id` ; c'est le `BindingProfile` qui sait que cela vaut `L` sur cette machine (RT-02).
+> Note what is **not** in the command: no key. The command references an `action_id`; it is the
+> `BindingProfile` that knows this means `L` on this machine (RT-02).
 
 ### `BindingProfile` + `Binding`
 
@@ -232,7 +232,7 @@ variantes (« Optimus Lite », « Optimus Combat ») **sans code spécifique** (
 }
 ```
 
-`InputSpec` (forme normalisée d'une entrée physique) :
+`InputSpec` (the normalised form of a physical input):
 
 ```jsonc
 {
@@ -240,9 +240,9 @@ variantes (« Optimus Lite », « Optimus Combat ») **sans code spécifique** (
   "key": "L | F5 | NUMPAD5 | MOUSE4 | WHEEL_UP",
   "mods": ["SHIFT" | "CTRL" | "ALT" | "RALT" | "LSHIFT" | ...],
   "mode": "tap | hold | double_tap | press | release",
-  "hold_ms": 0,          // pour hold
-  "repeat": 1,           // nb de répétitions
-  "interval_ms": 40      // entre répétitions
+  "hold_ms": 0,          // for hold
+  "repeat": 1,           // number of repetitions
+  "interval_ms": 40      // between repetitions
 }
 ```
 
@@ -251,8 +251,8 @@ variantes (« Optimus Lite », « Optimus Combat ») **sans code spécifique** (
 ```json
 {
   "id": "macro.combat_mode",
-  "name": "Mode combat",
-  "voice_phrases": ["mode combat", "passe en mode combat", "prépare le combat"],
+  "name": "Combat mode",
+  "voice_phrases": ["combat mode", "go to combat mode", "prep for combat"],
   "dangerous": false,
   "steps": [
     { "type": "game_action", "action_id": "spaceship_power/v_power_preset_combat", "mode": "tap" },
@@ -323,7 +323,7 @@ variantes (« Optimus Lite », « Optimus Combat ») **sans code spécifique** (
 }
 ```
 
-### `Plugin` (manifeste)
+### `Plugin` (manifest)
 
 ```json
 {
@@ -339,7 +339,7 @@ variantes (« Optimus Lite », « Optimus Combat ») **sans code spécifique** (
 
 ---
 
-## 6.5 Schéma SQLite (données de runtime)
+## 6.5 SQLite schema (runtime data)
 
 ```sql
 CREATE TABLE history (
@@ -349,12 +349,12 @@ CREATE TABLE history (
   profile_id    TEXT NOT NULL,
   copilot_id    TEXT NOT NULL,
   source        TEXT NOT NULL,      -- voice | ui | api | discord | plugin
-  raw_text      TEXT,               -- transcription brute
+  raw_text      TEXT,               -- raw transcript
   normalized    TEXT,
   intent_id     TEXT,
   confidence    REAL,
   resolver      TEXT,               -- exact | fuzzy | llm | manual
-  binding       TEXT,               -- représentation lisible : "L", "ALT+T"
+  binding       TEXT,               -- human-readable form: "L", "ALT+T"
   result        TEXT NOT NULL,      -- success | failed | rejected | simulated | unknown
   error_code    TEXT,
   latency_stt_ms INTEGER, latency_intent_ms INTEGER,
@@ -389,16 +389,16 @@ CREATE TABLE embeddings_cache (
 CREATE TABLE schema_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 ```
 
-**Rétention** : `history` purgé au-delà de N jours (paramétrable, défaut 90) ;
-`unknown_phrases` conservé (c'est le carburant de l'amélioration du matcher).
+**Retention**: `history` is purged beyond N days (configurable, 90 by default);
+`unknown_phrases` is kept (it is the fuel for improving the matcher).
 
 ---
 
-## 6.6 Versionnement et migrations
+## 6.6 Versioning and migrations
 
-- Chaque fichier de configuration porte `"$schema": "optimus://schemas/<type>-<major>.json"`.
-- Au démarrage : validation par schéma → si version antérieure, **migration** + **backup
-  automatique** dans `backups\` avant écriture.
-- `schema_meta.db_version` pour SQLite, migrations SQL numérotées, idempotentes, testées.
-- Une configuration invalide **n'empêche jamais le démarrage** : l'élément fautif est désactivé,
-  signalé dans l'UI avec le message d'erreur du validateur, et l'app démarre en mode dégradé.
+- Every configuration file carries `"$schema": "optimus://schemas/<type>-<major>.json"`.
+- At startup: schema validation → if an earlier version is found, **migrate** and take an
+  **automatic backup** into `backups\` before writing.
+- `schema_meta.db_version` for SQLite, with numbered, idempotent, tested SQL migrations.
+- An invalid configuration **never prevents startup**: the offending item is disabled, reported in
+  the UI with the validator's error message, and the app starts in degraded mode.

@@ -1,82 +1,81 @@
-# PHASE 4 — Stack technique
+# PHASE 4 — Technical stack
 
-## 5.1 Choix du socle applicatif
+## 5.1 Choosing the application foundation
 
-| Critère (pondération) | .NET 8 + **WPF** | .NET 8 + WinUI 3 | Electron | Tauri (Rust) | Python + Qt |
+| Criterion (weight) | .NET 8 + **WPF** | .NET 8 + WinUI 3 | Electron | Tauri (Rust) | Python + Qt |
 |---|---|---|---|---|---|
-| RAM au repos (×3) | ~120 Mo ✅ | ~150 Mo ✅ | 300–450 Mo ❌ | ~70 Mo ✅✅ | ~180 Mo 🟡 |
-| Impact FPS à côté du jeu (×3) | négligeable ✅ | négligeable ✅ | GPU partagé ❌ | négligeable ✅ | négligeable ✅ |
-| Audio bas niveau (×3) | WASAPI/NAudio, mature ✅ | idem ✅ | via natif ❌ | cpal, correct 🟡 | sounddevice ✅ |
-| Injection clavier scancode (×3) | P/Invoke direct ✅ | idem ✅ | node-ffi fragile ❌ | winapi crate ✅ | pywin32/ctypes 🟡 |
-| Latence / GC (×2) | GC serveur maîtrisable ✅ | idem ✅ | ❌ | pas de GC ✅✅ | GIL ❌ |
-| Démarrage à froid (×2) | 1–2 s ✅ | 2–4 s 🟡 | 2–4 s 🟡 | < 1 s ✅✅ | 3–6 s ❌ |
-| Tray, hotkeys globaux, single-instance (×2) | trivial ✅ | contraintes packaging 🟡 | plugins ✅ | ok ✅ | ok ✅ |
-| Écosystème STT/TTS/IA (×2) | Whisper.net, ONNX Runtime ✅ | idem ✅ | via sidecars 🟡 | whisper-rs 🟡 | **le meilleur** ✅✅ |
-| Discord (×1) | Discord.Net ✅ | idem ✅ | discord.js ✅ | serenity ✅ | discord.py ✅ |
-| Vitesse de dev UI sci-fi (×2) | XAML + styles 🟡 | XAML 🟡 | HTML/CSS ✅✅ | HTML/CSS ✅✅ | QML 🟡 |
-| Packaging / MAJ auto (×2) | Velopack ✅ | MSIX contraignant 🟡 | electron-updater ✅ | intégré ✅ | PyInstaller ❌ |
-| Maturité / risque projet (×3) | très faible ✅ | moyen 🟡 | faible ✅ | moyen 🟡 | élevé ❌ |
-| **Verdict** | **RETENU** | écarté | écarté | 2ᵉ choix | écarté comme socle |
+| Idle RAM (×3) | ~120 MB ✅ | ~150 MB ✅ | 300–450 MB ❌ | ~70 MB ✅✅ | ~180 MB 🟡 |
+| FPS impact alongside the game (×3) | negligible ✅ | negligible ✅ | shared GPU ❌ | negligible ✅ | negligible ✅ |
+| Low-level audio (×3) | WASAPI/NAudio, mature ✅ | same ✅ | through native ❌ | cpal, adequate 🟡 | sounddevice ✅ |
+| Scancode keyboard injection (×3) | direct P/Invoke ✅ | same ✅ | node-ffi, fragile ❌ | winapi crate ✅ | pywin32/ctypes 🟡 |
+| Latency / GC (×2) | server GC, controllable ✅ | same ✅ | ❌ | no GC ✅✅ | GIL ❌ |
+| Cold start (×2) | 1–2 s ✅ | 2–4 s 🟡 | 2–4 s 🟡 | < 1 s ✅✅ | 3–6 s ❌ |
+| Tray, global hotkeys, single instance (×2) | trivial ✅ | packaging constraints 🟡 | plugins ✅ | ok ✅ | ok ✅ |
+| STT/TTS/AI ecosystem (×2) | Whisper.net, ONNX Runtime ✅ | same ✅ | through sidecars 🟡 | whisper-rs 🟡 | **the best** ✅✅ |
+| Discord (×1) | Discord.Net ✅ | same ✅ | discord.js ✅ | serenity ✅ | discord.py ✅ |
+| Speed of building a sci-fi UI (×2) | XAML + styles 🟡 | XAML 🟡 | HTML/CSS ✅✅ | HTML/CSS ✅✅ | QML 🟡 |
+| Packaging / auto-update (×2) | Velopack ✅ | MSIX, constraining 🟡 | electron-updater ✅ | built in ✅ | PyInstaller ❌ |
+| Maturity / project risk (×3) | very low ✅ | medium 🟡 | low ✅ | medium 🟡 | high ❌ |
+| **Verdict** | **CHOSEN** | rejected | rejected | 2nd choice | rejected as a foundation |
 
-### Décision : **C# / .NET 8 + WPF**
+### Decision: **C# / .NET 8 + WPF**
 
-**Justification en trois points :**
-1. **C'est la seule pile qui coche les trois contraintes dures simultanément** : audio temps réel
-   de qualité, P/Invoke natif sans friction pour `SendInput`/hooks/`RegisterHotKey`, et empreinte
-   compatible avec un jeu qui consomme déjà 16 Go de RAM et 100 % du GPU.
-2. **Le risque projet est le plus faible.** WPF est stable depuis 15 ans, la documentation Win32
-   en C# est pléthorique, et le pipeline IA existe désormais en .NET pur (Whisper.net, ONNX
-   Runtime) — ce qui **élimine la dépendance à Python**, principal facteur de complexité de
-   packaging pour ce type d'app.
-3. **Tauri était le concurrent sérieux** (empreinte inférieure, UI sci-fi bien plus rapide à
-   produire en CSS). Il est écarté sur la vélocité globale : deux langages (Rust + TS), un
-   écosystème IA/Discord/Windows moins fourni, et une courbe qui pénaliserait précisément les
-   parties les plus longues du projet (moteur de commandes, keybinds, plugins). **Si l'UI sci-fi
-   devient le goulot d'étranglement**, la porte de sortie existe sans rien casser : `Optimus.Core`
-   et `Optimus.Bridge` sont indépendants de l'UI, une coquille web pourrait consommer le Bridge.
+**Three reasons:**
+1. **It is the only stack that ticks all three hard constraints at once**: quality real-time
+   audio, frictionless native P/Invoke for `SendInput`, hooks and `RegisterHotKey`, and a
+   footprint compatible with a game that already eats 16 GB of RAM and 100% of the GPU.
+2. **Project risk is the lowest.** WPF has been stable for fifteen years, the Win32 documentation
+   in C# is abundant, and the AI pipeline now exists in pure .NET (Whisper.net, ONNX Runtime) —
+   which **removes the dependency on Python**, the main packaging complexity for this kind of app.
+3. **Tauri was the serious contender** (smaller footprint, a sci-fi UI far quicker to build in
+   CSS). It is rejected on overall velocity: two languages (Rust + TS), a thinner
+   AI/Discord/Windows ecosystem, and a learning curve that would penalise exactly the longest
+   parts of the project (command engine, keybinds, plugins). **If the sci-fi UI becomes the
+   bottleneck**, the exit exists without breaking anything: `Optimus.Core` and `Optimus.Bridge`
+   are independent of the UI, and a web shell could consume the Bridge.
 
-**Modernisation de l'UI WPF** : `CommunityToolkit.Mvvm` (MVVM sans boilerplate),
-`WPF-UI` ou `HandyControl` comme base de contrôles, thème custom « avionique » par-dessus,
-`LiveChartsCore`/`ScottPlot` pour les graphes d'analytics, `H.NotifyIcon.Wpf` pour le tray.
+**Modernising the WPF UI**: `CommunityToolkit.Mvvm` (MVVM without boilerplate), `WPF-UI` or
+`HandyControl` as a control base, a custom “avionics” theme on top, `LiveChartsCore`/`ScottPlot`
+for the analytics charts, `H.NotifyIcon.Wpf` for the tray.
 
 ---
 
-## 5.2 Décisions par composant (format ADR condensé)
+## 5.2 Decisions per component (condensed ADR format)
 
-| # | Composant | Décision | Justification | Alternative gardée en réserve |
+| # | Component | Decision | Rationale | Alternative kept in reserve |
 |---|---|---|---|---|
-| 1 | **Langage** | C# 12 / .NET 8 LTS, `nullable enable`, publication self-contained x64 | Zéro prérequis pour l'utilisateur, LTS jusqu'en 2026+ | .NET 9/10 quand LTS |
-| 2 | **Desktop** | WPF + MVVM | cf. §5.1 | Tauri via le Bridge |
-| 3 | **Audio in** | **NAudio** (WASAPI capture, événementiel, 16 kHz mono) | Référence .NET, faible latence, gestion du hot-plug | CSCore |
-| 4 | **VAD** | **Silero VAD** en ONNX via `Microsoft.ML.OnnxRuntime` | Bien meilleur que le seuil d'énergie en environnement bruyant (ventilos, jeu, TS/Discord) ; ~1 Mo, < 1 ms/trame | WebRTC VAD (fallback simple, sans modèle) |
-| 5 | **STT** | **Deux étages** (D28). ① **Grammaire contrainte** : `System.Speech` + moteur Windows, grammaire bâtie depuis les phrases du catalogue → les 59 commandes. ② **Whisper.net** modèle `base` → conversation et phrases libres | Mesuré (S0-2 et S0-6) : **16,7 ms contre 3 336 ms** avec le jeu lancé, et 21/21 commandes justes. Whisper `base` retenu plutôt que `small` (pas plus précis, 3,4× plus lent) ou `tiny` (WER 59 %, rate le mot d'éveil). L'étage ① n'exige ni GPU ni téléchargement | Vosk si le moteur Windows manque ; provider cloud via l'interface. Build GPU de whisper.cpp **écarté sur la machine cible** : 6 Go de VRAM contre 7,3 réclamés par le jeu |
-| 6 | **Wake word** | v0.1 : préfixe détecté dans la transcription (coût nul). V1 : **openWakeWord** en ONNX, modèle « optimus » entraîné | Sans dépendance commerciale ni compte | **Picovoice Porcupine** (meilleure qualité, mais licence/compte à valider avant intégration) |
-| 7 | **TTS** | v0.1 : **Windows OneCore** (`Windows.Media.SpeechSynthesis`) — voix FR natives, zéro installation. Option : **Piper** (ONNX, sidecar) pour une voix neurale locale | Deux niveaux : ça marche immédiatement, et ça devient beau si on le veut | ElevenLabs / Azure / OpenAI TTS via `ITextToSpeechProvider` (cloud, opt-in) |
-| 8 | **LLM** | **Optionnel**, désactivé par défaut. Interface `ILlmProvider` ; implémentations : Ollama (local), OpenAI-compatible (OpenAI, OpenRouter, LM Studio), Anthropic | §84 du brief : rien ne doit dépendre du cloud. Sortie **JSON contrainte** (grammar/JSON mode) + validation liste blanche | — |
-| 9 | **Matching flou** | **FuzzySharp** (ratio token-set) + Levenshtein pondéré ; V1 : embeddings ONNX (`multilingual-e5-small`) pour le rappel sémantique | Déterministe, testable, < 5 ms sur 1 000 phrases | — |
-| 10 | **Injection** | **`SendInput`** avec `KEYEVENTF_SCANCODE` (P/Invoke), souris incluse, **table de scancodes fixe en positions US** (jamais `MapVirtualKey`), `timeBeginPeriod(1)` pendant les séquences | **Mesuré au spike S0-1** : une injection virtual-key seule arrive dans le Raw Input avec `MakeCode = 0x00`, donc invisible pour un moteur lisant le scancode ; et `MapVirtualKey` renvoie des scancodes faux en AZERTY | Pilote **Interception** en plugin si un cas résiste (installe un driver → jamais dans le MVP) |
-| 11 | **Détection du jeu** | `Process.GetProcessesByName("StarCitizen")` + `GetForegroundWindow`/`GetWindowThreadProcessId` ; chemin via launcher/processus/scan/saisie manuelle | Sans chemin en dur (§59) | WMI `Win32_ProcessStartTrace` pour l'événementiel |
-| 12 | **Keybinds SC** | Parser XML dédié (`System.Xml.Linq`) : `defaultProfile.xml` (défauts, extrait de `Data.p4k` via **unp4k**) ⊕ `layout_*.xml` (deltas) | cf. `docs/02` | Préréglages embarqués par version si `Data.p4k` inaccessible |
-| 13 | **Base de données** | **SQLite** (`Microsoft.Data.Sqlite` + **Dapper**), mode WAL | Historique, analytics, cache d'embeddings, appairages. Léger, embarqué, pas d'ORM lourd | EF Core si les migrations deviennent complexes |
-| 14 | **Configuration** | **JSON canonique** (`System.Text.Json`, source-generated) + **schémas JSON** validés au chargement ; **YAML accepté** en import/export (`YamlDotNet`) | JSON = outillage, diff, validation stricte. YAML = confort d'édition manuelle. Les deux, pas l'un contre l'autre | — |
-| 15 | **API locale** | **ASP.NET Core Minimal API** hébergé dans le processus, **Kestrel lié à `127.0.0.1`**, token bearer, WebSocket pour le temps réel | Un seul processus, pas de service Windows, surface d'attaque minimale | gRPC si un client natif l'exige |
-| 16 | **Discord** | **Discord.Net** (slash commands, embeds), mode « bot local » par défaut (token utilisateur) | Isolation garantie sans serveur central (§82) | DSharpPlus ; mode relais en V2 |
-| 17 | **Logs** | **Serilog** : console + fichier rotatif quotidien (30 j) + sink UI en mémoire ; format structuré avec `trace_id` | Corrélation d'une phrase de bout en bout | OpenTelemetry en V2 |
-| 18 | **Plugins** | `AssemblyLoadContext` collectible + manifeste de permissions + SDK versionné (`Optimus.Sdk`) | Chargement/déchargement à chaud, dépendances isolées | Scripts C# (Roslyn) ou Lua pour les plugins « légers » en V2 |
-| 19 | **Tests** | xUnit + FluentAssertions + NetArchTest (règles de dépendance) + Verify (snapshots de séquences) + Testcontainers non requis | cf. `docs/13` | — |
-| 20 | **Packaging / MAJ** | **Velopack** (installeur + mises à jour delta signées) ; option Inno Setup pour un installeur classique | Simple, moderne, MAJ auto sans MSIX ni store | MSIX écarté (contraintes sur hooks globaux et chemins) |
-| 21 | **CI** | GitHub Actions : build, tests, lint de catalogue, publication self-contained, release Velopack | | |
+| 1 | **Language** | C# 12 / .NET 8 LTS, `nullable enable`, self-contained x64 publish | Nothing for the user to install first, LTS until 2026+ | .NET 9/10 once LTS |
+| 2 | **Desktop** | WPF + MVVM | see §5.1 | Tauri through the Bridge |
+| 3 | **Audio in** | **NAudio** (WASAPI capture, event-driven, 16 kHz mono) | The .NET reference, low latency, handles hot-plug | CSCore |
+| 4 | **VAD** | **Silero VAD** in ONNX through `Microsoft.ML.OnnxRuntime` | Far better than an energy threshold in a noisy environment (fans, game, TS/Discord); ~1 MB, < 1 ms per frame | WebRTC VAD (a simple fallback, no model) |
+| 5 | **STT** | **Two tiers** (D28). ① **Constrained grammar**: `System.Speech` + the Windows engine, with a grammar built from the catalogue's phrases → the 59 commands. ② **Whisper.net** with the `base` model → conversation and free speech | Measured (S0-2 and S0-6): **16.7 ms against 3,336 ms** with the game running, and 21/21 commands correct. `base` chosen over `small` (no more accurate, 3.4× slower) and over `tiny` (59% WER, misses the wake word). Tier ① needs neither a GPU nor a download | Vosk if the Windows engine is missing; a cloud provider through the interface. A GPU build of whisper.cpp is **rejected on the target machine**: 6 GB of VRAM against the 7.3 the game claims |
+| 6 | **Wake word** | v0.1: the prefix detected in the transcript (free). V1: **openWakeWord** in ONNX, with an “optimus” model trained | No commercial dependency and no account | **Picovoice Porcupine** (better quality, but licence and account to be cleared before integrating) |
+| 7 | **TTS** | v0.1: **Windows OneCore** (`Windows.Media.SpeechSynthesis`) — native voices, nothing to install. Option: **Piper** (ONNX, sidecar) for a local neural voice | Two levels: it works immediately, and it becomes beautiful if you want it to | ElevenLabs / Azure / OpenAI TTS through `ITextToSpeechProvider` (cloud, opt-in) |
+| 8 | **LLM** | **Optional**, off by default. An `ILlmProvider` interface; implementations: Ollama (local), OpenAI-compatible (OpenAI, OpenRouter, LM Studio), Anthropic | §84 of the brief: nothing may depend on the cloud. **Constrained JSON** output (grammar/JSON mode) + whitelist validation | — |
+| 9 | **Fuzzy matching** | **FuzzySharp** (token-set ratio) + weighted Levenshtein; V1: ONNX embeddings (`multilingual-e5-small`) for semantic recall | Deterministic, testable, under 5 ms over 1,000 phrases | — |
+| 10 | **Injection** | **`SendInput`** with `KEYEVENTF_SCANCODE` (P/Invoke), mouse included, a **fixed scancode table in US positions** (never `MapVirtualKey`), `timeBeginPeriod(1)` during sequences | **Measured in spike S0-1**: a virtual-key-only injection arrives in Raw Input with `MakeCode = 0x00`, and is therefore invisible to an engine reading the scancode; and `MapVirtualKey` returns wrong scancodes on AZERTY | The **Interception** driver as a plugin if a case resists (it installs a driver → never in the MVP) |
+| 11 | **Game detection** | `Process.GetProcessesByName("StarCitizen")` + `GetForegroundWindow`/`GetWindowThreadProcessId`; the path through the launcher, the process, a scan, or manual entry | No hard-coded path (§59) | WMI `Win32_ProcessStartTrace` for an event-driven version |
+| 12 | **SC keybinds** | A dedicated XML parser (`System.Xml.Linq`): `defaultProfile.xml` (defaults, extracted from `Data.p4k` with **unp4k**) ⊕ `layout_*.xml` (deltas) | see `docs/02` | Presets shipped per version if `Data.p4k` is unreachable |
+| 13 | **Database** | **SQLite** (`Microsoft.Data.Sqlite` + **Dapper**), WAL mode | History, analytics, embedding cache, pairings. Light, embedded, no heavy ORM | EF Core if the migrations become complex |
+| 14 | **Configuration** | **Canonical JSON** (`System.Text.Json`, source-generated) + **JSON schemas** validated at load; **YAML accepted** for import and export (`YamlDotNet`) | JSON for tooling, diffs and strict validation. YAML for comfortable hand editing. Both, not one against the other | — |
+| 15 | **Local API** | **ASP.NET Core Minimal API** hosted in-process, **Kestrel bound to `127.0.0.1`**, bearer token, WebSocket for real time | One process, no Windows service, minimal attack surface | gRPC if a native client demands it |
+| 16 | **Discord** | **Discord.Net** (slash commands, embeds), “local bot” mode by default (the user's own token) | Isolation guaranteed with no central server (§82) | DSharpPlus; relay mode in V2 |
+| 17 | **Logs** | **Serilog**: console + a daily rotating file (30 days) + an in-memory UI sink; structured format with `trace_id` | End-to-end correlation of one sentence | OpenTelemetry in V2 |
+| 18 | **Plugins** | A collectible `AssemblyLoadContext` + a permissions manifest + a versioned SDK (`Optimus.Sdk`) | Hot load and unload, isolated dependencies | C# scripts (Roslyn) or Lua for “light” plugins in V2 |
+| 19 | **Tests** | xUnit + FluentAssertions + NetArchTest (dependency rules) + Verify (sequence snapshots); Testcontainers not required | see `docs/13` | — |
+| 20 | **Packaging / updates** | **Velopack** (installer + signed delta updates); Inno Setup as an option for a classic installer | Simple, modern, auto-update without MSIX or a store | MSIX rejected (constraints on global hooks and paths) |
+| 21 | **CI** | GitHub Actions: build, tests, catalogue lint, self-contained publish, Velopack release | | |
 
 ---
 
-## 5.3 Points de vigilance techniques sur ces choix
+## 5.3 Technical watch points on these choices
 
-| Sujet | Risque | Mitigation |
+| Subject | Risk | Mitigation |
 |---|---|---|
-| **Anti-triche** | Star Citizen embarque une protection anti-triche. Les entrées synthétiques *peuvent* être filtrées ou considérées comme suspectes. VoiceAttack fonctionne aujourd'hui, ce qui est un indice fort — **pas une garantie**. | **À valider en tout premier, avant toute autre ligne de code** (spike n°1, cf. `docs/13`). Plan B : pilote Interception ; plan C : périphérique HID émulé. Ne jamais implémenter d'automatisation continue (aim, farming) : 1 phrase = 1 action délibérée. |
-| **Élévation** | Si SC tourne en administrateur, une app non élevée ne peut pas lui envoyer d'entrées (UIPI). | Détecter le cas et le dire clairement ; proposer un mode élevé opt-in. |
-| **Plein écran exclusif** | Les hotkeys globaux et l'overlay se comportent différemment. | Recommander « plein écran fenêtré » ; tester les deux. |
-| **Whisper `small` sur CPU faible** | Transcription > 1 s → latence hors cible. | Sélection auto du modèle selon le CPU/GPU au premier lancement + benchmark intégré ; `tiny`/`base` en repli. |
-| **Micro capté par le jeu et Discord** | Conflits de périphérique. | WASAPI en mode partagé (jamais exclusif) ; sélection explicite du périphérique. |
-| **Voix TTS entendue par le micro** (boucle) | Auto-déclenchement. | Ducking + suppression de la fenêtre TTS dans le VAD + barge-in maîtrisé. |
-| **Modèles volumineux dans l'installeur** | Installeur de plusieurs centaines de Mo. | Installeur léger + **téléchargement du modèle au premier lancement**, avec choix de la taille. |
+| **Anti-cheat** | Star Citizen ships anti-cheat protection. Synthetic input *may* be filtered or treated as suspicious. VoiceAttack works today, which is a strong hint — **not a guarantee**. | **To be settled first, before any other line of code** (spike no. 1, see `docs/13`). Plan B: the Interception driver; plan C: an emulated HID device. Never implement continuous automation (aiming, farming): one sentence means one deliberate action. |
+| **Elevation** | If SC runs as administrator, a non-elevated app cannot send it input (UIPI). | Detect the case and say so plainly; offer an opt-in elevated mode. |
+| **Exclusive full screen** | Global hotkeys and the overlay behave differently. | Recommend borderless full screen; test both. |
+| **Whisper `small` on a weak CPU** | Transcription over 1 s → latency outside target. | Automatic model selection from CPU/GPU at first launch + a built-in benchmark; `tiny`/`base` as fallbacks. |
+| **The microphone captured by the game and by Discord** | Device conflicts. | WASAPI in shared mode (never exclusive); explicit device selection. |
+| **The TTS voice heard by the microphone** (a loop) | Self-triggering. | Ducking + suppressing the TTS window in the VAD + controlled barge-in. |
+| **Large models in the installer** | An installer of several hundred MB. | A light installer + **downloading the model at first launch**, with a choice of size. |
