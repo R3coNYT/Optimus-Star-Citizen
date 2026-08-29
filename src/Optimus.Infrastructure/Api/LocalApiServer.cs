@@ -214,9 +214,16 @@ public sealed class LocalApiServer : IAsyncDisposable
             await RefuseAsync(context, HttpStatusCode.BadRequest, refusal.Message)
                 .ConfigureAwait(false);
         }
+        catch (Speech.MissingRecognizerException missing)
+        {
+            // 503 et non 500 : le service est indisponible, le client n'a rien fait de mal.
+            // Le message porte deja la langue attendue et la marche a suivre.
+            await RefuseAsync(context, HttpStatusCode.ServiceUnavailable, missing.Message)
+                .ConfigureAwait(false);
+        }
         catch (JsonException malformed)
         {
-            await RefuseAsync(context, HttpStatusCode.BadRequest, $"JSON illisible : {malformed.Message}")
+            await RefuseAsync(context, HttpStatusCode.BadRequest, $"Unreadable JSON: {malformed.Message}")
                 .ConfigureAwait(false);
         }
         catch (Exception exception)
@@ -269,6 +276,10 @@ public sealed class LocalApiServer : IAsyncDisposable
             case ("POST", "/api/system/simulation"):
                 await AnswerAsync(context, token, ApiScope.Write, SimulationAsync).ConfigureAwait(false);
                 return;
+
+            case ("POST", "/api/system/listening"):
+                await AnswerAsync(context, token, ApiScope.Write, ListeningAsync).ConfigureAwait(false);
+                return;
         }
 
         if (method == "POST" && path.StartsWith("/api/commands/", StringComparison.Ordinal)
@@ -282,7 +293,7 @@ public sealed class LocalApiServer : IAsyncDisposable
             return;
         }
 
-        await RefuseAsync(context, HttpStatusCode.NotFound, $"Aucune route « {method} {path} ».")
+        await RefuseAsync(context, HttpStatusCode.NotFound, $"No route “{method} {path}”.")
             .ConfigureAwait(false);
     }
 
@@ -414,7 +425,7 @@ public sealed class LocalApiServer : IAsyncDisposable
     {
         if (!_runtime.Catalog.TryGet(id, out CommandDefinition? command) || command is null)
         {
-            throw new ApiRequestException($"Aucune commande « {id} » au catalogue.");
+            throw new ApiRequestException($"No command “{id}” in the catalogue.");
         }
 
         CommandPolarity polarity = Text(body, "polarity", required: false).ToLowerInvariant() switch
@@ -465,6 +476,44 @@ public sealed class LocalApiServer : IAsyncDisposable
         _runtime.SetSimulation(Flag(body, "simulation"));
 
         return Task.FromResult<object>(new { simulation = _runtime.SimulationMode });
+    }
+
+    /// <summary>
+    /// Ouvre ou ferme le micro.
+    ///
+    /// <c>{ "listening": true }</c> impose l'état ; un corps qui ne dit rien <b>bascule</b>.
+    /// Les deux formes existent pour une raison matérielle : une touche de Stream Deck est un
+    /// bouton unique, et sans plugin elle ne peut pas lire l'état courant pour décider quoi
+    /// envoyer. La bascule lui suffit, l'imposition sert aux clients qui savent.
+    ///
+    /// C'est la seule route qui bascule ; <c>killswitch</c> et <c>simulation</c> gardent leur
+    /// sémantique d'affectation. La différence est assumée : couper les commandes par erreur
+    /// est sans gravité, les rouvrir par erreur ne l'est pas.
+    ///
+    /// L'état de retour est relu du moteur, jamais deviné : démarrer l'écoute peut échouer.
+    /// </summary>
+    private async Task<object> ListeningAsync(JsonElement body)
+    {
+        bool wanted = Flag(body, "listening", fallback: !_runtime.IsListening);
+
+        if (wanted == _runtime.IsListening)
+        {
+            return new { listening = _runtime.IsListening };
+        }
+
+        if (wanted)
+        {
+            await _runtime.StartListeningAsync().ConfigureAwait(false);
+        }
+        else
+        {
+            await _runtime.StopListeningAsync().ConfigureAwait(false);
+        }
+
+        // StartListeningAsync et StopListeningAsync emettent tous deux StateChanged : la trame
+        // « state » part donc d'elle-meme sur /ws/events, et le voyant du bouton suit sans que
+        // cette route ait rien a diffuser.
+        return new { listening = _runtime.IsListening };
     }
 
     // ------------------------------------------------------------------- le flux d'evenements
@@ -696,7 +745,7 @@ public sealed class LocalApiServer : IAsyncDisposable
         }
 
         return required
-            ? throw new ApiRequestException($"Le champ « {property} » est attendu.")
+            ? throw new ApiRequestException($"The field “{property}” is required.")
             : string.Empty;
     }
 
@@ -704,6 +753,29 @@ public sealed class LocalApiServer : IAsyncDisposable
         body.ValueKind == JsonValueKind.Object
         && body.TryGetProperty(property, out JsonElement value)
         && value.ValueKind == JsonValueKind.True;
+
+    /// <summary>
+    /// Le même drapeau, mais qui distingue « absent » de « faux ».
+    ///
+    /// <see cref="Flag(JsonElement, string)"/> rend <c>false</c> dans les deux cas, ce qui
+    /// convient pour imposer un état mais interdit toute bascule : un corps vide vaudrait
+    /// « éteins ».
+    /// </summary>
+    internal static bool Flag(JsonElement body, string property, bool fallback)
+    {
+        if (body.ValueKind != JsonValueKind.Object
+            || !body.TryGetProperty(property, out JsonElement value))
+        {
+            return fallback;
+        }
+
+        return value.ValueKind switch
+        {
+            JsonValueKind.True => true,
+            JsonValueKind.False => false,
+            _ => fallback,
+        };
+    }
 
     private static Task WriteAsync(HttpListenerContext context, HttpStatusCode status, object payload)
     {

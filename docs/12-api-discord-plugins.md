@@ -19,6 +19,7 @@ The table below describes the target. What exists today is its executable founda
 | `POST` | `/api/utterance` | `execute` — the same path as the voice |
 | `POST` | `/api/say` | `write` |
 | `POST` | `/api/system/killswitch` · `/api/system/simulation` | `write` |
+| `POST` | `/api/system/listening` | `write` — opens or closes the microphone |
 | `WS` | `/ws/events` | `read` — `activity` and `state` frames |
 
 The rest of the target table — CRUD for copilots, commands and bindings, history, statistics —
@@ -32,6 +33,16 @@ but refuses `http://+:port/` — listening on every interface — to anyone who 
 administrator. Since Optimus installs per user, without UAC (D58), it is therefore *impossible*
 for it to expose itself to the network, even through a programming mistake. The §81-83 promise is
 carried by the operating system, not only by a line somebody might one day change.
+
+**One route toggles, the others do not.** `/api/system/listening` accepts
+`{"listening": true}` to impose a state, and **toggles** when the body says nothing. The reason is
+physical: a Stream Deck key is a single button, and without a plugin it cannot read the current
+state to decide what to send. `killswitch` and `simulation` keep their set-only semantics — cutting
+commands by mistake is harmless, reopening them by mistake is not.
+
+Starting the microphone can fail, on a machine without the speech feature for the copilot's
+language. That answers **503**, not 500: the service is unavailable, the client did nothing wrong,
+and the message names the language and what to install.
 
 **An execution takes as long as the speech takes.** `/execute` and `/utterance` only return once
 the copilot's reply has been spoken — measured at around 4 s for a talkative refusal. This is
@@ -58,6 +69,7 @@ to wait listens to `/ws/events` rather than to the HTTP response.
 | GET | `/api/analytics/*` | statistics | token · read |
 | POST | `/api/say` | make the copilot speak | token · write |
 | POST | `/api/system/killswitch` · `/api/system/simulation` | safety | token · **write** |
+| POST | `/api/system/listening` | open / close the microphone | token · **write** |
 | WS | `/ws/events` | real-time stream (state, commands, traces) | token |
 
 ### Security model

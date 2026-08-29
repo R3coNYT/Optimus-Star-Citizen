@@ -34,6 +34,55 @@ public sealed class LocalApiTests : IDisposable
 
     private string Tokens => Path.Combine(_root, "tokens.dat");
 
+    // --------------------------------------------------------------- ouvrir et fermer le micro
+
+    /// <summary>
+    /// La bascule du micro distingue « absent » de « faux ».
+    ///
+    /// C'est toute la route <c>/api/system/listening</c> : un corps qui ne dit rien bascule,
+    /// un corps qui dit impose. Sans cette distinction, une touche de Stream Deck qui envoie
+    /// un corps vide vaudrait « éteins » — et le micro ne se rouvrirait jamais depuis le
+    /// boîtier.
+    ///
+    /// Le reste de la route n'a rien à éprouver ici : elle appelle StartListeningAsync ou
+    /// StopListeningAsync, qui demandent un micro.
+    /// </summary>
+    [Theory]
+    [InlineData("{\"listening\":true}", false, true)]
+    [InlineData("{\"listening\":true}", true, true)]
+    [InlineData("{\"listening\":false}", true, false)]
+    [InlineData("{\"listening\":false}", false, false)]
+    [InlineData("{}", false, false)]
+    [InlineData("{}", true, true)]
+    [InlineData("{\"autre\":1}", true, true)]
+    public void Le_drapeau_distingue_absent_de_faux(string body, bool fallback, bool expected)
+    {
+        using System.Text.Json.JsonDocument document = System.Text.Json.JsonDocument.Parse(body);
+
+        Assert.Equal(
+            expected,
+            LocalApiServer.Flag(document.RootElement, "listening", fallback));
+    }
+
+    /// <summary>
+    /// Un corps qui n'est pas un objet ne décide de rien.
+    ///
+    /// Le cas arrive pour de vrai : <c>curl -d ""</c> envoie un corps vide, que le serveur
+    /// présente comme <c>Undefined</c>. Le prendre pour un « faux » couperait le micro à
+    /// chaque appui.
+    /// </summary>
+    [Theory]
+    [InlineData("[]")]
+    [InlineData("\"texte\"")]
+    [InlineData("null")]
+    public void Un_corps_qui_n_est_pas_un_objet_laisse_le_repli_decider(string body)
+    {
+        using System.Text.Json.JsonDocument document = System.Text.Json.JsonDocument.Parse(body);
+
+        Assert.True(LocalApiServer.Flag(document.RootElement, "listening", fallback: true));
+        Assert.False(LocalApiServer.Flag(document.RootElement, "listening", fallback: false));
+    }
+
     // ------------------------------------------------------------------- la boucle locale
 
     /// <summary>
