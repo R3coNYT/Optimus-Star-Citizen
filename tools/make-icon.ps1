@@ -159,5 +159,47 @@ foreach ($size in @(55, 83, 110, 138)) {
 
 "assistant : 55, 83, 110 et 138 pixels"
 
+# ---------------------------------------------------------------- la touche du Stream Deck
+#
+# Le Stream Deck ne va pas chercher l'icone d'un executable : il pose son propre
+# pictogramme et attend qu'on lui glisse une image. Il lui faut donc un PNG.
+#
+# Deux declinaisons, parce qu'une touche de Stream Deck fait 72 pixels de cote et
+# que le cadran complet s'y reduit en bouillie. La version « cadran » recadre sur
+# l'octogone et le vaisseau, en abandonnant la couronne graduee : a cette taille,
+# ce qu'on perd ne se voyait deja plus, et ce qui reste devient lisible.
+#
+# Les deux sont livrees en 144 et 288 : le Stream Deck reduit tres bien, il
+# agrandit tres mal.
+$deck = Join-Path $outputDir 'streamdeck'
+if (-not (Test-Path $deck)) { New-Item -ItemType Directory -Path $deck | Out-Null }
+
+$side = $logo.Width
+$keep = [int]($side * 0.62)
+$edge = [int](($side - $keep) / 2)
+
+foreach ($size in @(144, 288)) {
+    $whole = Resize $logo $size
+    $whole.Save((Join-Path $deck "optimus-$size.png"), [Drawing.Imaging.ImageFormat]::Png)
+    $whole.Dispose()
+
+    $close = New-Object Drawing.Bitmap $size, $size, ([Drawing.Imaging.PixelFormat]::Format32bppArgb)
+    $g = [Drawing.Graphics]::FromImage($close)
+    $g.CompositingMode    = [Drawing.Drawing2D.CompositingMode]::SourceCopy
+    $g.CompositingQuality = [Drawing.Drawing2D.CompositingQuality]::HighQuality
+    $g.InterpolationMode  = [Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+    $g.SmoothingMode      = [Drawing.Drawing2D.SmoothingMode]::HighQuality
+    $g.PixelOffsetMode    = [Drawing.Drawing2D.PixelOffsetMode]::HighQuality
+    $g.DrawImage($logo,
+                 (New-Object Drawing.Rectangle 0, 0, $size, $size),
+                 (New-Object Drawing.Rectangle $edge, $edge, $keep, $keep),
+                 [Drawing.GraphicsUnit]::Pixel)
+    $g.Dispose()
+    $close.Save((Join-Path $deck "optimus-cadran-$size.png"), [Drawing.Imaging.ImageFormat]::Png)
+    $close.Dispose()
+}
+
+"stream deck : 144 et 288, entier et recadre"
+
 foreach ($frame in $frames) { $frame.Dispose() }
 $logo.Dispose()
