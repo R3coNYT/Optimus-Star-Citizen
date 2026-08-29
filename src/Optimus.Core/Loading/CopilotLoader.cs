@@ -49,8 +49,23 @@ public static class CopilotLoader
 
         // « responses_ref » reste un passe-droit pour un copilote qui tiendrait à un fichier
         // nommé autrement ; sans lui, le fichier se déduit de la langue, avec repli.
+        //
+        // Mais « responses.fr.json » n'est PAS un autre nom : c'est le nom par défaut, et les
+        // fiches livrées le portaient en toutes lettres jusqu'au 2026-08-28. L'installateur
+        // préservant la fiche du pilote — elle contient sa voix et son mot d'éveil — ce champ
+        // survit à la mise à jour et épingle le français à vie.
+        //
+        // Mesuré le 2026-08-29 sur le poste de jeu : catalogue anglais, répliques françaises.
+        // « Optimus, open the doors » reconnu à 0,66, exécuté, et la réponse « Sas ouverts ».
+        //
+        // Un champ retiré d'un fichier livré ne disparaît pas des machines : c'est la leçon de
+        // D35, D43, D46, D70 et D77 vue depuis l'autre bout. Le code doit donc savoir lire ce
+        // qu'il n'écrit plus.
+        string? reference = GetString(root, "responses_ref");
+        bool legacyPin = reference is not null && IsDefaultResponseName(reference);
+
         string responsePath =
-            GetString(root, "responses_ref") is string reference
+            reference is not null && !legacyPin
                 ? Path.Combine(directory, reference)
                 : Localization.Language.Localized(directory, "responses", ".json", spoken)
                   ?? Path.Combine(directory, "responses.fr.json");
@@ -97,6 +112,33 @@ public static class CopilotLoader
             GetString(root, "accent_color"));
 
         return new LoadResult<Copilot>(copilot, issues);
+    }
+
+    /// <summary>
+    /// Ce nom est-il celui que le chargeur aurait choisi tout seul ?
+    ///
+    /// « responses.json », « responses.fr.json », « responses.en.json » : dans ces trois cas
+    /// « responses_ref » n'exprime aucune volonté, il répète la règle par défaut d'une époque
+    /// où il n'y avait qu'une langue. Un copilote qui tient vraiment à « les-repliques.json »
+    /// garde, lui, son passe-droit.
+    /// </summary>
+    private static bool IsDefaultResponseName(string reference)
+    {
+        const string prefix = "responses.";
+        const string suffix = ".json";
+
+        if (!reference.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+            || !reference.EndsWith(suffix, StringComparison.OrdinalIgnoreCase)
+            || reference.Length < prefix.Length + suffix.Length)
+        {
+            return string.Equals(reference, "responses.json", StringComparison.OrdinalIgnoreCase);
+        }
+
+        string middle = reference[prefix.Length..^suffix.Length];
+
+        return middle.Length == 2
+            && char.IsAsciiLetter(middle[0])
+            && char.IsAsciiLetter(middle[1]);
     }
 
     private static VoiceConfig ReadVoice(JsonElement root)
