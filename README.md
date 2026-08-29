@@ -115,6 +115,30 @@ Nothing is signed from a development machine: only the [build
 pipeline](.github/workflows/release.yml), triggered by a tag on this repository, can submit an
 artefact for signing.
 
+Free code signing is provided by [SignPath.io](https://signpath.io/), with a certificate from the
+[SignPath Foundation](https://signpath.org/). No maintainer of this project ever holds the private
+key.
+
+> **Status: the application to the foundation is pending.** The binaries published so far are
+> **not** signed, and Windows will say so. Verify the SHA-256 published beside each release.
+
+## Privacy policy
+
+Optimus collects nothing, sends no telemetry, and has no account. **This program will not transfer
+any information to other networked systems unless specifically requested by the user or the person
+installing or operating it.**
+
+Concretely, three things reach the network, and only three:
+
+| What | When | Where |
+|---|---|---|
+| Neural voice and free-speech models | if you tick them in the installer | `huggingface.co` |
+| The text of an utterance | only if *you* enable the optional LLM and supply your own key | the provider *you* choose |
+| Nothing else | — | — |
+
+Speech recognition, intent resolution and key injection all run on your machine. The LLM is off by
+default; with it off, Optimus never opens a connection while running.
+
 ## Licence
 
 [GNU General Public License v3.0](LICENSE). You may use, study, modify and redistribute Optimus;
