@@ -265,7 +265,7 @@
   <sys:String x:Key="Settings.WindowsVoice">Voix Windows : quasi instantanées (7 à 15 ms), toujours disponibles, mais au timbre synthétique. C'est le choix sûr.</sys:String>
   <sys:String x:Key="Settings.CopilotMine">« {0} » vous appartient. Il répond à « {1} », et vous pouvez le supprimer — s'il masquait un copilote livré, l'original revient.</sys:String>
   <sys:String x:Key="Settings.CopilotShipped">« {0} » est livré avec Optimus et ne peut pas être supprimé. Il répond à « {1} ». Dupliquez-le pour en faire un à vous : voix, caractère et répliques suivront, et vous n'aurez qu'à les infléchir.</sys:String>
-  <sys:String x:Key="Settings.TokenPending">Le jeton sera émis à l'activation.</sys:String>
+  <sys:String x:Key="Settings.TokenPending">Activez l'interface : le jeton apparaît ici, prêt à copier.</sys:String>
   <sys:String x:Key="Settings.ApiListening">À l'écoute sur {0}</sys:String>
   <sys:String x:Key="Settings.ApiOffPendingSave">Éteinte. Enregistrez pour la démarrer.</sys:String>
   <sys:String x:Key="Settings.ApiOff">Éteinte.</sys:String>

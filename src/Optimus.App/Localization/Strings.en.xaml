@@ -269,7 +269,7 @@
   <sys:String x:Key="Settings.WindowsVoice">Windows voices: near-instant (7 to 15 ms), always available, but synthetic in timbre. This is the safe choice.</sys:String>
   <sys:String x:Key="Settings.CopilotMine">“{0}” is yours. It answers to “{1}”, and you can delete it — if it was shadowing a shipped copilot, the original comes back.</sys:String>
   <sys:String x:Key="Settings.CopilotShipped">“{0}” ships with Optimus and cannot be deleted. It answers to “{1}”. Duplicate it to make one of your own: voice, character and replies follow, and you only have to bend them.</sys:String>
-  <sys:String x:Key="Settings.TokenPending">The token will be issued when you switch this on.</sys:String>
+  <sys:String x:Key="Settings.TokenPending">Switch the interface on: the token appears here, ready to copy.</sys:String>
   <sys:String x:Key="Settings.ApiListening">Listening on {0}</sys:String>
   <sys:String x:Key="Settings.ApiOffPendingSave">Off. Save to start it.</sys:String>
   <sys:String x:Key="Settings.ApiOff">Off.</sys:String>

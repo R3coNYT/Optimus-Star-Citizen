@@ -547,7 +547,16 @@ public sealed class SettingsViewModel : ObservableObject
         {
             if (Track(ref _apiEnabled, value))
             {
+                // Le jeton tout de suite, et non a l'enregistrement : c'est ici que le pilote
+                // le cherche, et il a souvent besoin de le coller ailleurs avant de revenir
+                // valider. Ensure n'ecrit que s'il n'y en a aucun.
+                if (value)
+                {
+                    _runtime.EnsureApiTokens();
+                }
+
                 RegenerateTokenCommand.RaiseCanExecuteChanged();
+                Raise(nameof(ApiTokenSecret));
                 Raise(nameof(ApiExplanation));
             }
         }

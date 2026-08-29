@@ -34,6 +34,61 @@ public sealed class LocalApiTests : IDisposable
 
     private string Tokens => Path.Combine(_root, "tokens.dat");
 
+    // --------------------------------------------------------------- emettre le jeton
+
+    /// <summary>
+    /// Cocher la case doit suffire à faire apparaître le jeton.
+    ///
+    /// Signalé le 2026-08-29 : le pilote cochait « ouvrir l’interface locale » et le champ
+    /// affichait toujours « le jeton sera émis à l’activation », ce qu’il venait de faire.
+    /// L’émission n’avait lieu qu’à l’enregistrement — alors que c’est <b>avant</b>
+    /// d’enregistrer qu’on va coller le secret dans son Stream Deck.
+    ///
+    /// Le commentaire d’<c>Ensure</c> promettait déjà ce comportement : « le pilote active la
+    /// case, le jeton est là, il le copie ». La promesse n’était simplement pas tenue.
+    /// </summary>
+    [Fact]
+    public void Le_premier_appel_emet_un_jeton_utilisable()
+    {
+        IReadOnlyList<ApiToken> tokens = ApiTokenStore.Ensure(Tokens);
+
+        Assert.Single(tokens);
+        Assert.NotEmpty(tokens[0].Secret);
+        Assert.True(tokens[0].Matches(tokens[0].Secret));
+        Assert.True(File.Exists(Tokens));
+    }
+
+    /// <summary>
+    /// Et les suivants ne le remplacent pas.
+    ///
+    /// Ce serait le pire des défauts : un pilote qui décoche puis recoche la case verrait son
+    /// Stream Deck refusé, sans que rien n’explique pourquoi le secret d’hier ne vaut plus.
+    /// </summary>
+    [Fact]
+    public void Les_appels_suivants_rendent_le_meme_jeton()
+    {
+        string first = ApiTokenStore.Ensure(Tokens)[0].Secret;
+
+        Assert.Equal(first, ApiTokenStore.Ensure(Tokens)[0].Secret);
+        Assert.Equal(first, ApiTokenStore.Ensure(Tokens)[0].Secret);
+    }
+
+    /// <summary>
+    /// Le secret n’est jamais en clair sur le disque.
+    ///
+    /// Le fichier est chiffré au compte Windows courant. Cet essai n’éprouve pas DPAPI — c’est
+    /// le système — mais qu’on l’ait bien employé.
+    /// </summary>
+    [Fact]
+    public void Le_secret_ne_traine_pas_en_clair()
+    {
+        string secret = ApiTokenStore.Ensure(Tokens)[0].Secret;
+
+        string raw = System.Text.Encoding.UTF8.GetString(File.ReadAllBytes(Tokens));
+
+        Assert.DoesNotContain(secret, raw, StringComparison.Ordinal);
+    }
+
     // ------------------------------------------------------------- le jeton d un navigateur
 
     /// <summary>

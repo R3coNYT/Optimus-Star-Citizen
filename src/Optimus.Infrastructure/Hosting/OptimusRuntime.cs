@@ -1159,6 +1159,28 @@ public sealed class OptimusRuntime : IAsyncDisposable
     /// qu'au moment où l'API sert pour la première fois : un pilote qui n'active jamais
     /// l'interface n'a aucun secret qui traîne sur son disque.
     /// </summary>
+    /// <summary>
+    /// Émet le jeton du pilote s'il n'en existe aucun, et le rend.
+    ///
+    /// Séparé de <see cref="ApplyApiSettingsAsync"/> parce que les deux gestes ne se
+    /// produisent pas au même moment. Le pilote coche la case, veut copier le jeton, et
+    /// n'enregistre qu'ensuite — parfois bien plus tard, le temps de coller le secret dans
+    /// son Stream Deck. Signalé le 2026-08-29 : la case cochée, le champ affichait encore
+    /// « le jeton sera émis quand vous activerez ceci », ce que le pilote venait de faire.
+    ///
+    /// Un jeton pose sur le disque avant que l'API n'écoute ne vaut rien : il n'ouvre que ce
+    /// qui est déjà ouvert, et rien n'écoute tant que le réglage n'est pas enregistré.
+    /// </summary>
+    public IReadOnlyList<ApiToken> EnsureApiTokens()
+    {
+        if (ApiTokens.Count == 0)
+        {
+            ApiTokens = ApiTokenStore.Ensure();
+        }
+
+        return ApiTokens;
+    }
+
     public async Task ApplyApiSettingsAsync()
     {
         ApiSettings settings = User.Api ?? ApiSettings.Disabled;
