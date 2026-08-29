@@ -188,6 +188,7 @@
   <sys:String x:Key="App.COMBAT">COMBAT</sys:String>
 
   <!-- ============ Composed in C# ============ -->
+  <sys:String x:Key="Settings.VerbosityEffect">{0} words at most per reply</sys:String>
   <sys:String x:Key="Commands.CatalogSummary">{0} commands · {1} phrasings</sys:String>
   <sys:String x:Key="Commands.SpokenOnly">spoken reply only</sys:String>
   <sys:String x:Key="Commands.NotInjectable">not injectable</sys:String>

@@ -630,7 +630,9 @@ public sealed class SettingsViewModel : ObservableObject
 
     /// <summary>Budget de mots dérivé de la verbosité, montré parce que c'est l'effet le plus visible.</summary>
     public string VerbosityEffect =>
-        $"{new PersonalityTraits(Verbosity: Verbosity).MaxWords} mots au maximum par réplique";
+        Localization.Localizer.T(
+            "Settings.VerbosityEffect",
+            new PersonalityTraits(Verbosity: Verbosity).MaxWords);
 
     /// <summary>
     /// Trois répliques telles que ces curseurs les produiraient, tirées du vrai catalogue.

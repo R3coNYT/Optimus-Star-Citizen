@@ -55,7 +55,19 @@ public static class CopilotLoader
                 : Localization.Language.Localized(directory, "responses", ".json", spoken)
                   ?? Path.Combine(directory, "responses.fr.json");
 
-        ResponseSet responses = ReadResponses(responsePath, issues);
+        ResponseSet responses = ReadResponses(responsePath, issues, out Lexicon? spokenLexicon);
+
+        // Le lexique des REPLIQUES l'emporte sur celui du caractere, quand il existe.
+        //
+        // Les formes d'adresse sont de la langue — « commandant » n'a pas d'équivalent dans un
+        // fichier de curseurs — tandis que l'humour et la formalité n'en sont pas. Les laisser
+        // ensemble aurait fait dire à un copilote anglais « At your orders, commandant », ou
+        // imposé de dupliquer les huit curseurs dans un personality.en.json que le pilote
+        // aurait ensuite édité à moitié.
+        if (spokenLexicon is not null)
+        {
+            personality = personality with { Lexicon = spokenLexicon };
+        }
 
         Copilot copilot = new(
             id, name, spoken, wakeWord, voice, personality, responses,
@@ -113,36 +125,47 @@ public static class CopilotLoader
             };
         }
 
-        Lexicon lexicon = Lexicon.Empty;
-
-        if (root.TryGetProperty("lexicon", out JsonElement lexiconElement) &&
-            lexiconElement.ValueKind == JsonValueKind.Object)
-        {
-            Dictionary<string, string> replacements = new(StringComparer.OrdinalIgnoreCase);
-
-            if (lexiconElement.TryGetProperty("replacements", out JsonElement replacementsElement) &&
-                replacementsElement.ValueKind == JsonValueKind.Object)
-            {
-                foreach (JsonProperty property in replacementsElement.EnumerateObject())
-                {
-                    if (property.Value.ValueKind == JsonValueKind.String)
-                    {
-                        replacements[property.Name] = property.Value.GetString() ?? string.Empty;
-                    }
-                }
-            }
-
-            lexicon = new Lexicon(
-                GetStringArray(lexiconElement, "address_user"),
-                GetStringArray(lexiconElement, "forbidden_phrases"),
-                replacements);
-        }
+        Lexicon lexicon = ReadLexicon(root) ?? Lexicon.Empty;
 
         return new Domain.Personality.Personality(
             traits,
             lexicon,
             style == SpeechStyle.None ? SpeechStyle.Immersive : style,
             ReadRules(root, path, issues));
+    }
+
+    /// <summary>
+    /// Lit un lexique, d'où qu'il vienne, ou <c>null</c> s'il n'y en a pas.
+    ///
+    /// Extraite parce qu'elle sert deux fois : le caractère en porte un, et les répliques
+    /// peuvent en porter un autre. Voir <see cref="Load"/> pour savoir lequel l'emporte.
+    /// </summary>
+    private static Lexicon? ReadLexicon(JsonElement root)
+    {
+        if (!root.TryGetProperty("lexicon", out JsonElement lexiconElement) ||
+            lexiconElement.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        Dictionary<string, string> replacements = new(StringComparer.OrdinalIgnoreCase);
+
+        if (lexiconElement.TryGetProperty("replacements", out JsonElement replacementsElement) &&
+            replacementsElement.ValueKind == JsonValueKind.Object)
+        {
+            foreach (JsonProperty property in replacementsElement.EnumerateObject())
+            {
+                if (property.Value.ValueKind == JsonValueKind.String)
+                {
+                    replacements[property.Name] = property.Value.GetString() ?? string.Empty;
+                }
+            }
+        }
+
+        return new Lexicon(
+            GetStringArray(lexiconElement, "address_user"),
+            GetStringArray(lexiconElement, "forbidden_phrases"),
+            replacements);
     }
 
     /// <summary>
@@ -214,8 +237,11 @@ public static class CopilotLoader
         }
     }
 
-    private static ResponseSet ReadResponses(string path, List<LoadIssue> issues)
+    private static ResponseSet ReadResponses(
+        string path, List<LoadIssue> issues, out Lexicon? lexicon)
     {
+        lexicon = null;
+
         if (!File.Exists(path))
         {
             issues.Add(new LoadIssue(path, null, "Répliques introuvables : le copilote restera muet."));
@@ -224,6 +250,7 @@ public static class CopilotLoader
 
         using JsonDocument document = JsonDocument.Parse(File.ReadAllText(path));
         JsonElement root = document.RootElement;
+        lexicon = ReadLexicon(root);
         string locale = GetString(root, "locale") ?? "fr-FR";
 
         List<KeyValuePair<string, Dictionary<ResponseEvent, List<ResponseVariant>>>> entries = new();
