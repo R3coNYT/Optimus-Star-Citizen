@@ -112,7 +112,7 @@ public sealed class HttpLanguageModel : ILanguageModel
             if (!response.IsSuccessStatusCode)
             {
                 DiagnosticLog.Warn(
-                    $"le modèle a répondu {(int)response.StatusCode}",
+                    $"the model answered {(int)response.StatusCode}",
                     await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false));
 
                 return null;
@@ -130,7 +130,7 @@ public sealed class HttpLanguageModel : ILanguageModel
             // annoncer 45 s pour un abandon survenu au bout de 2 laisserait chercher une lenteur
             // du modele la ou rien n'ecoutait.
             DiagnosticLog.Warn(
-                $"le modèle n'a pas répondu — abandon après {Elapsed(start):F1} s",
+                $"the model did not answer — giving up after {Elapsed(start):F1} s",
                 _settings.Endpoint);
 
             return null;
@@ -138,7 +138,7 @@ public sealed class HttpLanguageModel : ILanguageModel
         catch (Exception exception)
         {
             DiagnosticLog.Warn(
-                $"modèle injoignable ({Id}) après {Elapsed(start):F1} s", exception.Message);
+                $"model unreachable ({Id}) after {Elapsed(start):F1} s", exception.Message);
 
             return null;
         }
@@ -223,7 +223,7 @@ public sealed class HttpLanguageModel : ILanguageModel
         }
         catch (JsonException exception)
         {
-            DiagnosticLog.Warn("réponse du modèle illisible", exception.Message);
+            DiagnosticLog.Warn("the model answer could not be read", exception.Message);
             return null;
         }
     }

@@ -107,16 +107,16 @@ public sealed record MacroCondition(
     public string Describe() => Subject switch
     {
         ConditionSubject.Binding =>
-            $"« {CommandId} » {(Negated ? "n'a pas" : "a")} toutes ses touches",
+            $"“{CommandId}” {(Negated ? "is missing a key" : "has all its keys")}",
         ConditionSubject.Directed =>
-            $"« {CommandId} » {(Negated ? "n'offre pas" : "offre")} "
-            + $"{(Polarity == CommandPolarity.Off ? "l'extinction" : "l'activation")} dirigée",
+            $"“{CommandId}” {(Negated ? "offers no" : "offers a")} "
+            + $"directed {(Polarity == CommandPolarity.Off ? "switch-off" : "switch-on")}",
         ConditionSubject.Simulation =>
-            Negated ? "les touches partent vraiment" : "Optimus simule",
+            Negated ? "the keys really go out" : "Optimus is simulating",
         ConditionSubject.FlightMode =>
-            $"le mode de vol {(Negated ? "n'est pas" : "est")} {Value?.ToUpperInvariant()}",
+            $"flight mode {(Negated ? "is not" : "is")} {Value?.ToUpperInvariant()}",
         ConditionSubject.Believed =>
-            $"« {CommandId} » {(Negated ? "n'est pas supposé" : "est supposé")} {Value}",
-        _ => "condition inconnue",
+            $"“{CommandId}” {(Negated ? "is not believed to be" : "is believed to be")} {Value}",
+        _ => "unknown condition",
     };
 }

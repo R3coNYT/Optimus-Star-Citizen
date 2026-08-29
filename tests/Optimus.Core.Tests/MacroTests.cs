@@ -92,7 +92,7 @@ public sealed class MacroTests
         InvalidOperationException error = Assert.Throws<InvalidOperationException>(
             () => MacroExpander.Expand(boucle, catalog, _defaults));
 
-        Assert.Contains("elle-même", error.Message, StringComparison.Ordinal);
+        Assert.Contains("calls itself", error.Message, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -156,8 +156,8 @@ public sealed class SendInputEngine : IInputEngine, IDisposable
         {
             int error = Marshal.GetLastWin32Error();
             throw new InvalidOperationException(
-                $"SendInput n'a injecté que {sent} évènement(s) sur {native.Length} (code {error}). " +
-                "Cause la plus probable : la fenêtre au premier plan est élevée alors qu'Optimus ne l'est pas.");
+                $"SendInput injected only {sent} of {native.Length} event(s) (code {error}). " +
+                "Most likely cause: the foreground window is elevated while Optimus is not.");
         }
     }
 

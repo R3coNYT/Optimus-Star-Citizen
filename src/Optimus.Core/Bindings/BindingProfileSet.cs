@@ -130,7 +130,7 @@ public static class BindingProfileSet
 
         if (File.Exists(target))
         {
-            throw new InvalidOperationException($"Un profil « {Sanitize(name)} » existe déjà.");
+            throw new InvalidOperationException($"A profile “{Sanitize(name)}” already exists.");
         }
 
         BindingOverlay overlay = copyFrom is null
@@ -158,7 +158,7 @@ public static class BindingProfileSet
 
         if (File.Exists(target))
         {
-            throw new InvalidOperationException($"Un profil « {Sanitize(to)} » existe déjà.");
+            throw new InvalidOperationException($"A profile “{Sanitize(to)}” already exists.");
         }
 
         if (!File.Exists(source))
@@ -184,7 +184,7 @@ public static class BindingProfileSet
         if (List(root).Count <= 1)
         {
             throw new InvalidOperationException(
-                "C'est le dernier profil : vos assignations n'auraient plus où être enregistrées.");
+                "This is the last profile: your bindings would have nowhere left to be saved.");
         }
 
         string path = PathOf(name, root);

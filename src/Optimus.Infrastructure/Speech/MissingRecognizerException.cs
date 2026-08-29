@@ -14,8 +14,8 @@ namespace Optimus.Infrastructure.Speech;
 /// </summary>
 public sealed class MissingRecognizerException(string culture, Exception inner)
     : InvalidOperationException(
-        $"Aucun moteur de reconnaissance vocale pour « {culture} ». Vérifiez qu'un microphone "
-        + $"est branché et que le module vocal de « {culture} » est installé dans Windows.",
+        $"No speech recognition engine for “{culture}”. Check that a microphone "
+        + $"is plugged in and that the “{culture}” speech feature is installed in Windows.",
         inner)
 {
     /// <summary>La langue qui manque, telle qu'elle a été demandée.</summary>

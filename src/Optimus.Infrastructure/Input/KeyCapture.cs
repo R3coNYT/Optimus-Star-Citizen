@@ -82,7 +82,7 @@ public sealed partial class KeyCapture : IDisposable
         if (_input == 0 || _input == -1 || !_isConsole)
         {
             throw new InvalidOperationException(
-                "La capture de touche exige un terminal interactif : l'entrée est redirigée. "
+                "Key capture needs an interactive terminal: input is redirected. "
                 + "Lancez « --bind » directement dans une console, sans tube ni redirection.");
         }
 

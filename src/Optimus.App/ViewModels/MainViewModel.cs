@@ -945,8 +945,8 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
 
         if (heard is not null)
         {
-            Add($"entendu · {heard.Text}",
-                $"confiance {heard.Confidence:F2}"
+            Add(Localization.Localizer.T("Log.Heard", heard.Text),
+                Localization.Localizer.T("Log.Confidence", heard.Confidence.ToString("F2"))
                 + (heard.Outcome == RecognitionOutcome.Unclear ? Localization.Localizer.T("Log.CalledNotUnderstood") : string.Empty),
                 heard.Outcome == RecognitionOutcome.Unclear ? ActivityLevel.Warning : ActivityLevel.Normal);
         }

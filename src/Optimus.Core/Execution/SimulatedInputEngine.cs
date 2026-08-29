@@ -81,6 +81,6 @@ public sealed class SimulatedInputEngine : IInputEngine
     /// <summary>Rendu lisible du journal, tel qu'affiché en mode simulation.</summary>
     public string Transcript() =>
         _events.Count == 0
-            ? "(aucune entrée)"
+            ? "(no input)"
             : string.Join(Environment.NewLine, _events.Select(e => e.ToString()));
 }

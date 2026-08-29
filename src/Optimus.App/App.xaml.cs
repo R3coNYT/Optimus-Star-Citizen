@@ -19,13 +19,13 @@ public partial class App : Application
         // fonctionner n'est pas un dispositif : c'est une intention.
         if (e.Args.Contains("--test-crash", StringComparer.OrdinalIgnoreCase))
         {
-            DiagnosticLog.Warn("essai de plantage demandé", "l'exception suivante est volontaire");
+            DiagnosticLog.Warn("test crash requested", "the exception that follows is deliberate");
 
             // Un vrai fil, pas un Task.Run : une tache non observee ne tue pas le processus et
             // n'eprouverait donc pas le filet qui compte - celui du fil d'arriere-plan fatal.
             System.Threading.Thread thread = new(() => throw new InvalidOperationException(
-                "Plantage d'essai déclenché par --test-crash. Si vous lisez ceci dans un rapport, "
-                + "le dispositif fonctionne."))
+                "Test crash triggered by --test-crash. If you are reading this in a report, "
+                + "the safety net works."))
             {
                 IsBackground = false,
             };
@@ -36,23 +36,23 @@ public partial class App : Application
 
         try
         {
-            DiagnosticLog.Info("recherche du dossier de données", AppContext.BaseDirectory);
+            DiagnosticLog.Info("looking for the data folder", AppContext.BaseDirectory);
             string? dataRoot = OptimusRuntime.FindDataRoot(AppContext.BaseDirectory);
 
             if (dataRoot is null)
             {
-                DiagnosticLog.Error("dossier « data » introuvable");
+                DiagnosticLog.Error("“data” folder not found");
 
                 MessageBox.Show(
-                    "Dossier « data » introuvable au-dessus de l'exécutable.\n\n"
-                    + "Optimus a besoin du catalogue de commandes et du profil de bindings pour démarrer.",
+                    "No “data” folder above the executable.\n\n"
+                    + "Optimus needs the command catalogue and the binding profile to start.",
                     "Optimus", MessageBoxButton.OK, MessageBoxImage.Error);
 
                 Shutdown(1);
                 return;
             }
 
-            DiagnosticLog.Info("chargement des données", dataRoot);
+            DiagnosticLog.Info("loading data", dataRoot);
             OptimusRuntime runtime = OptimusRuntime.Load(dataRoot);
 
             // Avant la fenetre : sans cela elle se peindrait en francais, puis se corrigerait
@@ -60,28 +60,28 @@ public partial class App : Application
             Localization.Localizer.Apply(runtime.User.Language);
 
             DiagnosticLog.Info(
-                "données chargées",
-                $"{runtime.Catalog.Count} commandes · {runtime.Bindings.BoundCount} actions liées · "
-                + $"copilote « {runtime.Copilot.Name} » · langue {runtime.User.Language}"
-                + $" · voix {runtime.Copilot.Voice.VoiceId ?? "par défaut du système"}");
+                "data loaded",
+                $"{runtime.Catalog.Count} commands · {runtime.Bindings.BoundCount} actions bound · "
+                + $"copilot “{runtime.Copilot.Name}” · language {runtime.User.Language}"
+                + $" · voice {runtime.Copilot.Voice.VoiceId ?? "system default"}");
 
             foreach (Core.Loading.LoadIssue issue in runtime.Issues)
             {
-                DiagnosticLog.Warn("anomalie de chargement", issue.ToString());
+                DiagnosticLog.Warn("loading anomaly", issue.ToString());
             }
 
-            DiagnosticLog.Info("ouverture de la fenêtre");
+            DiagnosticLog.Info("opening the window");
             MainWindow window = new(runtime);
             MainWindow = window;
             window.Show();
 
-            DiagnosticLog.Info("fenêtre affichée");
+            DiagnosticLog.Info("window shown");
         }
         catch (Exception exception)
         {
             // Un plantage AU DEMARRAGE ne laisse aucune fenetre pour se plaindre : sans ce
             // filet, Optimus disparaitrait en silence avant d'avoir rien pu dire.
-            Fatal(exception, "démarrage");
+            Fatal(exception, "startup");
             Shutdown(1);
         }
     }
@@ -105,7 +105,7 @@ public partial class App : Application
         {
             if (args.ExceptionObject is Exception exception)
             {
-                Fatal(exception, args.IsTerminating ? "fil d'arrière-plan (fatal)" : "fil d'arrière-plan");
+                Fatal(exception, args.IsTerminating ? "background thread (fatal)" : "background thread");
             }
         };
 
@@ -113,7 +113,7 @@ public partial class App : Application
         // donc invisible sans ceci.
         TaskScheduler.UnobservedTaskException += (_, args) =>
         {
-            DiagnosticLog.Error("tâche non observée", args.Exception);
+            DiagnosticLog.Error("unobserved task", args.Exception);
             args.SetObserved();
         };
     }
@@ -139,8 +139,8 @@ public partial class App : Application
         {
             _repeats++;
             DiagnosticLog.Warn(
-                $"même plantage répété ({_repeats} fois)",
-                "rapport déjà écrit, on ne le réécrit pas");
+                $"same crash repeated ({_repeats} times)",
+                "report already written, not rewriting it");
             return;
         }
 
@@ -150,11 +150,11 @@ public partial class App : Application
 
         string? report = DiagnosticLog.WriteCrashReport(exception, origin, Context());
 
-        string message = $"Optimus a rencontré un problème ({origin}).\n\n{exception.Message}";
+        string message = $"Optimus hit a problem ({origin}).\n\n{exception.Message}";
 
         if (report is not null)
         {
-            message += $"\n\nRapport écrit dans :\n{report}\n\nOuvrir le dossier ?";
+            message += $"\n\nReport written to:\n{report}\n\nOpen the folder?";
 
             if (MessageBox.Show(message, "Optimus", MessageBoxButton.YesNo, MessageBoxImage.Error)
                 == MessageBoxResult.Yes)
@@ -181,9 +181,9 @@ public partial class App : Application
     {
         string version = Path.Combine(AppContext.BaseDirectory, "VERSION.txt");
 
-        return $"Exécutable  : {AppContext.BaseDirectory}\n"
-             + $"Journaux    : {DiagnosticLog.Directory}\n"
-             + $"VERSION.txt : {(File.Exists(version) ? File.ReadAllText(version).Trim().Replace("\n", " | ") : "absent")}";
+        return $"Executable : {AppContext.BaseDirectory}\n"
+             + $"Logs       : {DiagnosticLog.Directory}\n"
+             + $"VERSION.txt: {(File.Exists(version) ? File.ReadAllText(version).Trim().Replace("\n", " | ") : "missing")}";
     }
 
     private static string Version()
@@ -200,7 +200,7 @@ public partial class App : Application
 
             if (!string.IsNullOrEmpty(executable) && File.Exists(executable))
             {
-                return $"{number} (compilé le {File.GetLastWriteTime(executable):yyyy-MM-dd HH:mm})";
+                return $"{number} (built {File.GetLastWriteTime(executable):yyyy-MM-dd HH:mm})";
             }
         }
         catch (IOException)

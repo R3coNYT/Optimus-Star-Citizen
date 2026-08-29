@@ -165,8 +165,8 @@ public sealed class WindowsTtsProvider : ITextToSpeechProvider
             // arrive ici apres un repli, et un pilote qui entend soudain une autre voix merite
             // mieux qu'une devinette.
             Optimus.Core.Diagnostics.DiagnosticLog.Warn(
-                $"voix Windows « {voiceId} » introuvable",
-                "Optimus se rabat sur une voix de la langue du copilote.");
+                $"Windows voice “{voiceId}” not found",
+                "Optimus falls back to a voice in the copilot's language.");
         }
 
         VoiceInformation? matching = MatchLanguage(language);
@@ -182,10 +182,10 @@ public sealed class WindowsTtsProvider : ITextToSpeechProvider
             // Windows livre Zira (anglaise) à SAPI sur toutes les machines, et elle n'apparait
             // pas ici. Lire la mauvaise liste ferait conclure que tout va bien.
             Optimus.Core.Diagnostics.DiagnosticLog.Warn(
-                $"aucune voix Windows installée pour « {language} »",
-                "Le copilote garde la voix par défaut du système. "
-                + "Ajoutez le module « synthèse vocale » de cette langue dans "
-                + "Paramètres ▸ Heure et langue.");
+                $"no Windows voice installed for “{language}”",
+                "The copilot keeps the system default voice. "
+                + "Add the “text-to-speech” feature for that language in "
+                + "Settings ▸ Time & language.");
         }
 
         // Remettre la voix par défaut quand rien ne correspond n'est pas une politesse : le

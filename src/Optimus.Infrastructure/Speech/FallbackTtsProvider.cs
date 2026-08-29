@@ -86,7 +86,7 @@ public sealed class FallbackTtsProvider : ITextToSpeechProvider
             _failures++;
 
             DiagnosticLog.Warn(
-                $"{_primary.Id} a échoué ({_failures}/{Tolerance})",
+                $"{_primary.Id} failed ({_failures}/{Tolerance})",
                 exception.Message);
 
             if (_failures >= Tolerance)
@@ -94,9 +94,9 @@ public sealed class FallbackTtsProvider : ITextToSpeechProvider
                 _demoted = true;
 
                 DiagnosticLog.Warn(
-                    $"passage définitif à « {_fallback.Id} » pour cette session",
-                    $"« {_primary.Id} » a échoué {_failures} fois de suite. Réessayer ferait payer "
-                    + "son délai d'attente à chaque réplique.");
+                    $"switching for good to “{_fallback.Id}” for this session",
+                    $"“{_primary.Id}” failed {_failures} times in a row. Retrying would charge "
+                    + "its timeout to every single reply.");
             }
         }
 
@@ -124,7 +124,7 @@ public sealed class FallbackTtsProvider : ITextToSpeechProvider
         catch (Exception exception)
         {
             // Un prechauffage rate ne condamne pas le moteur : la premiere replique retentera.
-            DiagnosticLog.Warn($"préchauffage de « {_primary.Id} » impossible", exception.Message);
+            DiagnosticLog.Warn($"could not warm up “{_primary.Id}”", exception.Message);
         }
 
         await _fallback.WarmUpAsync(null, cancellationToken).ConfigureAwait(false);

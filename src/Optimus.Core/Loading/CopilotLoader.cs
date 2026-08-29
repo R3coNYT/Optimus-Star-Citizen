@@ -87,9 +87,9 @@ public static class CopilotLoader
             // symptome qu'on entend avant de le lire, et il faut pouvoir remonter du son a
             // la cause sans ouvrir l'ecran des donnees.
             Diagnostics.DiagnosticLog.Warn(
-                $"aucune réplique en « {spoken} » pour le copilote « {id} »",
-                $"{expected} est absent de {directory}. "
-                + $"Optimus parlera avec {Path.GetFileName(responsePath)}.");
+                $"no replies in “{spoken}” for copilot “{id}”",
+                $"{expected} is missing from {directory}. "
+                + $"Optimus will speak with {Path.GetFileName(responsePath)}.");
         }
 
         ResponseSet responses = ReadResponses(responsePath, issues, out Lexicon? spokenLexicon);
@@ -159,7 +159,7 @@ public static class CopilotLoader
     {
         if (!File.Exists(path))
         {
-            issues.Add(new LoadIssue(path, null, "Personnalité introuvable, valeurs par défaut appliquées."));
+            issues.Add(new LoadIssue(path, null, "Personality not found, defaults applied."));
             return Domain.Personality.Personality.Default;
         }
 
@@ -252,13 +252,13 @@ public static class CopilotLoader
 
             if (!TryParseTrigger(when, out BehaviorTrigger trigger))
             {
-                issues.Add(new LoadIssue(path, "rules", $"Circonstance « {when} » inconnue, règle ignorée."));
+                issues.Add(new LoadIssue(path, "rules", $"Unknown circumstance “{when}”, rule ignored."));
                 continue;
             }
 
             if (!TryParseEffect(behavior, out BehaviorEffect effect))
             {
-                issues.Add(new LoadIssue(path, "rules", $"Comportement « {behavior} » inconnu, règle ignorée."));
+                issues.Add(new LoadIssue(path, "rules", $"Unknown behaviour “{behavior}”, rule ignored."));
                 continue;
             }
 
@@ -308,7 +308,7 @@ public static class CopilotLoader
 
         if (!File.Exists(path))
         {
-            issues.Add(new LoadIssue(path, null, "Répliques introuvables : le copilote restera muet."));
+            issues.Add(new LoadIssue(path, null, "Replies not found: the copilot will stay silent."));
             return ResponseSet.Empty;
         }
 
@@ -334,7 +334,7 @@ public static class CopilotLoader
             {
                 if (!TryParseEvent(eventProperty.Name, out ResponseEvent responseEvent))
                 {
-                    issues.Add(new LoadIssue(path, entry.Name, $"Circonstance « {eventProperty.Name} » inconnue, ignorée."));
+                    issues.Add(new LoadIssue(path, entry.Name, $"Unknown circumstance “{eventProperty.Name}”, ignored."));
                     continue;
                 }
 
@@ -345,7 +345,7 @@ public static class CopilotLoader
                     string? text = GetString(variantElement, "text");
                     if (string.IsNullOrWhiteSpace(text))
                     {
-                        issues.Add(new LoadIssue(path, entry.Name, "Variante sans texte, ignorée."));
+                        issues.Add(new LoadIssue(path, entry.Name, "Variant with no text, ignored."));
                         continue;
                     }
 

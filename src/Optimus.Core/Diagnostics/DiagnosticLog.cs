@@ -96,7 +96,7 @@ public static class DiagnosticLog
             }
         }
 
-        Info($"=== {component} démarre ===",
+        Info($"=== {component} starting ===",
             $"version {version ?? "inconnue"} · {RuntimeInformation()}");
     }
 
@@ -195,7 +195,7 @@ public static class DiagnosticLog
         if (detail is not null)
         {
             string trimmed = detail.Length > DetailLimit
-                ? detail[..DetailLimit] + $"{Environment.NewLine}… ({detail.Length - DetailLimit} caractères de plus)"
+                ? detail[..DetailLimit] + $"{Environment.NewLine}… ({detail.Length - DetailLimit} more characters)"
                 : detail;
 
             line += Environment.NewLine + "    " + trimmed.Replace(
@@ -246,7 +246,7 @@ public static class DiagnosticLog
 
         while (current is not null && depth < 8)
         {
-            builder.AppendLine($"{(depth == 0 ? string.Empty : "→ causée par ")}{current.GetType().FullName} : {current.Message}");
+            builder.AppendLine($"{(depth == 0 ? string.Empty : "→ caused by ")}{current.GetType().FullName} : {current.Message}");
 
             if (current.StackTrace is string stack)
             {

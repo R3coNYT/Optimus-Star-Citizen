@@ -88,7 +88,7 @@ public sealed class ExecutionGuard
 
         if (environment.KillSwitchEngaged)
         {
-            return new GuardDecision(GuardVerdict.KillSwitch, "Arrêt d'urgence actif.");
+            return new GuardDecision(GuardVerdict.KillSwitch, "Emergency stop engaged.");
         }
 
         if (IsOnCooldown(command))
@@ -112,7 +112,7 @@ public sealed class ExecutionGuard
         {
             if (!environment.GameRunning)
             {
-                return new GuardDecision(GuardVerdict.GameNotRunning, "Star Citizen n'est pas lancé.");
+                return new GuardDecision(GuardVerdict.GameNotRunning, "Star Citizen is not running.");
             }
 
             if (environment.RequireGameForeground && !environment.GameForeground)
@@ -136,7 +136,7 @@ public sealed class ExecutionGuard
                     // LEQUEL manque est toute la difference entre un diagnostic et une enigme.
                     return new GuardDecision(
                         GuardVerdict.BindingNotConfigured,
-                        $"Aucun raccourci configuré pour « {actionId} ».",
+                        $"No shortcut configured for “{actionId}”.",
                         actionId);
 
                 case BindingLookup.UnknownAction:

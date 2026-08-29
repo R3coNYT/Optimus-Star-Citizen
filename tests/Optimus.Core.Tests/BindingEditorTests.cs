@@ -78,7 +78,9 @@ public sealed class BindingEditorTests
 
         Assert.Empty(import.Entries);
         Assert.Single(import.Skipped);
-        Assert.Contains("retirée", import.Skipped[0]);
+        // Le journal du moteur est en anglais quelle que soit la langue de l'écran :
+        // il est lu dans un rapport, pas dans une fenêtre traduite.
+        Assert.Contains("key removed by the pilot", import.Skipped[0], StringComparison.Ordinal);
     }
 
     [Fact]

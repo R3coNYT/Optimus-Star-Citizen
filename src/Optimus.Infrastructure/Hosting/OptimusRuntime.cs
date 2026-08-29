@@ -429,12 +429,12 @@ public sealed class OptimusRuntime : IAsyncDisposable
         {
             // Le profil est bel et bien actif : ne pas pouvoir s'en souvenir est genant, pas
             // bloquant. Le dire plutot que de defaire une bascule qui a reussi.
-            DiagnosticLog.Warn("profil de touches non mémorisé", exception.Message);
+            DiagnosticLog.Warn("key profile not remembered", exception.Message);
         }
 
         DiagnosticLog.Info(
-            $"profil de touches « {clean} »",
-            $"{Overlay.Count} assignations · {Bindings.BoundCount} actions liées");
+            $"key profile “{clean}”",
+            $"{Overlay.Count} bindings · {Bindings.BoundCount} actions bound");
     }
 
     /// <summary>
@@ -473,8 +473,8 @@ public sealed class OptimusRuntime : IAsyncDisposable
                 ?? Path.Combine(DataRoot, "data", "commands", "starcitizen.core.json")).Value;
 
             DiagnosticLog.Info(
-                "langue changée",
-                $"{spoken} → {User.Language} · {ShippedCatalog.Count} commandes rechargées");
+                "language changed",
+                $"{spoken} → {User.Language} · {ShippedCatalog.Count} commands reloaded");
         }
 
         Copilot previous = Copilot;
@@ -578,10 +578,10 @@ public sealed class OptimusRuntime : IAsyncDisposable
         GrammarSize = grammar.Count;
 
         DiagnosticLog.Info(
-            "démarrage de l'écoute",
-            $"mode {settings.Mode} · {grammar.Count} alternatives · mot d'éveil « {Copilot.WakeWord} » · "
-            + $"seuils bruit {settings.NoiseFloor:F2} / exécution {settings.ConfidenceThreshold:F2} · "
-            + $"langue {Copilot.Language}");
+            "listening starting",
+            $"mode {settings.Mode} · {grammar.Count} alternatives · wake word “{Copilot.WakeWord}” · "
+            + $"thresholds noise {settings.NoiseFloor:F2} / execution {settings.ConfidenceThreshold:F2} · "
+            + $"language {Copilot.Language}");
 
         try
         {
@@ -593,7 +593,7 @@ public sealed class OptimusRuntime : IAsyncDisposable
             // Cause la plus frequente : aucun peripherique d'entree, ou pas de moteur de
             // reconnaissance installe pour cette langue. Le dire vaut mieux que de tomber.
             DiagnosticLog.Error(
-                "impossible d'ouvrir le moteur de reconnaissance", exception);
+                "could not open the recognition engine", exception);
             // La langue est nommee, et non presumee : le message disait « pour le francais »
             // meme quand l'anglais avait ete demande, ce qui envoyait chercher le mauvais
             // module dans les parametres de Windows.
@@ -613,7 +613,7 @@ public sealed class OptimusRuntime : IAsyncDisposable
 
         await _listener.StartAsync(cancellationToken).ConfigureAwait(false);
 
-        DiagnosticLog.Info("écoute active", _listener.RecognizerName);
+        DiagnosticLog.Info("listening active", _listener.RecognizerName);
         StateChanged?.Invoke(this, EventArgs.Empty);
     }
 
@@ -633,7 +633,7 @@ public sealed class OptimusRuntime : IAsyncDisposable
             await _listener.DisposeAsync().ConfigureAwait(false);
             _listener = null;
 
-            DiagnosticLog.Info("écoute arrêtée");
+            DiagnosticLog.Info("listening stopped");
         }
 
         StateChanged?.Invoke(this, EventArgs.Empty);
@@ -692,7 +692,7 @@ public sealed class OptimusRuntime : IAsyncDisposable
         {
             // Une exception dans un gestionnaire « async void » abattrait le processus. Optimus
             // doit survivre a une commande ratee : on la trace, on la signale, on continue.
-            DiagnosticLog.Error($"échec du traitement de « {recognition.Text} »", exception);
+            DiagnosticLog.Error($"failed to handle “{recognition.Text}”", exception);
             Report(new SessionActivity(recognition, null, $"Erreur interne : {exception.Message}", []));
         }
         finally
@@ -766,8 +766,8 @@ public sealed class OptimusRuntime : IAsyncDisposable
         }
 
         DiagnosticLog.Info(
-            "parole libre transcrite",
-            $"{heard.ElapsedMs:F0} ms · « {heard.Text} »");
+            "free speech transcribed",
+            $"{heard.ElapsedMs:F0} ms · “{heard.Text}”");
 
         // La confiance vient d'un autre moteur : la reporter telle quelle serait comparer deux
         // echelles sans rapport. Un enonce transcrit est tenu pour clair — c'est le
@@ -930,7 +930,7 @@ public sealed class OptimusRuntime : IAsyncDisposable
             }
             catch (Exception exception)
             {
-                DiagnosticLog.Warn($"bascule vers « {profile} » impossible", exception.Message);
+                DiagnosticLog.Warn($"could not switch to “{profile}”", exception.Message);
             }
 
             StateChanged?.Invoke(this, EventArgs.Empty);
@@ -1001,7 +1001,7 @@ public sealed class OptimusRuntime : IAsyncDisposable
             }
             catch (Exception exception)
             {
-                DiagnosticLog.Warn($"passage vers « {next} » impossible", exception.Message);
+                DiagnosticLog.Warn($"could not move to “{next}”", exception.Message);
             }
         }
     }
@@ -1030,12 +1030,12 @@ public sealed class OptimusRuntime : IAsyncDisposable
         catch (Exception exception)
         {
             // Un etage facultatif ne fait pas tomber le reste.
-            DiagnosticLog.Warn("étage conversationnel indisponible", exception.Message);
+            DiagnosticLog.Warn("conversational tier unavailable", exception.Message);
             return null;
         }
 
         DiagnosticLog.Info(
-            $"modèle · {outcome.Decision.Kind}",
+            $"model · {outcome.Decision.Kind}",
             $"{outcome.ElapsedMs:F0} ms · {Conversation.ModelId} · {outcome.Decision.Reasoning}");
 
         switch (outcome.Decision.Kind)
@@ -1082,7 +1082,7 @@ public sealed class OptimusRuntime : IAsyncDisposable
         }
         catch (Exception exception)
         {
-            DiagnosticLog.Error("synthèse impossible", exception);
+            DiagnosticLog.Error("speech synthesis failed", exception);
         }
     }
 
@@ -1222,7 +1222,7 @@ public sealed class OptimusRuntime : IAsyncDisposable
             ? catalog
             : CommandCatalog.Merge(
                 catalog.Id, catalog.Name, catalog,
-                new CommandCatalog("engendre", "Commandes engendrées", commands));
+                new CommandCatalog("engendre", "Generated commands", commands));
 
     /// <summary>
     /// Passe la main à un autre copilote, sans redémarrer.
@@ -1252,8 +1252,8 @@ public sealed class OptimusRuntime : IAsyncDisposable
         await ReloadSettingsAsync(cancellationToken).ConfigureAwait(false);
 
         DiagnosticLog.Info(
-            $"copilote « {Copilot.Name} »",
-            $"mot d'éveil « {Copilot.WakeWord} » · voix {Copilot.Voice.VoiceId ?? "par défaut"}");
+            $"copilot “{Copilot.Name}”",
+            $"wake word “{Copilot.WakeWord}” · voice {Copilot.Voice.VoiceId ?? "default"}");
     }
 
     /// <summary>
@@ -1300,21 +1300,21 @@ public sealed class OptimusRuntime : IAsyncDisposable
                     Transcriber = new WhisperTranscriber(installation, settings);
 
                     DiagnosticLog.Info(
-                        $"parole libre · {settings.Mode}",
-                        $"modèle {Transcriber.ModelName} · {settings.EffectiveThreads} fils"
-                        + (settings.TrimContext ? " · fenêtre réduite" : string.Empty));
+                        $"free speech · {settings.Mode}",
+                        $"model {Transcriber.ModelName} · {settings.EffectiveThreads} threads"
+                        + (settings.TrimContext ? " · reduced window" : string.Empty));
                 }
                 catch (Exception exception)
                 {
-                    DiagnosticLog.Warn("étage de parole libre indisponible", exception.Message);
+                    DiagnosticLog.Warn("free speech tier unavailable", exception.Message);
                 }
             }
             else
             {
                 DiagnosticLog.Warn(
-                    "Whisper demandé mais introuvable",
-                    $"Rien d'utilisable dans {WhisperInstallation.DefaultRoot}. "
-                    + "Optimus s'en tient à sa grammaire fermée.");
+                    "Whisper requested but not found",
+                    $"Nothing usable in {WhisperInstallation.DefaultRoot}. "
+                    + "Optimus keeps to its closed grammar.");
             }
         }
 
@@ -1374,7 +1374,7 @@ public sealed class OptimusRuntime : IAsyncDisposable
         {
             // Une macro qui s'arrete parce qu'une phrase n'a pas pu etre dite serait absurde :
             // le vaisseau resterait a mi-chemin pour un probleme de confort.
-            DiagnosticLog.Warn($"narration impossible pour « {responseKey} »", exception.Message);
+            DiagnosticLog.Warn($"could not narrate “{responseKey}”", exception.Message);
         }
     }
 
@@ -1391,7 +1391,7 @@ public sealed class OptimusRuntime : IAsyncDisposable
         }
         else if (activity.Recognition is VoiceRecognition heard && heard.Outcome != RecognitionOutcome.Noise)
         {
-            DiagnosticLog.Debug($"entendu « {heard.Text} »", $"confiance {heard.Confidence:F2}");
+            DiagnosticLog.Debug($"heard “{heard.Text}”", $"confidence {heard.Confidence:F2}");
         }
 
         Activity?.Invoke(this, activity);
@@ -1422,7 +1422,7 @@ public sealed class OptimusRuntime : IAsyncDisposable
         {
             // Perdre le journal de comprehension est facheux, pas grave : il se reconstruit en
             // volant. Empecher la fermeture pour cela serait absurde.
-            DiagnosticLog.Warn("journal de compréhension non enregistré", exception.Message);
+            DiagnosticLog.Warn("understanding journal not saved", exception.Message);
         }
 
         if (Api is not null)

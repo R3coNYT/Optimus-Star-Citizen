@@ -120,7 +120,7 @@ public sealed class WhisperTranscriber
 
         _model = installation.ModelPath(settings.Model)
             ?? throw new InvalidOperationException(
-                $"Aucun modèle Whisper dans {installation.ModelsDirectory}.");
+                $"No Whisper model in {installation.ModelsDirectory}.");
     }
 
     /// <summary>Nom du modèle réellement chargé.</summary>
@@ -136,7 +136,7 @@ public sealed class WhisperTranscriber
 
         if (!File.Exists(wavePath))
         {
-            DiagnosticLog.Warn("audio à transcrire introuvable", wavePath);
+            DiagnosticLog.Warn("audio to transcribe not found", wavePath);
             return Transcription.Empty;
         }
 
@@ -162,7 +162,7 @@ public sealed class WhisperTranscriber
 
             if (process is null)
             {
-                DiagnosticLog.Warn("Whisper n'a pas démarré", _installation.Executable);
+                DiagnosticLog.Warn("Whisper did not start", _installation.Executable);
                 return Transcription.Empty;
             }
 
@@ -185,7 +185,7 @@ public sealed class WhisperTranscriber
             if (process.ExitCode != 0)
             {
                 DiagnosticLog.Warn(
-                    $"Whisper a rendu {process.ExitCode}",
+                    $"Whisper returned {process.ExitCode}",
                     Tail(await errors.ConfigureAwait(false)));
 
                 return Transcription.Empty;
@@ -194,23 +194,23 @@ public sealed class WhisperTranscriber
             double elapsed = Elapsed(start);
 
             DiagnosticLog.Debug(
-                "Whisper a transcrit",
-                $"{elapsed:F0} ms · {ModelName} · {_settings.EffectiveThreads} fils · "
-                + $"« {transcript} »");
+                "Whisper transcribed",
+                $"{elapsed:F0} ms · {ModelName} · {_settings.EffectiveThreads} threads · "
+                + $"“{transcript}”");
 
             return new Transcription(transcript, elapsed);
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
             DiagnosticLog.Warn(
-                $"Whisper n'a pas répondu en {Timeout.TotalSeconds:F0} s",
-                "l'énoncé est abandonné, Optimus reste utilisable");
+                $"Whisper did not answer within {Timeout.TotalSeconds:F0} s",
+                "the utterance is dropped, Optimus stays usable");
 
             return Transcription.Empty;
         }
         catch (Exception exception)
         {
-            DiagnosticLog.Warn("transcription impossible", exception.Message);
+            DiagnosticLog.Warn("transcription failed", exception.Message);
             return Transcription.Empty;
         }
     }

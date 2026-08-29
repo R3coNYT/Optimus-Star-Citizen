@@ -174,7 +174,7 @@ public sealed class PiperTtsProvider : ITextToSpeechProvider
 
         string? model = _installation.ModelPath(voiceId)
             ?? throw new InvalidOperationException(
-                $"Aucune voix Piper nommée « {voiceId} » dans {_installation.VoicesDirectory}.");
+                $"No Piper voice named “{voiceId}” in {_installation.VoicesDirectory}.");
 
         ProcessStartInfo start = new(_installation.Executable)
         {
@@ -194,7 +194,7 @@ public sealed class PiperTtsProvider : ITextToSpeechProvider
         start.ArgumentList.Add(scale.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture));
 
         Process piper = Process.Start(start)
-            ?? throw new InvalidOperationException("Piper n'a pas démarré.");
+            ?? throw new InvalidOperationException("Piper did not start.");
 
         // Les journaux de Piper partent sur l'erreur standard. Les lire en continu n'est pas un
         // luxe : un tuyau qu'on ne vide jamais finit par se remplir, et le processus se bloque
@@ -216,10 +216,10 @@ public sealed class PiperTtsProvider : ITextToSpeechProvider
         bool loaded = await WaitReadyAsync(ready, cancellationToken).ConfigureAwait(false);
 
         DiagnosticLog.Info(
-            "Piper démarré",
-            $"{Path.GetFileNameWithoutExtension(model)} · débit ×{rate:F2} (length_scale {scale:0.###})"
-            + $" · voix chargée en {Elapsed(loading):F0} ms"
-            + (loaded ? string.Empty : " (annonce jamais reçue, on tente quand même)"));
+            "Piper started",
+            $"{Path.GetFileNameWithoutExtension(model)} · rate ×{rate:F2} (length_scale {scale:0.###})"
+            + $" · voice loaded in {Elapsed(loading):F0} ms"
+            + (loaded ? string.Empty : " (announcement never received, trying anyway)"));
 
         return piper;
     }
@@ -255,13 +255,13 @@ public sealed class PiperTtsProvider : ITextToSpeechProvider
             Shutdown();
 
             throw new InvalidOperationException(
-                $"Piper n'a rien rendu en {SynthesisTimeout.TotalSeconds:F0} s. Processus relancé.");
+                $"Piper produced nothing within {SynthesisTimeout.TotalSeconds:F0} s. Process restarted.");
         }
 
         if (string.IsNullOrWhiteSpace(path))
         {
             Shutdown();
-            throw new InvalidOperationException("Piper s'est arrêté sans rien produire.");
+            throw new InvalidOperationException("Piper stopped without producing anything.");
         }
 
         string wave = path.Trim();
@@ -271,13 +271,13 @@ public sealed class PiperTtsProvider : ITextToSpeechProvider
         // chaque WAV — le pilote doit pouvoir voir que sa synthese ralentit, et le constater sur
         // sa machine plutot que de se fier a la mienne.
         DiagnosticLog.Debug(
-            "Piper a synthétisé",
-            $"{Elapsed(start):F0} ms · {line.Length} caractères");
+            "Piper synthesised",
+            $"{Elapsed(start):F0} ms · {line.Length} characters");
 
         return File.Exists(wave)
             ? wave
             : throw new InvalidOperationException(
-                $"Piper annonce « {wave} », qui n'existe pas. Le dossier est-il accessible en écriture ?");
+                $"Piper announces “{wave}”, which does not exist. Is the folder writable?");
     }
 
     private async Task PlayAsync(string wave, double volume, CancellationToken cancellationToken)
@@ -373,7 +373,7 @@ public sealed class PiperTtsProvider : ITextToSpeechProvider
 
                 if (line.Contains("[error]", StringComparison.OrdinalIgnoreCase))
                 {
-                    DiagnosticLog.Warn("Piper signale une erreur", line);
+                    DiagnosticLog.Warn("Piper reports an error", line);
                 }
             }
         }
@@ -415,7 +415,7 @@ public sealed class PiperTtsProvider : ITextToSpeechProvider
         }
         catch (Exception exception)
         {
-            DiagnosticLog.Warn("nettoyage des fichiers Piper impossible", exception.Message);
+            DiagnosticLog.Warn("could not clean up the Piper files", exception.Message);
         }
     }
 

@@ -47,9 +47,9 @@ public static class SpeechFactory
         if (PiperInstallation.Locate() is not PiperInstallation installation)
         {
             DiagnosticLog.Warn(
-                "Piper demandé mais introuvable",
-                $"Rien d'utilisable dans {PiperInstallation.DefaultRoot}. "
-                + "Les voix Windows prennent le relais.");
+                "Piper requested but not found",
+                $"Nothing usable in {PiperInstallation.DefaultRoot}. "
+                + "Windows voices take over.");
 
             return new WindowsTtsProvider();
         }

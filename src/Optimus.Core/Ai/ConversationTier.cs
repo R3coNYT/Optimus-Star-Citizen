@@ -97,8 +97,8 @@ public sealed class ConversationTier(ILanguageModel model, AiSettings settings)
         if (Remaining == 0)
         {
             DiagnosticLog.Warn(
-                "budget d'appels épuisé",
-                $"{settings.CallBudget} appels consommés depuis le démarrage");
+                "call budget exhausted",
+                $"{settings.CallBudget} calls used since startup");
 
             return new AiOutcome(AiDecision.Refused(AiRejection.BudgetSpent), 0);
         }
@@ -118,7 +118,7 @@ public sealed class ConversationTier(ILanguageModel model, AiSettings settings)
         if (decision.Kind == AiDecisionKind.Rejected)
         {
             DiagnosticLog.Warn(
-                $"proposition refusée par le verrou ({decision.Rejection})",
+                $"proposal refused by the gate ({decision.Rejection})",
                 decision.Reasoning);
         }
 

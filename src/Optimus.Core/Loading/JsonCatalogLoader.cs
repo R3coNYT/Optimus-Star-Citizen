@@ -69,26 +69,26 @@ public static class JsonCatalogLoader
             string? commandId = GetString(element, "id");
             if (string.IsNullOrWhiteSpace(commandId))
             {
-                issues.Add(new LoadIssue(path, null, "Commande sans identifiant, ignorée."));
+                issues.Add(new LoadIssue(path, null, "Command with no id, ignored."));
                 continue;
             }
 
             if (!seen.Add(commandId))
             {
-                issues.Add(new LoadIssue(path, commandId, "Identifiant en double, commande ignorée."));
+                issues.Add(new LoadIssue(path, commandId, "Duplicate id, command ignored."));
                 continue;
             }
 
             if (!TryParseKind(GetString(element, "kind"), out CommandKind kind))
             {
-                issues.Add(new LoadIssue(path, commandId, $"Type « {GetString(element, "kind")} » inconnu, commande ignorée."));
+                issues.Add(new LoadIssue(path, commandId, $"Unknown kind “{GetString(element, "kind")}”, command ignored."));
                 continue;
             }
 
             List<string> phrases = GetStringArray(element, "voice_phrases");
             if (phrases.Count == 0)
             {
-                issues.Add(new LoadIssue(path, commandId, "Aucune phrase vocale, commande ignorée."));
+                issues.Add(new LoadIssue(path, commandId, "No voice phrase, command ignored."));
                 continue;
             }
 
@@ -110,7 +110,7 @@ public static class JsonCatalogLoader
 
             if (kind == CommandKind.Action && steps.Count == 0)
             {
-                issues.Add(new LoadIssue(path, commandId, "Commande d'action sans étape exécutable, ignorée."));
+                issues.Add(new LoadIssue(path, commandId, "Action command with no executable step, ignored."));
                 continue;
             }
 
@@ -160,7 +160,7 @@ public static class JsonCatalogLoader
                 string? key = GetString(property.Value, "key");
                 if (string.IsNullOrWhiteSpace(key))
                 {
-                    issues.Add(new LoadIssue(path, property.Name, "Binding sans touche, ignoré."));
+                    issues.Add(new LoadIssue(path, property.Name, "Binding with no key, ignored."));
                     continue;
                 }
 
@@ -203,7 +203,7 @@ public static class JsonCatalogLoader
         if (!step.TryGetProperty("condition", out JsonElement node)
             || node.ValueKind != JsonValueKind.Object)
         {
-            issues.Add(new LoadIssue(path, commandId, "Étape « si » sans condition, ignorée."));
+            issues.Add(new LoadIssue(path, commandId, "“if” step with no condition, ignored."));
             return null;
         }
 
@@ -222,7 +222,7 @@ public static class JsonCatalogLoader
         if (parsed is not ConditionSubject known)
         {
             issues.Add(new LoadIssue(path, commandId,
-                $"Condition sur « {subject ?? "?"} » : sujet inconnu. Étape ignorée."));
+                $"Condition on “{subject ?? "?"}”: unknown subject. Step ignored."));
 
             return null;
         }
@@ -233,7 +233,7 @@ public static class JsonCatalogLoader
             && string.IsNullOrWhiteSpace(target))
         {
             issues.Add(new LoadIssue(path, commandId,
-                $"Condition « {subject} » sans command_id. Étape ignorée."));
+                $"Condition “{subject}” with no command_id. Step ignored."));
 
             return null;
         }
@@ -276,7 +276,7 @@ public static class JsonCatalogLoader
                         string? actionId = GetString(action, "action_id");
                         if (string.IsNullOrWhiteSpace(actionId))
                         {
-                            issues.Add(new LoadIssue(path, commandId, "Étape « game_action » sans action_id, ignorée."));
+                            issues.Add(new LoadIssue(path, commandId, "“game_action” step with no action_id, ignored."));
                             continue;
                         }
 
@@ -304,7 +304,7 @@ public static class JsonCatalogLoader
 
                         if (string.IsNullOrWhiteSpace(target))
                         {
-                            issues.Add(new LoadIssue(path, commandId, "Étape « command » sans command_id, ignorée."));
+                            issues.Add(new LoadIssue(path, commandId, "“command” step with no command_id, ignored."));
                             break;
                         }
 
@@ -343,8 +343,8 @@ public static class JsonCatalogLoader
                         if (times < 1 || times > MacroExpander.MaxRepeat)
                         {
                             issues.Add(new LoadIssue(path, commandId,
-                                $"Répétition de {times} tours : le compte doit être compris entre 1 "
-                                + $"et {MacroExpander.MaxRepeat}. Étape ignorée."));
+                                $"Repeat of {times} rounds: the count must be between 1 "
+                                + $"and {MacroExpander.MaxRepeat}. Step ignored."));
                             break;
                         }
 
@@ -354,7 +354,7 @@ public static class JsonCatalogLoader
                     }
 
                 default:
-                    issues.Add(new LoadIssue(path, commandId, $"Type d'étape « {type} » non pris en charge, ignorée."));
+                    issues.Add(new LoadIssue(path, commandId, $"Step type “{type}” not supported, ignored."));
                     break;
             }
         }

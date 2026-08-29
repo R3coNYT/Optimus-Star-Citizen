@@ -59,7 +59,7 @@ public sealed record VoiceRecognition(
     public override string ToString() => $"« {Text} » conf {Confidence:F2}" + Outcome switch
     {
         RecognitionOutcome.Noise => " (bruit)",
-        RecognitionOutcome.Unclear => " (interpellé, mais pas compris)",
+        RecognitionOutcome.Unclear => " (called, but not understood)",
         _ => string.Empty,
     };
 }

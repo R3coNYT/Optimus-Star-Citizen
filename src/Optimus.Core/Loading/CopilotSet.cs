@@ -131,7 +131,7 @@ public static class CopilotSet
 
         if (Directory.Exists(target))
         {
-            throw new InvalidOperationException($"Un copilote « {clean} » vous appartient déjà.");
+            throw new InvalidOperationException($"You already own a copilot named “{clean}”.");
         }
 
         string source = DirectoryOf(copyFrom, dataRoot, userRoot)
@@ -167,8 +167,8 @@ public static class CopilotSet
         if (!Directory.Exists(mine))
         {
             throw new InvalidOperationException(
-                $"« {id} » est livré avec Optimus : il ne peut pas être supprimé, "
-                + "seulement masqué par une copie à vous.");
+                $"“{id}” ships with Optimus: it cannot be deleted, "
+                + "only masked by a copy of your own.");
         }
 
         Directory.Delete(mine, recursive: true);

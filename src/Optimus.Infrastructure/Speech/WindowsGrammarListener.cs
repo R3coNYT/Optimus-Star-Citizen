@@ -45,7 +45,7 @@ public sealed class WindowsGrammarListener : IVoiceCommandListener
 
         if (grammar.Count == 0)
         {
-            throw new ArgumentException("La grammaire est vide : le moteur n'aurait rien à reconnaître.", nameof(grammar));
+            throw new ArgumentException("The grammar is empty: the engine would have nothing to recognise.", nameof(grammar));
         }
 
         _grammar = grammar;
@@ -55,7 +55,7 @@ public sealed class WindowsGrammarListener : IVoiceCommandListener
         RecognizerInfo recognizer = FindRecognizer(culture)
             ?? throw new InvalidOperationException(
                 $"Aucun moteur de reconnaissance pour « {culture} ». " +
-                "Ajoute le module vocal dans Paramètres > Heure et langue > Langue.");
+                "Add the speech feature in Settings > Time & language > Language.");
 
         _engine = new SpeechRecognitionEngine(recognizer);
 
@@ -225,7 +225,7 @@ public sealed class WindowsGrammarListener : IVoiceCommandListener
         catch (Exception exception)
         {
             // Un enonce sans audio se traite comme avant : le chemin rapide n'en depend pas.
-            DiagnosticLog.Warn("audio de l'énoncé non conservé", exception.Message);
+            DiagnosticLog.Warn("utterance audio not kept", exception.Message);
             return null;
         }
     }

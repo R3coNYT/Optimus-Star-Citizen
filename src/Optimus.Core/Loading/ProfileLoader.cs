@@ -44,7 +44,7 @@ public static class ProfileLoader
 
         if (!File.Exists(path))
         {
-            issues.Add(new LoadIssue(path, null, "Profil introuvable, valeurs par défaut appliquées."));
+            issues.Add(new LoadIssue(path, null, "Profile not found, defaults applied."));
             return new LoadResult<UserProfile>(UserProfile.Default, issues);
         }
 
@@ -97,7 +97,7 @@ public static class ProfileLoader
     /// </summary>
     private static ListeningMode Unknown(string? raw, List<LoadIssue> issues, string path)
     {
-        issues.Add(new LoadIssue(path, "voice_input.mode", $"Mode « {raw} » inconnu, écoute permanente appliquée."));
+        issues.Add(new LoadIssue(path, "voice_input.mode", $"Unknown mode “{raw}”, always-on listening applied."));
         return ListeningMode.AlwaysOn;
     }
 

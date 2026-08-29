@@ -104,14 +104,14 @@ public static class MacroExpander
             if (depth > MaxDepth)
             {
                 throw new InvalidOperationException(
-                    $"« {current.Name} » enchaîne trop de renvois : au-delà de {MaxDepth} niveaux, "
-                    + "c'est presque sûrement un cycle.");
+                    $"“{current.Name}” chains too many references: beyond {MaxDepth} levels, "
+                    + "it is almost certainly a cycle.");
             }
 
             if (!visiting.Add(current.Id))
             {
                 throw new InvalidOperationException(
-                    $"« {current.Name} » s'appelle elle-même, directement ou non.");
+                    $"“{current.Name}” calls itself, directly or otherwise.");
             }
 
             Play(current.ActionsFor(sense, bindings), current, depth);
@@ -159,8 +159,8 @@ public static class MacroExpander
             // ou le pilote en attendait cinq doit pouvoir s'expliquer autrement que par un
             // decompte.
             decisions.Add(
-                $"{condition.Describe()} → {(holds ? "oui" : "non")}"
-                + (chosen.Count == 0 ? ", rien à jouer" : $", {chosen.Count} pas"));
+                $"{condition.Describe()} → {(holds ? "yes" : "no")}"
+                + (chosen.Count == 0 ? ", nothing to play" : $", {chosen.Count} step{(chosen.Count == 1 ? string.Empty : "s")}"));
 
             Play(chosen, current, depth);
         }
@@ -170,7 +170,7 @@ public static class MacroExpander
             if (step.Repeat < 1 || step.Repeat > MaxRepeat)
             {
                 throw new InvalidOperationException(
-                    $"« {current.Name} » répète un bloc {step.Repeat} fois : le compte doit être "
+                    $"“{current.Name}” repeats a block {step.Repeat} times: the count must be "
                     + $"compris entre 1 et {MaxRepeat}.");
             }
 
@@ -202,7 +202,7 @@ public static class MacroExpander
                 string direction = step.Polarity == CommandPolarity.On ? "activation" : "extinction";
                 skipped.Add(
                     $"« {target.Name} » ({direction}) : le jeu n'expose pas ce sens et aucune touche "
-                    + "dirigée n'est configurée. Une bascule aurait fait l'inverse une fois sur deux.");
+                    + "directed binding is configured. A toggle would have done the opposite half the time.");
                 return;
             }
 
@@ -218,8 +218,8 @@ public static class MacroExpander
             if (expanded.Count >= MaxSteps)
             {
                 throw new InvalidOperationException(
-                    $"« {command.Name} » déplie plus de {MaxSteps} étapes. Des répétitions "
-                    + "imbriquées se multiplient sans qu'aucune ne dépasse sa propre borne.");
+                    $"“{command.Name}” expands to more than {MaxSteps} steps. Nested repetitions "
+                    + "multiply without any single one going past its own bound.");
             }
 
             expanded.Add(step);

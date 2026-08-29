@@ -102,9 +102,9 @@ public sealed class LocalApiServer : IAsyncDisposable
             _runtime.StateChanged += OnStateChanged;
 
             DiagnosticLog.Info(
-                "API locale démarrée",
+                "local API started",
                 $"{_settings.Prefix} · {_tokens.Count} jeton(s) · "
-                + $"{_settings.ExecutionsPerMinute} exécutions/min");
+                + $"{_settings.ExecutionsPerMinute} executions/min");
 
             return Task.FromResult(true);
         }
@@ -112,7 +112,7 @@ public sealed class LocalApiServer : IAsyncDisposable
         {
             // Port deja pris, pare-feu, politique d'entreprise : Optimus continue sans son API.
             DiagnosticLog.Warn(
-                $"API locale indisponible sur {_settings.Prefix}", exception.Message);
+                $"local API unavailable on {_settings.Prefix}", exception.Message);
 
             return Task.FromResult(false);
         }
@@ -157,7 +157,7 @@ public sealed class LocalApiServer : IAsyncDisposable
 
         await CloseSocketsAsync().ConfigureAwait(false);
 
-        DiagnosticLog.Info("API locale arrêtée", null);
+        DiagnosticLog.Info("local API stopped", null);
     }
 
     // ------------------------------------------------------------------------ la boucle
@@ -221,7 +221,7 @@ public sealed class LocalApiServer : IAsyncDisposable
         }
         catch (Exception exception)
         {
-            DiagnosticLog.Error("requête d'API en échec", exception);
+            DiagnosticLog.Error("API request failed", exception);
 
             try
             {
@@ -304,7 +304,7 @@ public sealed class LocalApiServer : IAsyncDisposable
             await RefuseAsync(
                 context,
                 HttpStatusCode.Forbidden,
-                $"Le jeton « {token.Name} » n'a pas la portée « {required} ».").ConfigureAwait(false);
+                $"Token “{token.Name}” does not have the “{required}” scope.").ConfigureAwait(false);
 
             return;
         }
@@ -314,7 +314,7 @@ public sealed class LocalApiServer : IAsyncDisposable
             await RefuseAsync(
                 context,
                 HttpStatusCode.TooManyRequests,
-                $"Plafond atteint : {_settings.ExecutionsPerMinute} exécutions par minute.")
+                $"Rate limit reached: {_settings.ExecutionsPerMinute} executions per minute.")
                 .ConfigureAwait(false);
 
             return;
@@ -492,7 +492,7 @@ public sealed class LocalApiServer : IAsyncDisposable
             _socketLock.Release();
         }
 
-        DiagnosticLog.Debug($"flux d'événements ouvert · {token.Name}", null);
+        DiagnosticLog.Debug($"event stream opened · {token.Name}", null);
 
         // On ne lit rien du client : ce flux ne sert qu'a pousser. Lire quand meme est ce qui
         // permet de detecter sa fermeture, sans quoi la liste enflerait de sockets mortes.
@@ -559,7 +559,7 @@ public sealed class LocalApiServer : IAsyncDisposable
             {
                 // Une serialisation qui echoue dans un Task.Run detache disparait sans laisser
                 // de trace : le flux se tairait, et rien n'expliquerait pourquoi.
-                DiagnosticLog.Warn("événement d'API non sérialisable", exception.Message);
+                DiagnosticLog.Warn("API event not serialisable", exception.Message);
                 return;
             }
 
@@ -576,7 +576,7 @@ public sealed class LocalApiServer : IAsyncDisposable
                 _socketLock.Release();
             }
 
-            DiagnosticLog.Debug($"diffusion vers {targets.Count} flux", $"{frame.Length} octets");
+            DiagnosticLog.Debug($"broadcast to {targets.Count} streams", $"{frame.Length} bytes");
 
             foreach (WebSocket socket in targets)
             {
@@ -591,7 +591,7 @@ public sealed class LocalApiServer : IAsyncDisposable
                 }
                 catch (Exception exception)
                 {
-                    DiagnosticLog.Debug("flux d'événements rompu", exception.Message);
+                    DiagnosticLog.Debug("event stream broken", exception.Message);
                     await ForgetAsync(socket).ConfigureAwait(false);
                 }
             }
@@ -635,7 +635,7 @@ public sealed class LocalApiServer : IAsyncDisposable
             try
             {
                 await socket.CloseAsync(
-                    WebSocketCloseStatus.NormalClosure, "Optimus s'arrête", CancellationToken.None)
+                    WebSocketCloseStatus.NormalClosure, "Optimus is shutting down", CancellationToken.None)
                     .ConfigureAwait(false);
             }
             catch (Exception)

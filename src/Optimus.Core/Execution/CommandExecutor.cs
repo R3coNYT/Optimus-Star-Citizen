@@ -66,8 +66,8 @@ public sealed record ExecutionResult(
 
         if (Intent is not null)
         {
-            builder.AppendLine($"  énoncé      « {Intent.RawText} »");
-            builder.AppendLine($"  normalisé   « {Intent.NormalizedText} »");
+            builder.AppendLine($"  utterance   “{Intent.RawText}”");
+            builder.AppendLine($"  normalised  “{Intent.NormalizedText}”");
 
             if (Intent.Best is not null)
             {
@@ -96,7 +96,7 @@ public sealed record ExecutionResult(
 
         foreach (SequenceStepTrace step in Steps)
         {
-            builder.AppendLine($"  étape {step.Index,-3} {step.Description}  ({step.DurationMs:F1} ms)");
+            builder.AppendLine($"  step {step.Index,-3} {step.Description}  ({step.DurationMs:F1} ms)");
         }
 
         if (Message is not null)
@@ -252,7 +252,7 @@ public sealed class CommandExecutor
             return new ExecutionResult(
                 traceId, ExecutionStatus.NoChangeNeeded, null, command, guard,
                 Array.Empty<SequenceStepTrace>(), Elapsed(start),
-                $"« {command.Name} » : rien à changer.", polarity);
+                $"“{command.Name}”: nothing to change.", polarity);
         }
 
         if (command.IsPassive)
@@ -293,12 +293,12 @@ public sealed class CommandExecutor
 
                 foreach (string decision in decisions)
                 {
-                    annotated.Add(new SequenceStepTrace(annotated.Count, $"si — {decision}", 0));
+                    annotated.Add(new SequenceStepTrace(annotated.Count, $"if — {decision}", 0));
                 }
 
                 foreach (string reason in skipped)
                 {
-                    annotated.Add(new SequenceStepTrace(annotated.Count, $"écarté — {reason}", 0));
+                    annotated.Add(new SequenceStepTrace(annotated.Count, $"skipped — {reason}", 0));
                 }
 
                 traces = annotated;
@@ -312,7 +312,7 @@ public sealed class CommandExecutor
             return new ExecutionResult(
                 traceId, ExecutionStatus.Failed, null, command, guard,
                 Array.Empty<SequenceStepTrace>(), Elapsed(start),
-                "Séquence interrompue ; toutes les touches ont été relâchées.", polarity);
+                "Sequence interrupted; every key has been released.", polarity);
         }
         catch (InvalidOperationException exception)
         {

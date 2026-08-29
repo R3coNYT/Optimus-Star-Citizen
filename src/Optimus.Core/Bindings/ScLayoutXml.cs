@@ -89,7 +89,7 @@ public static class ScLayoutXml
                 // C'est une information, pas un défaut : elle défait un défaut du jeu.
                 if (string.IsNullOrWhiteSpace(raw) || raw == " ")
                 {
-                    skipped.Add($"{actionId} : touche retirée par le pilote");
+                    skipped.Add($"{actionId}: key removed by the pilot");
                     continue;
                 }
 
@@ -129,7 +129,7 @@ public static class ScLayoutXml
             new XElement(
                 "CustomisationUIHeader",
                 new XAttribute("label", layoutName),
-                new XAttribute("description", "Assignations demandées par Optimus"),
+                new XAttribute("description", "Bindings requested by Optimus"),
                 new XElement("devices", new XElement("keyboard", new XAttribute("instance", "1")))),
             new XElement("options", new XAttribute("type", "keyboard"), new XAttribute("instance", "1")),
             new XElement("modifiers"));

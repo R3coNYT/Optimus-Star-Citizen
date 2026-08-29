@@ -107,7 +107,7 @@ public sealed class SequenceRunner
         {
             case ActionStepType.Wait:
                 await DelayAsync(step.WaitMs, options, cancellationToken).ConfigureAwait(false);
-                return $"attendre {step.WaitMs} ms";
+                return $"wait {step.WaitMs} ms";
 
             case ActionStepType.Say:
                 // Une macro de dix secondes qui se deroulerait en silence est inquietante :
@@ -118,12 +118,12 @@ public sealed class SequenceRunner
                     await _narrate(step.ResponseKey, cancellationToken).ConfigureAwait(false);
                 }
 
-                return $"dire « {step.ResponseKey} »";
+                return $"say “{step.ResponseKey}”";
 
             case ActionStepType.Key:
                 if (step.RawInput is null)
                 {
-                    throw new InvalidOperationException("Étape de type Key sans entrée.");
+                    throw new InvalidOperationException("Key step with no input.");
                 }
 
                 await SendAsync(step.RawInput, options, cancellationToken).ConfigureAwait(false);
@@ -133,14 +133,14 @@ public sealed class SequenceRunner
                 {
                     if (step.ActionId is null)
                     {
-                        throw new InvalidOperationException("Étape de type GameAction sans identifiant d'action.");
+                        throw new InvalidOperationException("GameAction step with no action id.");
                     }
 
                     BindingLookup lookup = _bindings.Resolve(step.ActionId, out Binding? binding);
                     if (lookup != BindingLookup.Bound || binding is null)
                     {
                         throw new InvalidOperationException(
-                            $"L'action « {step.ActionId} » n'est pas exécutable ({lookup}).");
+                            $"Action “{step.ActionId}” is not executable ({lookup}).");
                     }
 
                     InputSpec input = ApplyOverrides(binding.Input, step);
@@ -149,7 +149,7 @@ public sealed class SequenceRunner
                 }
 
             default:
-                throw new NotSupportedException($"Type d'étape non pris en charge : {step.Type}");
+                throw new NotSupportedException($"Unsupported step type: {step.Type}");
         }
     }
 

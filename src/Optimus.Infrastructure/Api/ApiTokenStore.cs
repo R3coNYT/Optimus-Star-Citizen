@@ -65,7 +65,7 @@ public static class ApiTokenStore
         catch (Exception exception)
         {
             DiagnosticLog.Warn(
-                "jetons d'API illisibles, un jeton neuf sera émis",
+                "API tokens unreadable, a fresh one will be issued",
                 $"{Path.GetFileName(file)} : {exception.Message}");
 
             return Array.Empty<ApiToken>();
@@ -109,7 +109,7 @@ public static class ApiTokenStore
         ApiToken owner = ApiToken.Issue(OwnerName, ApiScope.All);
         Save([owner], path);
 
-        DiagnosticLog.Info("jeton d'API émis", $"« {OwnerName} », portée complète");
+        DiagnosticLog.Info("API token issued", $"“{OwnerName}”, full scope");
 
         return [owner];
     }
@@ -133,7 +133,7 @@ public static class ApiTokenStore
         tokens.Add(issued);
         Save(tokens, path);
 
-        DiagnosticLog.Info($"jeton d'API « {name} » régénéré", "l'ancien ne vaut plus rien");
+        DiagnosticLog.Info($"API token “{name}” regenerated", "the old one is now worthless");
 
         return issued;
     }

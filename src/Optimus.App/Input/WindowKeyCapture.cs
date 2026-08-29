@@ -46,7 +46,7 @@ public sealed class WindowKeyCapture : IDisposable
 
         if (PresentationSource.FromVisual(window) is not HwndSource source)
         {
-            throw new InvalidOperationException("La fenêtre n'est pas encore affichée.");
+            throw new InvalidOperationException("The window is not shown yet.");
         }
 
         using WindowKeyCapture capture = new(source);

@@ -112,7 +112,7 @@ public partial class MainWindow : Window
         {
             // Le confort de lecture ne vaut pas qu'Optimus tombe. C'est exactement ce qui
             // s'était produit, et une seule fois suffit.
-            DiagnosticLog.Warn("défilement du journal impossible", exception.Message);
+            DiagnosticLog.Warn("could not scroll the log", exception.Message);
         }
     }
 

@@ -111,7 +111,10 @@ public sealed class MacroConditionTests
         Assert.Empty(plan.Steps);
         Assert.Empty(plan.Skipped);
         Assert.Single(plan.Decisions);
-        Assert.Contains("non", plan.Decisions[0], StringComparison.Ordinal);
+        // La trace est en anglais quelle que soit la langue de l'écran : elle est lue
+        // dans un journal, pas dans une fenêtre. « non » aurait aussi bien pu tomber
+        // par hasard — « nothing to play » dit la même chose sans ambiguïté.
+        Assert.Contains(" → no,", plan.Decisions[0], StringComparison.Ordinal);
     }
 
     // ------------------------------------------------------------------------- la projection
