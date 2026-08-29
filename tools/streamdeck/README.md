@@ -67,19 +67,42 @@ Everything stays on `127.0.0.1`. The plugin runs inside the Stream Deck applicat
 machine as Optimus; nothing crosses the network, including for Stream Deck Mobile, which relays
 through the desktop application.
 
-## Your own icons
+## The icons
 
-Every image below is a **stand-in**. Drop your own file over it, keep the name, restart the Stream
-Deck application. Nothing else to edit — the manifest already points at these names.
+The nine key images are **drawn by hand**, on a single 3 × 3 sheet:
 
-All of them live in one folder:
+```
+images/streamdeck/Optimus_Stream_Deck_Buttons.png
+```
+
+Redraw that sheet, keep the reading order, and cut it again:
+
+```powershell
+.\tools\slice-streamdeck-sheet.ps1 -Preview   # says what it found, writes nothing
+.\tools\slice-streamdeck-sheet.ps1            # writes the nine pairs
+```
+
+The order on the sheet is the order in the list below, left to right, top to bottom. It is
+declared once, at the top of the script — not in the manifest.
+
+The cutter does not assume a regular grid, because the sheet is not one. It counts the lit pixels
+of every row and column to find the three bands, splits the sheet into nine cells at the middle of
+each gutter, then measures **each tile inside its own cell**. An earlier version used one band per
+row: the tiles are not aligned with each other, and the bottom two rows came out with their frames
+clipped.
+
+Every tile is then cut to the **same side**, centred on its own drawing. Nine different scales
+would show at a glance once the keys sit side by side.
+
+All the files land in one folder:
 
 ```
 tools/streamdeck/com.optimus.copilot.sdPlugin/icons/
 ```
 
 Two files per image: `name.png` and `name@2x.png`, at double the size. The Stream Deck picks the
-one that suits the screen; giving only the small file leaves a blurry key on current hardware.
+one that suits the screen; giving only the small file leaves a blurry key on current hardware. The
+cutter writes both.
 
 ### Keys — 72 × 72 and 144 × 144
 
@@ -121,14 +144,16 @@ it does. The key therefore shows **the last successful press from that key** —
 same thing as the state of the ship. Set a direction (`on` / `off`) in the key's panel and the
 state stops guessing.
 
-### Regenerating the stand-ins
+### The two small families
+
+`category` and the five `action-*` thumbnails are derived from the logo, not drawn by hand:
 
 ```powershell
 .\tools\make-streamdeck-icons.ps1
 ```
 
-Rebuilds all thirty files from `images/Optimus.png`, in three treatments: full, dimmed, and red for
-the engaged stop. It **overwrites** the folder — run it before you draw your own, not after.
+It writes **only** those twelve files. It used to produce key stand-ins as well, and would now
+overwrite the drawn ones — the kind of loss you notice only after reloading the plugin.
 
 ## How it is built
 

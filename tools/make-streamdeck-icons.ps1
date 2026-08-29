@@ -3,23 +3,16 @@
     Fabrique les icones du plugin Stream Deck a partir du logo.
 
 .DESCRIPTION
-    Le Stream Deck reclame trois familles de tailles, et il n'accepte pas qu'on
-    lui en donne une seule en esperant qu'il redimensionne :
+    Fabrique les DEUX petites familles d'images, celles qui ne se voient jamais
+    sur le boitier :
 
         categorie      28 px  (+ 56 en @2x)   la ligne dans la liste des plugins
         action         20 px  (+ 40 en @2x)   la vignette de chaque action
-        touche         72 px  (+144 en @2x)   ce que le pilote voit sur le boitier
 
-    Chaque touche existe en trois etats, parce qu'un bouton qui ne dit pas dans
-    quel etat il est ne vaut pas mieux qu'un raccourci clavier :
-
-        allume         le logo tel quel
-        eteint         attenue et desature - lisible, mais manifestement inactif
-        alerte         vire au rouge, pour l'arret d'urgence engage
-
-    L'attenuation passe par une ColorMatrix et non par une opacite globale : sur
-    le fond noir d'un Stream Deck, baisser l'alpha donne un gris sale, tandis
-    que baisser les canaux garde le dessin net.
+    Les images des TOUCHES ne sont plus fabriquees ici. Elles sont dessinees a la
+    main, et decoupees de la planche par slice-streamdeck-sheet.ps1. Ce script les
+    produisait autrefois en supplement ; il les ecraserait aujourd'hui, ce qui est
+    exactement le genre de perte qu'on ne remarque qu'une fois le plugin recharge.
 
 .EXAMPLE
     .\make-streamdeck-icons.ps1
@@ -89,26 +82,6 @@ function New-Icon {
     Write-Host ("    {0,-22} {1} px" -f $Name, $Size) -ForegroundColor DarkGray
 }
 
-# Attenuation : les trois canaux ramenes a 40 %, plus un leger melange vers le gris.
-# Le dessin reste net, mais aucun pilote ne le confondra avec un bouton actif.
-$dim = @(
-    @(0.32, 0.14, 0.14),
-    @(0.14, 0.32, 0.14),
-    @(0.14, 0.14, 0.32)
-)
-
-# Alerte : tout le signal verse dans le rouge. L'arret d'urgence n'a pas a etre joli.
-$alert = @(
-    @(0.90, 0.05, 0.05),
-    @(0.55, 0.08, 0.08),
-    @(0.55, 0.08, 0.08)
-)
-
-# Chaque nom sort du manifeste : une image manquante ne fait pas echouer le
-# chargement du plugin, elle donne une touche noire, ce qui se cherche longtemps.
-# Ces fichiers sont des SUPPLEANTS - ils tiennent la place jusqu'a ce que le
-# pilote pose les siens, au meme nom.
-
 Write-Host '==> Categorie  (28 / 56)' -ForegroundColor Cyan
 New-Icon -Size 28  -Name 'category.png'
 New-Icon -Size 56  -Name 'category@2x.png'
@@ -118,24 +91,6 @@ foreach ($name in @('action-mic', 'action-stop', 'action-sim', 'action-command',
     New-Icon -Size 20 -Name "$name.png"
     New-Icon -Size 40 -Name "$name@2x.png"
 }
-
-Write-Host '==> Touches  (72 / 144)' -ForegroundColor Cyan
-
-# Les etats « allume » gardent le logo entier ; les « eteint » sont attenues.
-foreach ($name in @('mic-on', 'sim-on', 'command-on', 'speak')) {
-    New-Icon -Size 72  -Name "$name.png"
-    New-Icon -Size 144 -Name "$name@2x.png"
-}
-
-foreach ($name in @('mic-off', 'stop-off', 'sim-off', 'command-off')) {
-    New-Icon -Size 72  -Name "$name.png"     -Matrix $dim
-    New-Icon -Size 144 -Name "$name@2x.png"  -Matrix $dim
-}
-
-# L'arret d'urgence engage est le seul rouge : c'est le seul etat qu'on doit
-# reconnaitre du coin de l'oeil, sans lire.
-New-Icon -Size 72  -Name 'stop-on.png'    -Matrix $alert
-New-Icon -Size 144 -Name 'stop-on@2x.png' -Matrix $alert
 
 $logo.Dispose()
 
