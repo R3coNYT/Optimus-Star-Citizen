@@ -382,4 +382,13 @@
   <sys:String x:Key="Settings.SamplePhrase">“{0}”</sys:String>
   <sys:String x:Key="Settings.AiReachable">The provider answers. Check that “{0}” is actually installed there.</sys:String>
   <sys:String x:Key="Settings.AiUnreachable">No answer from {0}. Is the service running?</sys:String>
+
+  <!-- Zone de notification -->
+  <sys:String x:Key="Tray.Open">Open Optimus</sys:String>
+  <sys:String x:Key="Tray.Quit">Quit Optimus</sys:String>
+  <sys:String x:Key="Tray.HiddenTitle">Optimus is still running</sys:String>
+  <sys:String x:Key="Tray.HiddenBody">The window is closed, but Optimus stays in the notification area: it can still listen and press keys. Right-click the icon to quit it.</sys:String>
+  <sys:String x:Key="Tray.Idle">Optimus — idle</sys:String>
+  <sys:String x:Key="Tray.Listening">Optimus — listening</sys:String>
+  <sys:String x:Key="Tray.Stopped">Optimus — emergency stop engaged</sys:String>
 </ResourceDictionary>

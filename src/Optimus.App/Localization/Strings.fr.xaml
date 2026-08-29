@@ -378,4 +378,13 @@
   <sys:String x:Key="Settings.SamplePhrase">« {0} »</sys:String>
   <sys:String x:Key="Settings.AiReachable">Le fournisseur répond. Vérifiez que « {0} » y est bien installé.</sys:String>
   <sys:String x:Key="Settings.AiUnreachable">Aucune réponse de {0}. Le service est-il lancé ?</sys:String>
+
+  <!-- Zone de notification -->
+  <sys:String x:Key="Tray.Open">Ouvrir Optimus</sys:String>
+  <sys:String x:Key="Tray.Quit">Quitter Optimus</sys:String>
+  <sys:String x:Key="Tray.HiddenTitle">Optimus tourne toujours</sys:String>
+  <sys:String x:Key="Tray.HiddenBody">La fenêtre est fermée, mais Optimus reste dans la zone de notification : il peut encore écouter et appuyer sur des touches. Clic droit sur l'icône pour le quitter.</sys:String>
+  <sys:String x:Key="Tray.Idle">Optimus — en veille</sys:String>
+  <sys:String x:Key="Tray.Listening">Optimus — à l'écoute</sys:String>
+  <sys:String x:Key="Tray.Stopped">Optimus — arrêt d'urgence engagé</sys:String>
 </ResourceDictionary>

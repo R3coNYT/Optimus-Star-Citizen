@@ -17,6 +17,15 @@ public partial class MainWindow : Window
     private readonly MainViewModel _model;
     private bool _scrollPending;
 
+    private TrayIcon? _tray;
+    private ContextMenu? _menu;
+
+    /// <summary>Vrai quand la fermeture est VOULUE, et non un simple repli dans le plateau.</summary>
+    private bool _quitting;
+
+    /// <summary>La bulle n'est dite qu'une fois par session : la deuxième serait du bruit.</summary>
+    private bool _warned;
+
     public MainWindow(OptimusRuntime runtime)
     {
         InitializeComponent();
@@ -26,10 +35,187 @@ public partial class MainWindow : Window
 
         ((INotifyCollectionChanged)_model.Journal).CollectionChanged += OnJournalChanged;
 
-        SourceInitialized += (_, _) => PaintTitleBarDark();
+        SourceInitialized += (_, _) =>
+        {
+            PaintTitleBarDark();
+            InstallTray();
+        };
+
         Loaded += async (_, _) => await _model.WarmUpAsync();
-        Closed += async (_, _) => await _model.DisposeAsync();
+
+        Closed += async (_, _) =>
+        {
+            _tray?.Dispose();
+            _tray = null;
+
+            await _model.DisposeAsync();
+        };
     }
+
+    // ------------------------------------------------------------------ la zone de notification
+
+    /// <summary>
+    /// Pose l'icône, et branche ses deux gestes.
+    ///
+    /// Après <c>SourceInitialized</c> parce que le menu a besoin du handle de cette fenêtre, et
+    /// que l'icône a besoin d'exister avant la première fermeture.
+    ///
+    /// Un échec n'empêche rien : Optimus reste utilisable, la fenêtre se ferme pour de bon comme
+    /// avant. Perdre l'icône ne doit pas coûter l'application.
+    /// </summary>
+    private void InstallTray()
+    {
+        try
+        {
+            _tray = new TrayIcon(Localization.Localizer.T("Tray.Idle"));
+            _tray.Opened += (_, _) => Dispatcher.Invoke(Restore);
+            _tray.MenuRequested += (_, _) => Dispatcher.Invoke(ShowTrayMenu);
+
+            _model.PropertyChanged += (_, _) => Dispatcher.Invoke(RefreshTooltip);
+            RefreshTooltip();
+        }
+        catch (Exception exception)
+        {
+            DiagnosticLog.Warn("notification icon unavailable", exception.Message);
+            _tray = null;
+        }
+    }
+
+    /// <summary>
+    /// Le menu du plateau, bâti sur les MÊMES commandes que la fenêtre.
+    ///
+    /// Rien n'est redéfini ici : « Cockpit.Listen » devient « Cockpit.StopListening » au même
+    /// moment des deux côtés, parce que c'est la même propriété qui l'écrit. Deux menus tenus
+    /// séparément auraient fini par se contredire, et c'est précisément dans le plateau qu'un
+    /// libellé faux se remarque le plus tard.
+    /// </summary>
+    private void ShowTrayMenu()
+    {
+        _menu ??= BuildTrayMenu();
+
+        // Passer au premier plan AVANT d'ouvrir : sans cela le menu reste affiché quand on
+        // clique ailleurs, et il faut le rappeler pour s'en débarrasser. La fenêtre peut être
+        // masquée, son handle existe tant qu'elle n'est pas fermée.
+        SetForegroundWindow(new WindowInteropHelper(this).Handle);
+
+        _menu.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
+        _menu.IsOpen = true;
+    }
+
+    private ContextMenu BuildTrayMenu()
+    {
+        ContextMenu menu = new() { DataContext = _model };
+
+        MenuItem open = new() { Header = Localization.Localizer.T("Tray.Open"), FontWeight = FontWeights.Bold };
+        open.Click += (_, _) => Restore();
+        menu.Items.Add(open);
+
+        menu.Items.Add(new Separator());
+
+        menu.Items.Add(Bound("ListeningLabel", "ToggleListeningCommand"));
+        menu.Items.Add(Bound("ModeLabel", "ToggleSimulationCommand"));
+        menu.Items.Add(Bound("KillSwitchLabel", "ToggleKillSwitchCommand"));
+
+        menu.Items.Add(new Separator());
+
+        MenuItem quit = new() { Header = Localization.Localizer.T("Tray.Quit") };
+        quit.Click += (_, _) => Quit();
+        menu.Items.Add(quit);
+
+        return menu;
+    }
+
+    /// <summary>Un élément dont le libellé et l'action viennent du modèle, comme à l'écran.</summary>
+    private static MenuItem Bound(string label, string command)
+    {
+        MenuItem item = new();
+
+        item.SetBinding(HeaderedItemsControl.HeaderProperty, new System.Windows.Data.Binding(label));
+        item.SetBinding(MenuItem.CommandProperty, new System.Windows.Data.Binding(command));
+
+        return item;
+    }
+
+    /// <summary>
+    /// Ce que dit l'infobulle : l'arrêt d'urgence d'abord, l'écoute ensuite.
+    ///
+    /// Dans cet ordre parce que c'est celui de la gravité. Un arrêt d'urgence engagé explique
+    /// pourquoi plus rien ne répond ; le savoir en survolant une icône évite de chercher
+    /// ailleurs.
+    /// </summary>
+    private void RefreshTooltip()
+    {
+        if (_tray is null)
+        {
+            return;
+        }
+
+        string key =
+            _model.KillSwitch ? "Tray.Stopped"
+            : _model.IsListening ? "Tray.Listening"
+            : "Tray.Idle";
+
+        _tray.SetTooltip(Localization.Localizer.T(key));
+    }
+
+    /// <summary>Remonte la fenêtre, même réduite, même derrière le jeu.</summary>
+    private void Restore()
+    {
+        Show();
+
+        if (WindowState == WindowState.Minimized)
+        {
+            WindowState = WindowState.Normal;
+        }
+
+        Activate();
+    }
+
+    /// <summary>Fermer pour de bon, par le menu du plateau.</summary>
+    private void Quit()
+    {
+        _quitting = true;
+        Close();
+    }
+
+    /// <summary>
+    /// Fermer la fenêtre ne ferme plus Optimus.
+    ///
+    /// C'est ce que demandent le Stream Deck, Discord et l'écoute vocale : aucun ne survit à
+    /// l'arrêt du processus, et personne ne garde une fenêtre ouverte pendant qu'il joue.
+    ///
+    /// Mais un programme qui peut APPUYER SUR DES TOUCHES n'a pas le droit de survivre en
+    /// silence à sa propre fermeture. D'où la bulle, dite une fois par session : elle nomme
+    /// l'endroit où le trouver, et la façon de l'arrêter pour de bon.
+    /// </summary>
+    protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
+    {
+        base.OnClosing(e);
+
+        if (_quitting || _tray is null)
+        {
+            return;
+        }
+
+        e.Cancel = true;
+        Hide();
+
+        if (_warned)
+        {
+            return;
+        }
+
+        _warned = true;
+
+        _tray.ShowBalloon(
+            Localization.Localizer.T("Tray.HiddenTitle"),
+            Localization.Localizer.T("Tray.HiddenBody"));
+
+        DiagnosticLog.Info("window hidden", "Optimus keeps running in the notification area");
+    }
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern bool SetForegroundWindow(nint window);
 
     /// <summary>Attribut DWM qui bascule la barre de titre en sombre (Windows 10 20H1 et suite).</summary>
     private const int UseImmersiveDarkMode = 20;
