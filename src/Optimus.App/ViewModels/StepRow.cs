@@ -248,40 +248,84 @@ public sealed class StepRow : ObservableObject
     /// de liste déroulante. Un pilote qui branche sur un état supposé doit l'apprendre en
     /// l'écrivant, pas en voyant sa macro se tromper.
     /// </summary>
-    public string SubjectCaveat => Subject switch
+    public string SubjectCaveat => Localization.Localizer.T(Subject switch
     {
-        ConditionSubject.Binding =>
-            "Certain : se lit dans votre profil de touches, pas dans le vaisseau.",
-        ConditionSubject.Directed =>
-            "Certain : le jeu expose ce sens et une touche lui est assignée.",
-        ConditionSubject.Simulation =>
-            "Certain : Optimus sait s'il envoie vraiment les touches.",
-        ConditionSubject.FlightMode =>
-            "Supposé. Rien ne remonte du jeu : si vous avez changé de mode au clavier, "
-            + "Optimus l'ignore.",
-        _ => "Supposé. Optimus ne connaît que les commutations qu'il a lui-même provoquées. "
-             + "Inconnu vaut « non ».",
-    };
+        ConditionSubject.Binding => "Macros.CaveatBinding",
+        ConditionSubject.Directed => "Macros.CaveatDirected",
+        ConditionSubject.Simulation => "Macros.CaveatSimulation",
+        ConditionSubject.FlightMode => "Macros.CaveatFlightMode",
+        _ => "Macros.CaveatBelieved",
+    });
 
-    /// <summary>Ligne lisible dans la liste : ce que fera l'étape, en français.</summary>
+    /// <summary>Ligne lisible dans la liste : ce que fera l'étape, dans la langue affichée.</summary>
     public string Summary => Marker switch
     {
-        RowMarker.Else => "sinon",
-        RowMarker.End => "fin",
+        RowMarker.Else => Localization.Localizer.T("Macros.StepElse"),
+        RowMarker.End => Localization.Localizer.T("Macros.StepEnd"),
         _ => Type switch
         {
-            ActionStepType.Wait => $"attendre {WaitMs} ms",
-            ActionStepType.Say => $"dire « {ResponseKey} »",
-            ActionStepType.If => $"si {BuildCondition().Describe()}",
-            ActionStepType.Repeat => $"répéter {Times} fois",
-            _ => (Polarity switch
-            {
-                CommandPolarity.On => "allumer ",
-                CommandPolarity.Off => "éteindre ",
-                _ => "basculer ",
-            }) + (CommandId ?? "?") + (RequireDirected ? "   [sens garanti exigé]" : string.Empty),
+            ActionStepType.Wait => Localization.Localizer.T("Macros.StepWait", WaitMs),
+            ActionStepType.Say => Localization.Localizer.T("Macros.StepSay", ResponseKey ?? "?"),
+            ActionStepType.If => Localization.Localizer.T("Macros.StepIf", DescribeCondition()),
+            ActionStepType.Repeat => Localization.Localizer.T("Macros.StepRepeat", Times),
+            _ => Localization.Localizer.T(
+                     Polarity switch
+                     {
+                         CommandPolarity.On => "Macros.StepOn",
+                         CommandPolarity.Off => "Macros.StepOff",
+                         _ => "Macros.StepToggle",
+                     },
+                     CommandId ?? "?")
+                 + (RequireDirected ? Localization.Localizer.T("Macros.StepDirected") : string.Empty),
         },
     };
+
+    /// <summary>
+    /// La condition, écrite pour l'écran.
+    ///
+    /// <see cref="MacroCondition.Describe"/> existe déjà et dit la même chose — mais en
+    /// français, et le moteur n'a pas de dictionnaire : il écrit dans le journal, pas dans une
+    /// fenêtre. Refaire ici l'aiguillage n'est donc pas une duplication de règle métier, c'est
+    /// la même donnée rendue pour un autre lecteur.
+    ///
+    /// Une clé par cas, plutôt qu'une phrase assemblée de morceaux. « n'a pas » ne se glisse
+    /// pas au même endroit qu'un « is missing », et une phrase à trous se casse à la
+    /// deuxième langue.
+    /// </summary>
+    private string DescribeCondition()
+    {
+        string command = ConditionNeedsCommand ? ConditionCommandId ?? "?" : "?";
+        string value = ConditionValue ?? string.Empty;
+
+        return Subject switch
+        {
+            ConditionSubject.Binding => Localization.Localizer.T(
+                ConditionNegated ? "Macros.CondBindingNo" : "Macros.CondBindingYes", command),
+
+            ConditionSubject.Directed => Localization.Localizer.T(
+                (ConditionNegated, ConditionPolarity == CommandPolarity.Off) switch
+                {
+                    (false, false) => "Macros.CondDirectedOn",
+                    (false, true) => "Macros.CondDirectedOff",
+                    (true, false) => "Macros.CondDirectedNotOn",
+                    (true, true) => "Macros.CondDirectedNotOff",
+                },
+                command),
+
+            ConditionSubject.Simulation => Localization.Localizer.T(
+                ConditionNegated ? "Macros.CondReal" : "Macros.CondSimulated"),
+
+            ConditionSubject.FlightMode => Localization.Localizer.T(
+                ConditionNegated ? "Macros.CondFlightModeNot" : "Macros.CondFlightMode",
+                value.ToUpperInvariant()),
+
+            ConditionSubject.Believed => Localization.Localizer.T(
+                ConditionNegated ? "Macros.CondBelievedNot" : "Macros.CondBelieved",
+                command, value),
+
+            _ => Localization.Localizer.T("Macros.CondUnknown"),
+        };
+    }
 
     /// <summary>Condition telle que le moteur la recevra.</summary>
     public MacroCondition BuildCondition() => new(

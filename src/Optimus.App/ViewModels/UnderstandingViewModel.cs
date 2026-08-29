@@ -20,16 +20,19 @@ public sealed class HesitationRow(Hesitation hesitation, string? commandName)
 
     public string? CommandId => Source.CommandId;
 
-    public string Kind => Source.Kind switch
+    public string Kind => Localization.Localizer.T(Source.Kind switch
     {
-        HesitationKind.Proposed => "proposée sans certitude",
-        HesitationKind.Denied => "proposition refusée",
-        HesitationKind.Ambiguous => "plusieurs commandes",
-        _ => "non comprise",
-    };
+        HesitationKind.Proposed => "Understanding.KindProposed",
+        HesitationKind.Denied => "Understanding.KindDenied",
+        HesitationKind.Ambiguous => "Understanding.KindAmbiguous",
+        _ => "Understanding.KindUnclear",
+    });
 
-    public string Detail =>
-        $"{Count} fois · confiance {Source.LastConfidence:F2} · {Source.LastSeen.ToLocalTime():dd/MM HH:mm}";
+    public string Detail => Localization.Localizer.T(
+        "Understanding.HesitationDetail",
+        Count,
+        Source.LastConfidence.ToString("F2"),
+        Source.LastSeen.ToLocalTime().ToString("dd/MM HH:mm"));
 }
 
 /// <summary>Une formulation déjà ajoutée par le pilote.</summary>
@@ -177,9 +180,8 @@ public sealed class UnderstandingViewModel : ObservableObject
     }
 
     public string Summary => Hesitations.Count == 0
-        ? "Rien à signaler : tout ce qu'Optimus a entendu, il l'a compris."
-        : $"{Hesitations.Count} formulation(s) sur lesquelles Optimus a hésité · "
-          + $"{Aliases.Count} ajoutée(s) par vous";
+        ? Localization.Localizer.T("Understanding.NothingToReport")
+        : Localization.Localizer.T("Understanding.Summary", Hesitations.Count, Aliases.Count);
 
     /// <summary>Recharge la liste depuis le journal et les formulations enregistrées.</summary>
     public void Refresh()
@@ -236,7 +238,7 @@ public sealed class UnderstandingViewModel : ObservableObject
 
         if (normalized.Length == 0)
         {
-            Verdict = "Cette formulation ne contient rien de prononçable.";
+            Verdict = Localization.Localizer.T("Understanding.NothingPronounceable");
             return;
         }
 
@@ -248,8 +250,8 @@ public sealed class UnderstandingViewModel : ObservableObject
         if (owner is not null)
         {
             Verdict = string.Equals(owner.Id, TargetCommand, StringComparison.OrdinalIgnoreCase)
-                ? $"« {phrase} » est déjà rattachée à cette commande."
-                : $"« {phrase} » est déjà employée par « {owner.Name} ».";
+                ? Localization.Localizer.T("Understanding.AlreadyOnThisCommand", phrase)
+                : Localization.Localizer.T("Understanding.AlreadyTaken", phrase, owner.Name);
             return;
         }
 
@@ -272,7 +274,7 @@ public sealed class UnderstandingViewModel : ObservableObject
             ActivityLevel.Normal);
 
         Phrase = string.Empty;
-        Verdict = "Ajoutée.";
+        Verdict = Localization.Localizer.T("Understanding.Added");
         Refresh();
     }
 

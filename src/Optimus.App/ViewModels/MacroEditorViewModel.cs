@@ -19,9 +19,9 @@ public sealed class MacroRow(CommandDefinition macro, bool isUsers)
 
     public bool IsUsers { get; } = isUsers;
 
-    public string Origin => IsUsers ? "à vous" : "livrée";
+    public string Origin => Localization.Localizer.T(IsUsers ? "Macros.OriginYours" : "Macros.OriginShipped");
 
-    public string Summary => $"{Macro.Actions.Count} étapes · {Macro.VoicePhrases.Count} formulations";
+    public string Summary => Localization.Localizer.T("Macros.RowSummary", Macro.Actions.Count, Macro.VoicePhrases.Count);
 }
 
 /// <summary>
@@ -286,9 +286,9 @@ public sealed class MacroEditorViewModel : ObservableObject
         CommandDefinition draft = new(
             $"macro.perso.{DateTime.Now:yyyyMMddHHmmss}",
             CommandKind.Macro,
-            "Nouvelle macro",
+            Localization.Localizer.T("Macros.NewName"),
             "macro",
-            ["ma nouvelle macro"],
+            [Localization.Localizer.T("Macros.NewPhrase")],
             [ActionStep.Wait(500)],
             CooldownMs: 4000);
 
@@ -312,7 +312,7 @@ public sealed class MacroEditorViewModel : ObservableObject
         CommandDefinition copy = source with
         {
             Id = $"macro.perso.{DateTime.Now:yyyyMMddHHmmss}",
-            Name = source.Name + " (copie)",
+            Name = source.Name + Localization.Localizer.T("Macros.CopySuffix"),
 
             // Les formulations ne se dupliquent pas : deux commandes ne peuvent pas repondre au
             // meme enonce, et la copie serait refusee a l'enregistrement.
@@ -337,8 +337,8 @@ public sealed class MacroEditorViewModel : ObservableObject
         bool shipped = _runtime.ShippedCatalog.Contains(row.Id);
 
         string question = shipped
-            ? $"« {row.Name} » reviendra à la version livrée avec Optimus.\n\nContinuer ?"
-            : $"« {row.Name} » sera supprimée définitivement.\n\nContinuer ?";
+            ? Localization.Localizer.T("Macros.ConfirmRevert", row.Name)
+            : Localization.Localizer.T("Macros.ConfirmDelete", row.Name);
 
         if (MessageBox.Show(question, "Optimus", MessageBoxButton.OKCancel, MessageBoxImage.Warning)
             != MessageBoxResult.OK)
@@ -393,8 +393,9 @@ public sealed class MacroEditorViewModel : ObservableObject
         await _afterChange().ConfigureAwait(true);
 
         Verdict = verdict.Warnings.Count == 0
-            ? "Enregistrée."
-            : "Enregistrée. À savoir :\n• " + string.Join("\n• ", verdict.Warnings);
+            ? Localization.Localizer.T("Macros.Saved")
+            : Localization.Localizer.T("Macros.SavedWithNotes")
+              + string.Join("\n• ", verdict.Warnings);
 
         _log(Localization.Localizer.T("Log.MacroSaved", edited.Name),
             verdict.Warnings.Count == 0 ? null : verdict.Warnings[0],

@@ -723,7 +723,7 @@ public sealed class SettingsViewModel : ObservableObject
                 Compose(composer, "system.no_binding", ResponseEvent.Fail),
             ];
 
-            return string.Join("\n", samples.Where(s => s.Length > 0).Select(s => $"« {s} »"));
+            return string.Join("\n", samples.Where(s => s.Length > 0).Select(s => Localization.Localizer.T("Settings.SamplePhrase", s)));
         }
     }
 
@@ -814,8 +814,7 @@ public sealed class SettingsViewModel : ObservableObject
         if (!PushToTalkWatcher.IsSupported(PushToTalkKey))
         {
             MessageBox.Show(
-                $"« {PushToTalkKey} » ne peut pas servir de touche de push-to-talk.\n\n"
-                + "Choisissez-en une autre avec le bouton de capture.",
+                Localization.Localizer.T("Settings.PttUnusable", PushToTalkKey),
                 "Optimus", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
@@ -823,8 +822,7 @@ public sealed class SettingsViewModel : ObservableObject
         if (string.IsNullOrWhiteSpace(WakeWord))
         {
             MessageBox.Show(
-                "Le mot d'éveil ne peut pas être vide : c'est lui qui distingue une commande "
-                + "d'une conversation.",
+                Localization.Localizer.T("Settings.WakeWordEmpty"),
                 "Optimus", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
@@ -968,8 +966,8 @@ public sealed class SettingsViewModel : ObservableObject
         bool reachable = await model.IsReachableAsync().ConfigureAwait(true);
 
         AiProbe = reachable
-            ? $"Le fournisseur répond. Vérifiez que « {settings.Model} » y est bien installé."
-            : $"Aucune réponse de {settings.Endpoint}. Le service est-il lancé ?";
+            ? Localization.Localizer.T("Settings.AiReachable", settings.Model)
+            : Localization.Localizer.T("Settings.AiUnreachable", settings.Endpoint);
     }
 
     /// <summary>

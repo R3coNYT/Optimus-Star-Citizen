@@ -272,4 +272,109 @@
   <sys:String x:Key="Settings.ApiOnExplanation">N'écoute que 127.0.0.1 : Windows refuse à un programme sans droits administrateur d'écouter sur le réseau, et Optimus n'en a pas. Elle transporte des intentions, jamais des touches — on désigne une commande du catalogue, et l'exécution repasse par la même garde que la voix. Le jeton est chiffré au compte Windows courant.</sys:String>
   <sys:String x:Key="Settings.ApiOffExplanation">Éteinte. Rien n'écoute, pas même sur cette machine. À activer pour brancher un Stream Deck, un bot Discord ou un overlay — chacun devra présenter le jeton.</sys:String>
 
+
+  <!-- Macros : etapes et conditions -->
+  <sys:String x:Key="Macros.StepElse">sinon</sys:String>
+  <sys:String x:Key="Macros.StepEnd">fin</sys:String>
+  <sys:String x:Key="Macros.StepWait">attendre {0} ms</sys:String>
+  <sys:String x:Key="Macros.StepSay">dire « {0} »</sys:String>
+  <sys:String x:Key="Macros.StepIf">si {0}</sys:String>
+  <sys:String x:Key="Macros.StepRepeat">répéter {0} fois</sys:String>
+  <sys:String x:Key="Macros.StepOn">allumer {0}</sys:String>
+  <sys:String x:Key="Macros.StepOff">éteindre {0}</sys:String>
+  <sys:String x:Key="Macros.StepToggle">basculer {0}</sys:String>
+  <sys:String x:Key="Macros.StepDirected" xml:space="preserve">   [sens garanti exigé]</sys:String>
+  <sys:String x:Key="Macros.CaveatBinding">Certain : se lit dans votre profil de touches, pas dans le vaisseau.</sys:String>
+  <sys:String x:Key="Macros.CaveatDirected">Certain : le jeu expose ce sens et une touche lui est assignée.</sys:String>
+  <sys:String x:Key="Macros.CaveatSimulation">Certain : Optimus sait s'il envoie vraiment les touches.</sys:String>
+  <sys:String x:Key="Macros.CaveatFlightMode">Supposé. Rien ne remonte du jeu : si vous avez changé de mode au clavier, Optimus l'ignore.</sys:String>
+  <sys:String x:Key="Macros.CaveatBelieved">Supposé. Optimus ne connaît que les commutations qu'il a lui-même provoquées. Inconnu vaut « non ».</sys:String>
+  <sys:String x:Key="Macros.CondBindingYes">« {0} » a toutes ses touches</sys:String>
+  <sys:String x:Key="Macros.CondBindingNo">« {0} » n'a pas toutes ses touches</sys:String>
+  <sys:String x:Key="Macros.CondDirectedOn">« {0} » offre l'activation dirigée</sys:String>
+  <sys:String x:Key="Macros.CondDirectedOff">« {0} » offre l'extinction dirigée</sys:String>
+  <sys:String x:Key="Macros.CondDirectedNotOn">« {0} » n'offre pas l'activation dirigée</sys:String>
+  <sys:String x:Key="Macros.CondDirectedNotOff">« {0} » n'offre pas l'extinction dirigée</sys:String>
+  <sys:String x:Key="Macros.CondSimulated">Optimus simule</sys:String>
+  <sys:String x:Key="Macros.CondReal">les touches partent vraiment</sys:String>
+  <sys:String x:Key="Macros.CondFlightMode">le mode de vol est {0}</sys:String>
+  <sys:String x:Key="Macros.CondFlightModeNot">le mode de vol n'est pas {0}</sys:String>
+  <sys:String x:Key="Macros.CondBelieved">« {0} » est supposé {1}</sys:String>
+  <sys:String x:Key="Macros.CondBelievedNot">« {0} » n'est pas supposé {1}</sys:String>
+  <sys:String x:Key="Macros.CondUnknown">condition inconnue</sys:String>
+
+  <!-- Comprehension : hesitations et formulations apprises -->
+  <sys:String x:Key="Understanding.KindProposed">proposée sans certitude</sys:String>
+  <sys:String x:Key="Understanding.KindDenied">proposition refusée</sys:String>
+  <sys:String x:Key="Understanding.KindAmbiguous">plusieurs commandes</sys:String>
+  <sys:String x:Key="Understanding.KindUnclear">non comprise</sys:String>
+  <sys:String x:Key="Understanding.HesitationDetail">{0} fois · confiance {1} · {2}</sys:String>
+  <sys:String x:Key="Understanding.NothingToReport">Rien à signaler : tout ce qu'Optimus a entendu, il l'a compris.</sys:String>
+  <sys:String x:Key="Understanding.Summary">{0} formulation(s) sur lesquelles Optimus a hésité · {1} ajoutée(s) par vous</sys:String>
+  <sys:String x:Key="Understanding.NothingPronounceable">Cette formulation ne contient rien de prononçable.</sys:String>
+  <sys:String x:Key="Understanding.AlreadyOnThisCommand">« {0} » est déjà rattachée à cette commande.</sys:String>
+  <sys:String x:Key="Understanding.AlreadyTaken">« {0} » est déjà employée par « {1} ».</sys:String>
+  <sys:String x:Key="Understanding.Added">Ajoutée.</sys:String>
+
+  <!-- Fil d activite, touches et profils -->
+  <sys:String x:Key="Log.RealModeWarning">Les touches seront réellement envoyées au jeu.&#10;&#10;Placez-vous dans Star Citizen, vaisseau posé, avant de lancer une commande.&#10;&#10;Continuer ?</sys:String>
+  <sys:String x:Key="Log.RealModeTitle">Passer en mode réel</sys:String>
+  <sys:String x:Key="Log.RealModeOn">mode réel activé</sys:String>
+  <sys:String x:Key="Log.BackToSimulation">retour en simulation</sys:String>
+  <sys:String x:Key="Log.KillSwitchOn">ARRÊT D'URGENCE engagé</sys:String>
+  <sys:String x:Key="Log.KillSwitchOff">commandes débloquées</sys:String>
+  <sys:String x:Key="Log.PressKeyFor">pressez la touche pour « {0} »</sys:String>
+  <sys:String x:Key="Log.RememberToExport">N'oubliez pas d'exporter vers le jeu, sinon la frappe partira dans le vide.</sys:String>
+  <sys:String x:Key="Log.KeyAlreadyUsed">Attention : cette touche sert déjà à {0}.</sys:String>
+  <sys:String x:Key="Log.BindingRemoved">assignation retirée de « {0} »</sys:String>
+  <sys:String x:Key="Log.BindingRemovedHint">Star Citizen garde la touche qu'il a apprise : Optimus ne l'enverra plus, mais elle reste active si vous la pressez vous-même.</sys:String>
+  <sys:String x:Key="Log.ImportDialogTitle">Profil de commandes exporté depuis Star Citizen</sys:String>
+  <sys:String x:Key="Log.ImportDialogFilter">Profils Star Citizen (layout_*.xml)|layout_*.xml|Tous les fichiers XML|*.xml</sys:String>
+  <sys:String x:Key="Log.Imported">{0} réglage(s) repris de « {1} »</sys:String>
+  <sys:String x:Key="Log.ImportSkipped">{0} écarté(s) : {1}</sys:String>
+  <sys:String x:Key="Log.Exported">{0} assignation(s) exportée(s)</sys:String>
+  <sys:String x:Key="Log.ExportedInPlace">Déjà dans le dossier du jeu. Dans Star Citizen : pp_RebindKeys optimus</sys:String>
+  <sys:String x:Key="Log.ExportedElsewhere">Écrit dans {0} — à copier dans le dossier Mappings du jeu.</sys:String>
+  <sys:String x:Key="Log.KeyProfile">profil de touches « {0} »</sys:String>
+  <sys:String x:Key="Log.ProfileCreated">profil « {0} » créé</sys:String>
+  <sys:String x:Key="Log.ProfileEmpty">Vide : importez votre disposition depuis le jeu, ou assignez à la main.</sys:String>
+  <sys:String x:Key="Log.ProfileCopiedFrom">Reprend les assignations de « {0} ».</sys:String>
+  <sys:String x:Key="Log.ProfileRenamed">profil renommé en « {0} »</sys:String>
+  <sys:String x:Key="Log.ProfileWas">Anciennement « {0} ».</sys:String>
+  <sys:String x:Key="Log.ProfileDeleted">profil « {0} » supprimé</sys:String>
+  <sys:String x:Key="Log.Ignored">ignoré · {0}</sys:String>
+  <sys:String x:Key="Log.Confidence">confiance {0}</sys:String>
+  <sys:String x:Key="Log.CalledNotUnderstood" xml:space="preserve"> — interpellé, mais pas compris</sys:String>
+  <sys:String x:Key="Log.Rules">règles : {0}</sys:String>
+  <sys:String x:Key="Log.OptimusSaid">Optimus « {0} »</sys:String>
+  <sys:String x:Key="Log.Executed">exécuté · {0}</sys:String>
+  <sys:String x:Key="Log.SimulatedRun">simulé · {0}</sys:String>
+  <sys:String x:Key="Log.Answered">répondu · {0}</sys:String>
+  <sys:String x:Key="Log.NoChange">rien à changer · {0}</sys:String>
+  <sys:String x:Key="Log.Rejected">refusé · {0}</sys:String>
+  <sys:String x:Key="Log.Ambiguous">ambigu</sys:String>
+  <sys:String x:Key="Log.NotUnderstood">non compris</sys:String>
+  <sys:String x:Key="Log.Failed">échec</sys:String>
+  <sys:String x:Key="Keys.ProfileHint">Un profil ne contient que vos assignations — {0} pour « {1} ». Les touches par défaut du jeu restent communes. Dupliquez pour partir de celui-ci, puis ne changez que ce qui diffère.</sys:String>
+  <sys:String x:Key="Keys.BindingSummary">{0} actions du catalogue · {1} liées</sys:String>
+  <sys:String x:Key="Keys.BindingBlocking" xml:space="preserve"> · {0} bloquantes</sys:String>
+  <sys:String x:Key="Keys.BindingNoneBlocking" xml:space="preserve"> · aucune bloquante</sys:String>
+
+  <!-- Editeur de macros, reglages, profils -->
+  <sys:String x:Key="Macros.OriginYours">à vous</sys:String>
+  <sys:String x:Key="Macros.OriginShipped">livrée</sys:String>
+  <sys:String x:Key="Macros.RowSummary">{0} étapes · {1} formulations</sys:String>
+  <sys:String x:Key="Macros.NewName">Nouvelle macro</sys:String>
+  <sys:String x:Key="Macros.NewPhrase">ma nouvelle macro</sys:String>
+  <sys:String x:Key="Macros.CopySuffix" xml:space="preserve"> (copie)</sys:String>
+  <sys:String x:Key="Macros.ConfirmRevert">« {0} » reviendra à la version livrée avec Optimus.&#10;&#10;Continuer ?</sys:String>
+  <sys:String x:Key="Macros.ConfirmDelete">« {0} » sera supprimée définitivement.&#10;&#10;Continuer ?</sys:String>
+  <sys:String x:Key="Macros.Saved">Enregistrée.</sys:String>
+  <sys:String x:Key="Macros.SavedWithNotes" xml:space="preserve">Enregistrée. À savoir :&#10;• </sys:String>
+  <sys:String x:Key="Settings.PttUnusable">« {0} » ne peut pas servir de touche de push-to-talk.&#10;&#10;Choisissez-en une autre avec le bouton de capture.</sys:String>
+  <sys:String x:Key="Settings.WakeWordEmpty">Le mot d'éveil ne peut pas être vide : c'est lui qui distingue une commande d'une conversation.</sys:String>
+  <sys:String x:Key="Log.ProfileBindingsTaken">{0} assignations reprises.</sys:String>
+  <sys:String x:Key="Settings.SamplePhrase">« {0} »</sys:String>
+  <sys:String x:Key="Settings.AiReachable">Le fournisseur répond. Vérifiez que « {0} » y est bien installé.</sys:String>
+  <sys:String x:Key="Settings.AiUnreachable">Aucune réponse de {0}. Le service est-il lancé ?</sys:String>
 </ResourceDictionary>

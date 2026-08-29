@@ -232,10 +232,8 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
     /// depuis Star Citizen. Les touches par défaut du jeu ne changent pas d'un style de vol à
     /// l'autre, et les dupliquer dans chaque profil n'aurait rien apporté.
     /// </summary>
-    public string ProfileHint =>
-        $"Un profil ne contient que vos assignations — {_runtime.Overlay.Count} pour « "
-        + $"{_runtime.BindingProfileName} ». Les touches par défaut du jeu restent communes. "
-        + "Dupliquez pour partir de celui-ci, puis ne changez que ce qui diffère.";
+    public string ProfileHint => Localization.Localizer.T(
+        "Keys.ProfileHint", _runtime.Overlay.Count, _runtime.BindingProfileName);
 
     public AsyncRelayCommand ToggleListeningCommand { get; }
 
@@ -324,8 +322,11 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
     /// laissait croire à un filtre invisible.
     /// </summary>
     public string BindingSummary =>
-        $"{Bindings.Count} actions du catalogue · {Bindings.Count(s => s.IsBound)} liées"
-        + (BlockingCount > 0 ? $" · {BlockingCount} bloquantes" : " · aucune bloquante");
+        Localization.Localizer.T(
+            "Keys.BindingSummary", Bindings.Count, Bindings.Count(s => s.IsBound))
+        + (BlockingCount > 0
+            ? Localization.Localizer.T("Keys.BindingBlocking", BlockingCount)
+            : Localization.Localizer.T("Keys.BindingNoneBlocking"));
 
     public int BlockingCount => Bindings.Count(s => !s.IsBound && s.Need == ActionNeed.Primary);
 
@@ -482,10 +483,8 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
 
         // Passer en réel envoie de vraies touches : cela se demande, cela ne se subit pas (§56).
         if (goingReal && MessageBox.Show(
-                "Les touches seront réellement envoyées au jeu.\n\n"
-                + "Placez-vous dans Star Citizen, vaisseau posé, avant de lancer une commande.\n\n"
-                + "Continuer ?",
-                "Passer en mode réel",
+                Localization.Localizer.T("Log.RealModeWarning"),
+                Localization.Localizer.T("Log.RealModeTitle"),
                 MessageBoxButton.OKCancel,
                 MessageBoxImage.Warning) != MessageBoxResult.OK)
         {
@@ -493,7 +492,7 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
         }
 
         _runtime.SetSimulation(!goingReal);
-        Add(goingReal ? "mode réel activé" : "retour en simulation", null,
+        Add(Localization.Localizer.T(goingReal ? "Log.RealModeOn" : "Log.BackToSimulation"), null,
             goingReal ? ActivityLevel.Warning : ActivityLevel.Muted);
     }
 
@@ -501,7 +500,7 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
     {
         _runtime.SetKillSwitch(!_runtime.KillSwitch);
 
-        Add(_runtime.KillSwitch ? "ARRÊT D'URGENCE engagé" : "commandes débloquées", null,
+        Add(Localization.Localizer.T(_runtime.KillSwitch ? "Log.KillSwitchOn" : "Log.KillSwitchOff"), null,
             _runtime.KillSwitch ? ActivityLevel.Danger : ActivityLevel.Normal);
     }
 
@@ -517,7 +516,7 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
 
         try
         {
-            Add($"pressez la touche pour « {slot.CommandName} »", "Échap pour renoncer", ActivityLevel.Speech);
+            Add(Localization.Localizer.T("Log.PressKeyFor", slot.CommandName), Localization.Localizer.T("Log.EscapeToCancel"), ActivityLevel.Speech);
 
             InputSpec? captured = await WindowKeyCapture
                 .CaptureAsync(Owner, TimeSpan.FromSeconds(20))
@@ -539,8 +538,8 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
 
             Add($"{captured} → {slot.CommandName}",
                 clash is null
-                    ? "N'oubliez pas d'exporter vers le jeu, sinon la frappe partira dans le vide."
-                    : $"Attention : cette touche sert déjà à {clash.ActionId}.",
+                    ? Localization.Localizer.T("Log.RememberToExport")
+                    : Localization.Localizer.T("Log.KeyAlreadyUsed", clash.ActionId),
                 clash is null ? ActivityLevel.Normal : ActivityLevel.Warning);
 
             RefreshBindings();
@@ -564,9 +563,8 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
         _runtime.SaveOverlay();
         _runtime.ReloadBindings();
 
-        Add($"assignation retirée de « {slot.CommandName} »",
-            "Star Citizen garde la touche qu'il a apprise : Optimus ne l'enverra plus, "
-            + "mais elle reste active si vous la pressez vous-même.",
+        Add(Localization.Localizer.T("Log.BindingRemoved", slot.CommandName),
+            Localization.Localizer.T("Log.BindingRemovedHint"),
             ActivityLevel.Warning);
 
         RefreshBindings();
@@ -579,8 +577,8 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
 
         Microsoft.Win32.OpenFileDialog dialog = new()
         {
-            Title = "Profil de commandes exporté depuis Star Citizen",
-            Filter = "Profils Star Citizen (layout_*.xml)|layout_*.xml|Tous les fichiers XML|*.xml",
+            Title = Localization.Localizer.T("Log.ImportDialogTitle"),
+            Filter = Localization.Localizer.T("Log.ImportDialogFilter"),
             InitialDirectory = mappings is not null && Directory.Exists(mappings) ? mappings : string.Empty,
         };
 
@@ -609,8 +607,8 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
         _runtime.SaveOverlay();
         _runtime.ReloadBindings();
 
-        Add($"{adopted} réglage(s) repris de « {import.LayoutName ?? Path.GetFileName(dialog.FileName)} »",
-            import.Skipped.Count > 0 ? $"{import.Skipped.Count} écarté(s) : {import.Skipped[0]}" : null,
+        Add(Localization.Localizer.T("Log.Imported", adopted, import.LayoutName ?? Path.GetFileName(dialog.FileName)),
+            import.Skipped.Count > 0 ? Localization.Localizer.T("Log.ImportSkipped", import.Skipped.Count, import.Skipped[0]) : null,
             ActivityLevel.Normal);
 
         RefreshBindings();
@@ -641,10 +639,10 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
             ScLayoutXml.Write(manual.Select(a => new LayoutEntry(a.ActionId, a.Input)), "optimus"),
             target);
 
-        Add($"{manual.Length} assignation(s) exportée(s)",
+        Add(Localization.Localizer.T("Log.Exported", manual.Length),
             inGameFolder
-                ? "Déjà dans le dossier du jeu. Dans Star Citizen : pp_RebindKeys optimus"
-                : $"Écrit dans {target} — à copier dans le dossier Mappings du jeu.",
+                ? Localization.Localizer.T("Log.ExportedInPlace")
+                : Localization.Localizer.T("Log.ExportedElsewhere", target),
             ActivityLevel.Normal);
     }
 
@@ -776,8 +774,8 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
         {
             _runtime.SwitchBindingProfile(name);
 
-            Add($"profil de touches « {_runtime.BindingProfileName} »",
-                $"{_runtime.Overlay.Count} assignations reprises.", ActivityLevel.Normal);
+            Add(Localization.Localizer.T("Log.KeyProfile", _runtime.BindingProfileName),
+                Localization.Localizer.T("Log.ProfileBindingsTaken", _runtime.Overlay.Count), ActivityLevel.Normal);
         }
         catch (Exception exception)
         {
@@ -804,10 +802,10 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
 
         string created = BindingProfileSet.Sanitize(ProfileName);
 
-        Add($"profil « {created} » créé",
+        Add(Localization.Localizer.T("Log.ProfileCreated", created),
             copyFrom is null
-                ? "Vide : importez votre disposition depuis le jeu, ou assignez à la main."
-                : $"Reprend les assignations de « {copyFrom} ».",
+                ? Localization.Localizer.T("Log.ProfileEmpty")
+                : Localization.Localizer.T("Log.ProfileCopiedFrom", copyFrom),
             ActivityLevel.Normal);
 
         ProfileName = string.Empty;
@@ -834,7 +832,7 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
         // plus. Sans cela, la prochaine assignation recreerait un fichier au nom d'avant.
         _runtime.SwitchBindingProfile(to);
 
-        Add($"profil renommé en « {to} »", $"Anciennement « {from} ».", ActivityLevel.Normal);
+        Add(Localization.Localizer.T("Log.ProfileRenamed", to), Localization.Localizer.T("Log.ProfileWas", from), ActivityLevel.Normal);
 
         ProfileName = string.Empty;
         RefreshProfiles();
@@ -855,7 +853,7 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
             return;
         }
 
-        Add($"profil « {doomed} » supprimé", null, ActivityLevel.Warning);
+        Add(Localization.Localizer.T("Log.ProfileDeleted", doomed), null, ActivityLevel.Warning);
 
         SwitchProfile(BindingProfileSet.Resolve(null));
     }
@@ -939,7 +937,7 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
             // discretement plutot que de le taire - c'est en le voyant qu'on calibre les seuils.
             if (!string.IsNullOrWhiteSpace(heard.Text))
             {
-                Add($"ignoré · {heard.Text}", $"confiance {heard.Confidence:F2}", ActivityLevel.Muted);
+                Add(Localization.Localizer.T("Log.Ignored", heard.Text), Localization.Localizer.T("Log.Confidence", heard.Confidence.ToString("F2")), ActivityLevel.Muted);
             }
 
             return;
@@ -949,7 +947,7 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
         {
             Add($"entendu · {heard.Text}",
                 $"confiance {heard.Confidence:F2}"
-                + (heard.Outcome == RecognitionOutcome.Unclear ? " — interpellé, mais pas compris" : string.Empty),
+                + (heard.Outcome == RecognitionOutcome.Unclear ? Localization.Localizer.T("Log.CalledNotUnderstood") : string.Empty),
                 heard.Outcome == RecognitionOutcome.Unclear ? ActivityLevel.Warning : ActivityLevel.Normal);
         }
 
@@ -970,22 +968,22 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
         {
             string? rules = activity.AppliedRules.Count == 0
                 ? null
-                : "règles : " + string.Join(", ", activity.AppliedRules);
+                : Localization.Localizer.T("Log.Rules", string.Join(", ", activity.AppliedRules));
 
-            Add($"Optimus « {spoken} »", rules, ActivityLevel.Speech);
+            Add(Localization.Localizer.T("Log.OptimusSaid", spoken), rules, ActivityLevel.Speech);
         }
     }
 
     private static string Describe(ExecutionResult result) => result.Status switch
     {
-        ExecutionStatus.Executed => $"exécuté · {result.Command?.Name}",
-        ExecutionStatus.Simulated => $"simulé · {result.Command?.Name}",
-        ExecutionStatus.Answered => $"répondu · {result.Command?.Name}",
-        ExecutionStatus.NoChangeNeeded => $"rien à changer · {result.Command?.Name}",
-        ExecutionStatus.Rejected => $"refusé · {result.Command?.Name}",
-        ExecutionStatus.NeedsClarification => "ambigu",
-        ExecutionStatus.Unknown => "non compris",
-        _ => "échec",
+        ExecutionStatus.Executed => Localization.Localizer.T("Log.Executed", result.Command?.Name ?? "?"),
+        ExecutionStatus.Simulated => Localization.Localizer.T("Log.SimulatedRun", result.Command?.Name ?? "?"),
+        ExecutionStatus.Answered => Localization.Localizer.T("Log.Answered", result.Command?.Name ?? "?"),
+        ExecutionStatus.NoChangeNeeded => Localization.Localizer.T("Log.NoChange", result.Command?.Name ?? "?"),
+        ExecutionStatus.Rejected => Localization.Localizer.T("Log.Rejected", result.Command?.Name ?? "?"),
+        ExecutionStatus.NeedsClarification => Localization.Localizer.T("Log.Ambiguous"),
+        ExecutionStatus.Unknown => Localization.Localizer.T("Log.NotUnderstood"),
+        _ => Localization.Localizer.T("Log.Failed"),
     };
 
     private static string? Detail(ExecutionResult result)
