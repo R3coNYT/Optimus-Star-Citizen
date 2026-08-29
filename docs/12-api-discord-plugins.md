@@ -1,232 +1,234 @@
-# Stratégies transverses — API locale, Discord, Plugins, Multi-copilotes
+# Cross-cutting strategies — local API, Discord, plugins, multi-copilot
 
-## 12.1 API locale (Optimus Bridge)
+## 12.1 The local API (Optimus Bridge)
 
-Hébergée **dans le processus** de l'application, liée à `127.0.0.1` uniquement.
-Sert : l'UI (à terme), le bot Discord, les plugins, un compagnon tablette/SIMPIT, et de futurs
-clients. Elle n'est **jamais** exposée sur le réseau local.
+Hosted **inside the application's process**, bound to `127.0.0.1` only. It serves: the UI
+(eventually), the Discord bot, plugins, a tablet/SIMPIT companion, and future clients. It is
+**never** exposed on the local network.
 
-### Ce qui est livré (2026-08-27)
+### What is shipped (2026-08-27)
 
-Le tableau ci-dessous décrit la cible. Ce qui existe aujourd'hui en est le socle exécutable :
+The table below describes the target. What exists today is its executable foundation:
 
-| Méthode | Route | Portée |
+| Method | Route | Scope |
 |---|---|---|
 | `GET` | `/api/status` | `read` |
 | `GET` | `/api/commands` | `read` |
-| `POST` | `/api/intents/resolve` | `read` — résout un énoncé **sans rien exécuter** |
+| `POST` | `/api/intents/resolve` | `read` — resolves an utterance **without executing anything** |
 | `POST` | `/api/commands/{id}/execute` | `execute` |
-| `POST` | `/api/utterance` | `execute` — même chemin que la voix |
+| `POST` | `/api/utterance` | `execute` — the same path as the voice |
 | `POST` | `/api/say` | `write` |
 | `POST` | `/api/system/killswitch` · `/api/system/simulation` | `write` |
-| `WS` | `/ws/events` | `read` — trames `activity` et `state` |
+| `WS` | `/ws/events` | `read` — `activity` and `state` frames |
 
-Le reste du tableau cible — CRUD des copilotes, des commandes, des bindings, historique,
-statistiques — reste à faire : l'écran couvre déjà ces gestes, et les ouvrir à l'API sans besoin
-exprimé aurait été de la surface offerte pour rien.
+The rest of the target table — CRUD for copilots, commands and bindings, history, statistics —
+remains to be done: the screen already covers those gestures, and opening them to the API with no
+expressed need would have been attack surface offered for nothing.
 
-**`HttpListener` plutôt que Kestrel.** Une poignée de routes sur la boucle locale ne justifie pas
-d'embarquer ASP.NET Core dans une publication autonome déjà à 76 Mo. Et surtout : mesuré le
-2026-08-27, `HttpListener` accepte `http://127.0.0.1:port/` **sans aucun privilège** mais refuse
-`http://+:port/` — l'écoute sur toutes les interfaces — à qui n'est pas administrateur. Optimus
-s'installant par utilisateur, sans UAC (D58), il lui est donc *impossible* de s'exposer au
-réseau, même par erreur de programmation. La promesse §81-83 est portée par le système
-d'exploitation, pas seulement par une ligne qu'un jour quelqu'un modifierait.
+**`HttpListener` rather than Kestrel.** A handful of routes on the loopback does not justify
+embedding ASP.NET Core in a self-contained publish that already weighs 76 MB. And above all:
+measured on 2026-08-27, `HttpListener` accepts `http://127.0.0.1:port/` **without any privilege**
+but refuses `http://+:port/` — listening on every interface — to anyone who is not an
+administrator. Since Optimus installs per user, without UAC (D58), it is therefore *impossible*
+for it to expose itself to the network, even through a programming mistake. The §81-83 promise is
+carried by the operating system, not only by a line somebody might one day change.
 
-**Une exécution prend le temps que prend la parole.** `/execute` et `/utterance` ne rendent la
-main qu'une fois la réplique du copilote prononcée — mesuré à environ 4 s pour un refus bavard.
-C'est délibéré : l'API suit exactement le chemin de la voix, réponse comprise. Un client qui ne
-veut pas attendre écoute `/ws/events` plutôt que la réponse HTTP.
+**An execution takes as long as the speech takes.** `/execute` and `/utterance` only return once
+the copilot's reply has been spoken — measured at around 4 s for a talkative refusal. This is
+deliberate: the API follows exactly the voice's path, reply included. A client that does not want
+to wait listens to `/ws/events` rather than to the HTTP response.
 
 ### Routes
 
-| Méthode | Route | Rôle | Protection |
+| Method | Route | Role | Protection |
 |---|---|---|---|
-| GET | `/api/status` | état complet (voix, jeu, copilote, latences, simulation) | token · lecture |
-| GET | `/api/copilots` · `/api/copilots/{id}` | liste / détail | token · lecture |
-| POST | `/api/copilots` · PUT/DELETE `/api/copilots/{id}` | CRUD | token · **écriture** |
-| POST | `/api/copilots/{id}/activate` | changer de copilote actif | token · écriture |
-| GET | `/api/commands` (`?q=&category=&favorite=`) | catalogue | token · lecture |
-| POST/PUT/DELETE | `/api/commands[/{id}]` | CRUD des commandes utilisateur | token · **écriture** |
-| POST | `/api/commands/{id}/test` | exécution **forcée en simulation** | token · écriture |
-| POST | `/api/commands/{id}/execute` | exécution réelle | token · **exécution** + guard |
-| POST | `/api/intents/resolve` | texte → intent (sans exécuter) | token · lecture |
-| GET/PUT | `/api/bindings/{profile}` | profil de binding | token · écriture |
-| POST | `/api/bindings/import` | import d'un XML SC | token · écriture |
-| GET/PUT | `/api/profiles[/{id}]` | profils utilisateur | token · écriture |
-| GET | `/api/history?limit=&since=` | historique | token · lecture |
-| GET | `/api/analytics/*` | statistiques | token · lecture |
-| POST | `/api/say` | faire parler le copilote | token · écriture |
-| POST | `/api/system/killswitch` · `/api/system/simulation` | sécurité | token · **écriture** |
-| WS | `/ws/events` | flux temps réel (état, commandes, traces) | token |
+| GET | `/api/status` | full state (voice, game, copilot, latencies, simulation) | token · read |
+| GET | `/api/copilots` · `/api/copilots/{id}` | list / detail | token · read |
+| POST | `/api/copilots` · PUT/DELETE `/api/copilots/{id}` | CRUD | token · **write** |
+| POST | `/api/copilots/{id}/activate` | switch the active copilot | token · write |
+| GET | `/api/commands` (`?q=&category=&favorite=`) | catalogue | token · read |
+| POST/PUT/DELETE | `/api/commands[/{id}]` | CRUD for user commands | token · **write** |
+| POST | `/api/commands/{id}/test` | execution **forced into simulation** | token · write |
+| POST | `/api/commands/{id}/execute` | real execution | token · **execute** + guard |
+| POST | `/api/intents/resolve` | text → intent (without executing) | token · read |
+| GET/PUT | `/api/bindings/{profile}` | binding profile | token · write |
+| POST | `/api/bindings/import` | import an SC XML | token · write |
+| GET/PUT | `/api/profiles[/{id}]` | user profiles | token · write |
+| GET | `/api/history?limit=&since=` | history | token · read |
+| GET | `/api/analytics/*` | statistics | token · read |
+| POST | `/api/say` | make the copilot speak | token · write |
+| POST | `/api/system/killswitch` · `/api/system/simulation` | safety | token · **write** |
+| WS | `/ws/events` | real-time stream (state, commands, traces) | token |
 
-### Modèle de sécurité
+### Security model
 
-1. **Token bearer** généré au premier lancement, 256 bits, stocké chiffré (DPAPI), affiché dans
-   Settings, révocable/régénérable.
-2. **Trois portées** : `read`, `write`, `execute`. Un client reçoit le minimum
-   (le bot Discord démarre en `read` seul).
-3. `execute` **repasse toujours par l'`ExecutionGuard`** : simulation, kill switch, focus jeu,
-   permissions, `dangerous`. Aucune route ne court-circuite le point de contrôle unique.
-4. **Rate limiting** par client (défaut : 30 exécutions/min) + journalisation de la source
-   (`source = api | discord | plugin`) dans l'historique.
-5. **CORS fermé** par défaut ; ouverture explicite d'une origine pour le compagnon tablette.
-6. Écoute LAN possible **uniquement** via une option affichée avec un avertissement clair,
-   token obligatoire, et jamais activée par défaut.
+1. A **bearer token** generated at first launch, 256 bits, stored encrypted (DPAPI), shown in
+   Settings, revocable and regenerable.
+2. **Three scopes**: `read`, `write`, `execute`. A client gets the minimum (the Discord bot starts
+   on `read` alone).
+3. `execute` **always goes back through the `ExecutionGuard`**: simulation, kill switch, game
+   focus, permissions, `dangerous`. No route short-circuits the single point of control.
+4. **Rate limiting** per client (30 executions per minute by default) + logging of the source
+   (`source = api | discord | plugin`) in the history.
+5. **CORS closed** by default; an origin is opened explicitly for the tablet companion.
+6. LAN listening is possible **only** through an option shown with a clear warning, with a
+   mandatory token, and never enabled by default.
 
 ---
 
 ## 12.2 Discord (Optimus Link)
 
-### Deux modes, un seul principe
+### Two modes, one principle
 
 ```
-MODE LOCAL (V1, par défaut)                MODE RELAIS (V2, optionnel)
+LOCAL MODE (V1, the default)                RELAY MODE (V2, optional)
 
- Discord ──► bot hébergé DANS               Discord ──► relais ──WS sortant──► Optimus
-             Optimus (token perso)                       (n'a que des intents)
+ Discord ──► bot hosted INSIDE               Discord ──► relay ──outbound WS──► Optimus
+             Optimus (your own token)                     (holds only intents)
              │                                                        │
-             └► ExecutionGuard ► clavier local                        └► ExecutionGuard ► clavier local
+             └► ExecutionGuard ► local keyboard                       └► ExecutionGuard ► local keyboard
 ```
 
-Dans **les deux cas** : le relais/Discord ne transmet **jamais** une touche, seulement un
-`intent_id` + paramètres. La connexion est **sortante**. La machine cible valide tout localement.
+In **both cases**: the relay and Discord **never** carry a keystroke, only an `intent_id` plus
+parameters. The connection is **outbound**. The target machine validates everything locally.
 
-Le mode local est recommandé par défaut : il ne nécessite aucune infrastructure, et rend
-l'isolation (§81–83) vraie *par construction* et non par politique.
+Local mode is the recommended default: it needs no infrastructure, and it makes the isolation
+(§81–83) true *by construction* rather than by policy.
 
-### Appairage
+### Pairing
 
 ```
-1. Optimus (Settings ▸ Discord) : [ Générer un code d'appairage ]  →  OPT-7K3F-92XA (10 min)
-2. Discord : /optimus pair OPT-7K3F-92XA
-3. Optimus vérifie le code, crée un DiscordLink :
+1. Optimus (Settings ▸ Discord): [ Generate a pairing code ]  →  OPT-7K3F-92XA (10 min)
+2. Discord: /optimus pair OPT-7K3F-92XA
+3. Optimus checks the code and creates a DiscordLink:
    { discord_user_id, permissions: { view_status:true, view_commands:true,
                                      execute_commands:FALSE, modify_config:FALSE } }
-4. Le propriétaire élève les permissions à la main, par utilisateur, dans l'UI.
-5. Révocation en un clic ; expiration automatique après N jours d'inactivité (option).
+4. The owner raises the permissions by hand, per user, in the UI.
+5. Revocation in one click; automatic expiry after N days of inactivity (optional).
 ```
 
-### Commandes du bot
+### Bot commands
 
-| Commande | Permission requise |
+| Command | Permission required |
 |---|---|
 | `/optimus status` | `view_status` |
-| `/optimus commands [recherche] [catégorie]` | `view_commands` |
-| `/optimus command <nom>` (détail + binding) | `view_commands` |
+| `/optimus commands [search] [category]` | `view_commands` |
+| `/optimus command <name>` (detail + binding) | `view_commands` |
 | `/optimus history [n]` | `view_history` |
 | `/optimus profiles` · `/optimus profile <id>` | `view_status` / `modify_config` |
-| `/optimus say <texte>` | `execute_commands` |
-| `/optimus exec <commande>` | `execute_commands` (+ guard local, + confirmation si `dangerous`) |
-| `/optimus pair <code>` | — (c'est le point d'entrée) |
+| `/optimus say <text>` | `execute_commands` |
+| `/optimus exec <command>` | `execute_commands` (+ the local guard, + confirmation when `dangerous`) |
+| `/optimus pair <code>` | — (this is the entry point) |
 | `/optimus help` | — |
 
-Alias courts : `/opt …`.
+Short aliases: `/opt …`.
 
-### Notifications (opt-in, événement par événement)
+### Notifications (opt-in, event by event)
 
-`🟢 Optimus démarré` · `🟡 Star Citizen détecté / fermé` · `🔵 commande exécutée` ·
-`🔴 commande échouée` · `⚠️ commande inconnue` · `🟠 provider dégradé` · `⛔ kill switch activé`.
+`🟢 Optimus started` · `🟡 Star Citizen detected / closed` · `🔵 command executed` ·
+`🔴 command failed` · `⚠️ unknown command` · `🟠 provider degraded` · `⛔ kill switch engaged`.
 
-### Garde-fous supplémentaires
+### Extra guard rails
 
-- `execute_commands` **désactivé par défaut**, y compris pour le propriétaire.
-- Les commandes `dangerous` exigent une **confirmation dans l'application**, jamais sur Discord.
-- Rate limit dédié, plus strict que l'API.
-- Toute exécution d'origine Discord est marquée dans l'historique avec l'identité Discord.
-- Le kill switch local coupe **aussi** les exécutions venues de Discord.
-- Un utilisateur Discord ne peut être lié qu'à **une** instance à la fois (évite l'ambiguïté
-  « quelle machine ? »).
+- `execute_commands` is **off by default**, including for the owner.
+- `dangerous` commands require a **confirmation in the application**, never on Discord.
+- A dedicated rate limit, stricter than the API's.
+- Every Discord-originated execution is marked in the history with the Discord identity.
+- The local kill switch cuts Discord-originated executions **too**.
+- A Discord user can be linked to **one** instance at a time (which removes the “which machine?”
+  ambiguity).
 
 ---
 
 ## 12.3 Plugins
 
-### Contrat
+### The contract
 
 ```csharp
-// Optimus.Sdk — surface publique stable, versionnée (SemVer)
+// Optimus.Sdk — a stable, versioned public surface (SemVer)
 public interface IOptimusPlugin
 {
-    PluginMetadata Metadata { get; }                 // id, nom, version, sdk_version
+    PluginMetadata Metadata { get; }                 // id, name, version, sdk_version
     Task InitializeAsync(IPluginContext ctx, CancellationToken ct);
     Task ShutdownAsync(CancellationToken ct);
 }
 
 public interface IPluginContext
 {
-    IReadOnlyList<CommandDefinition> RegisterCommands();      // commandes apportées
-    void RegisterActionHandler(string ns, IActionHandler h);  // type d'étape "plugin"
-    void RegisterProvider<T>(T provider);                     // STT/TTS/LLM/GameState alternatif
+    IReadOnlyList<CommandDefinition> RegisterCommands();      // the commands contributed
+    void RegisterActionHandler(string ns, IActionHandler h);  // the "plugin" step type
+    void RegisterProvider<T>(T provider);                     // an alternative STT/TTS/LLM/GameState
     void RegisterCondition(string id, IConditionEvaluator e);
-    IEventBus Events { get; }        // abonnement aux événements du cœur (lecture seule)
+    IEventBus Events { get; }        // subscription to core events (read only)
     ILogger Logger { get; }
-    IPluginStorage Storage { get; }  // dossier et clés propres au plugin
-    IPluginSettings Settings { get; }// schéma de réglages rendu automatiquement dans l'UI
+    IPluginStorage Storage { get; }  // a folder and keys of the plugin's own
+    IPluginSettings Settings { get; }// a settings schema rendered automatically in the UI
 }
 ```
 
-### Modèle de permissions
+### Permission model
 
-Déclarées au manifeste, affichées à l'installation, refusables :
+Declared in the manifest, shown at install time, refusable:
 
-| Permission | Donne le droit de |
+| Permission | Grants the right to |
 |---|---|
-| `commands.register` | ajouter des commandes au catalogue |
-| `commands.execute` | déclencher une commande existante |
-| `providers.register` | fournir un STT/TTS/LLM/GameState |
-| `network.outbound:<host>` | sortir vers un hôte précis (jamais `*` sans avertissement) |
-| `filesystem.own` | écrire dans son propre dossier |
-| `filesystem.read:<path>` | lire un chemin précis |
-| `input.raw` | **injecter des entrées directement** — permission de plus haut niveau, avertissement explicite, réservée aux cas non couverts par les commandes |
-| `events.subscribe` | écouter les événements du cœur |
+| `commands.register` | add commands to the catalogue |
+| `commands.execute` | trigger an existing command |
+| `providers.register` | supply an STT/TTS/LLM/GameState |
+| `network.outbound:<host>` | reach a specific host (never `*` without a warning) |
+| `filesystem.own` | write inside its own folder |
+| `filesystem.read:<path>` | read a specific path |
+| `input.raw` | **inject input directly** — the highest-level permission, with an explicit warning, reserved for cases commands do not cover |
+| `events.subscribe` | listen to core events |
 
-Chargement dans un `AssemblyLoadContext` collectible (déchargement à chaud), dépendances isolées,
-appels enveloppés (`try/catch` + timeout) : **un plugin qui plante ne fait pas tomber Optimus**.
-Les packs distribués sont signés ; une signature invalide ⇒ installation refusée.
+Loaded into a collectible `AssemblyLoadContext` (hot unloading), with isolated dependencies and
+wrapped calls (`try/catch` + timeout): **a plugin that crashes does not bring Optimus down**.
+Distributed packs are signed; an invalid signature means the installation is refused.
 
-### Plugins de référence prévus
+### Planned reference plugins
 
-`starcitizen` (intégré au cœur au MVP, extrait en plugin ensuite) · `system` (volume, presse-papier,
-lancement d'applications) · `spotify` · `obs` · `twitch` · `telemetry` · `voiceattack-import`.
+`starcitizen` (built into the core for the MVP, extracted into a plugin later) · `system` (volume,
+clipboard, launching applications) · `spotify` · `obs` · `twitch` · `telemetry` ·
+`voiceattack-import`.
 
 ---
 
-## 12.4 Multi-copilotes
+## 12.4 Multi-copilot
 
-| Niveau | Fonctionnement | Version |
+| Level | How it works | Version |
 |---|---|---|
-| **1 — Sélection** | Un copilote actif, changement à chaud (UI, voix, API) ; chacun a son wake word, sa voix, ses commandes | MVP (1 livré) / V1 (n) |
-| **2 — Variantes** | Un même copilote décliné (`Optimus Lite/Combat/Mining`) par `enabled_commands` + capacités, sans code spécifique | V1 |
-| **3 — Routage** | Le wake word détermine le destinataire : « Synthia, … » réveille Synthia même si Optimus est actif | V1/V2 |
-| **4 — Multi-agents** | Plusieurs copilotes actifs, dialogues croisés, ordonnancement de parole, un seul détenteur du micro | V2 |
+| **1 — Selection** | One active copilot, switched hot (UI, voice, API); each has its wake word, its voice, its commands | MVP (one shipped) / V1 (n) |
+| **2 — Variants** | One copilot declined (`Optimus Lite/Combat/Mining`) through `enabled_commands` + abilities, with no special code | V1 |
+| **3 — Routing** | The wake word decides the recipient: “Synthia, …” wakes Synthia even while Optimus is active | V1/V2 |
+| **4 — Multi-agent** | Several copilots active, cross-talk, speech scheduling, a single holder of the microphone | V2 |
 
-**Le problème dur du niveau 4** n'est pas technique mais scénique : deux voix qui se coupent
-sont insupportables. Il faut un `ConversationDirector` (file de parole, priorités, tours,
-interruptions autorisées ou non) — raison pour laquelle c'est du V2, pas du V1.
+**The hard problem at level 4** is not technical but theatrical: two voices talking over each
+other are unbearable. It needs a `ConversationDirector` (a speaking queue, priorities, turns,
+interruptions allowed or not) — which is why it is V2 and not V1.
 
 ---
 
-## 12.5 Packs `.optcopilot`
+## 12.5 `.optcopilot` packs
 
 ```
-optimus-synthia-1.2.0.optcopilot   (ZIP signé)
-├── manifest.json        id, nom, version, sdk_version, auteur, licence, checksum
+optimus-synthia-1.2.0.optcopilot   (a signed ZIP)
+├── manifest.json        id, name, version, sdk_version, author, licence, checksum
 ├── copilot.json
 ├── personality.json
 ├── responses.fr.json / responses.en.json
-├── commands/            commandes additionnelles (validées par schéma)
-├── bindings/            suggestions de bindings (JAMAIS appliquées sans confirmation)
-├── prompts/system.md    fragment borné et échappé
-├── voices/              modèles Piper ou références de voix
-├── assets/              avatar, sons
-└── plugins/             optionnel, permissions déclarées
+├── commands/            additional commands (validated by schema)
+├── bindings/            suggested bindings (NEVER applied without confirmation)
+├── prompts/system.md    a bounded, escaped fragment
+├── voices/              Piper models or voice references
+├── assets/              avatar, sounds
+└── plugins/             optional, with declared permissions
 ```
 
-**Règles d'importation** (surface d'attaque à traiter au sérieux) :
-1. Signature vérifiée ; sinon, avertissement explicite et installation manuelle.
-2. Tout fichier validé par schéma **avant** écriture ; chemins normalisés (protection *zip slip*).
-3. Les bindings suggérés sont proposés en **diff**, jamais appliqués silencieusement.
-4. Le fragment de prompt est borné en longueur et ne peut pas contenir de directive de sécurité.
-5. Les plugins embarqués suivent le circuit de permissions normal.
-6. Import en bac à sable : le pack est d'abord chargé en **mode simulation forcé** pour un essai.
+**Import rules** (an attack surface to take seriously):
+1. The signature is verified; otherwise an explicit warning and a manual installation.
+2. Every file is validated by schema **before** being written; paths are normalised (*zip slip*
+   protection).
+3. Suggested bindings are offered as a **diff**, never applied silently.
+4. The prompt fragment is bounded in length and cannot contain a safety directive.
+5. Bundled plugins go through the normal permission circuit.
+6. Sandboxed import: the pack is first loaded in **forced simulation mode** for a trial run.
