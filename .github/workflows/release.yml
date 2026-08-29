@@ -1,0 +1,178 @@
+# Construit et signe une version d'Optimus.
+#
+# SignPath ne délivre pas de certificat : il signe pour vous, depuis sa propre
+# infrastructure, des artefacts qu'une chaîne de compilation publique lui soumet.
+# Personne — vous compris — ne détient jamais la clé privée. C'est précisément ce qui
+# permet à la fondation d'offrir le service : elle signe des binaires dont elle peut
+# prouver qu'ils sortent d'une compilation vérifiable, pas d'un poste de développeur.
+#
+# D'où cette chaîne. Elle n'est pas un confort : sans elle, il n'y a rien à signer.
+#
+# L'ordre compte. L'exécutable est signé AVANT d'entrer dans l'installateur, sans quoi
+# Smart App Control refuserait l'application une fois installée, même si l'installateur
+# était signé. Deux soumissions, donc, et pas une.
+#
+# Tant que SignPath n'a pas accepté le projet, les deux étapes de signature se sautent
+# d'elles-mêmes : la chaîne produit alors un installateur non signé, exactement celui
+# qu'on construit à la main aujourd'hui. Rien ne casse en attendant.
+
+name: Version
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version à construire, sans le « v » (ex. 0.2.0)"
+        required: true
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Version
+        id: version
+        shell: pwsh
+        run: |
+          # Le nom du tag fait foi : un installateur ne doit jamais annoncer une version
+          # qui ne corresponde pas au code d'où il sort.
+          $version = if ('${{ github.event_name }}' -eq 'workflow_dispatch') {
+            '${{ github.event.inputs.version }}'
+          } else {
+            '${{ github.ref_name }}'.TrimStart('v')
+          }
+
+          if ($version -notmatch '^\d+\.\d+\.\d+$') {
+            throw "version « $version » : attendu trois nombres séparés par des points"
+          }
+
+          "value=$version" >> $env:GITHUB_OUTPUT
+          Write-Host "version : $version"
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Inno Setup, si l'exécuteur ne l'a pas
+        shell: pwsh
+        run: |
+          # Les images GitHub l'ont embarqué par le passé, sans le garantir. Le tester
+          # coûte une seconde ; le supposer coûterait un échec en fin de chaîne, après
+          # les tests et la publication.
+          $iscc = @(
+            "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
+            "$env:ProgramFiles\Inno Setup 6\ISCC.exe"
+          ) | Where-Object { Test-Path $_ } | Select-Object -First 1
+
+          if ($iscc) {
+            Write-Host "déjà présent : $iscc"
+          } else {
+            choco install innosetup --no-progress -y
+          }
+
+      - name: Tests
+        run: dotnet test --configuration Release
+
+      - name: Publication
+        shell: pwsh
+        run: ./tools/publish-app.ps1
+
+      # ------------------------------------------------------------------ signature 1/2
+      #
+      # L'exécutable d'abord. SignPath veut un conteneur, pas un fichier nu : on lui
+      # tend une archive, il rend la même archive avec le binaire signé dedans.
+      - name: L'exécutable, en archive
+        if: vars.SIGNPATH_PROJECT != ''
+        shell: pwsh
+        run: |
+          Compress-Archive -Path publish/Optimus.App/Optimus.App.exe `
+                           -DestinationPath publish/app.zip -Force
+
+      - uses: actions/upload-artifact@v4
+        if: vars.SIGNPATH_PROJECT != ''
+        id: app-artifact
+        with:
+          name: app-unsigned
+          path: publish/app.zip
+
+      - name: Signature de l'exécutable
+        if: vars.SIGNPATH_PROJECT != ''
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT }}
+          signing-policy-slug: release-signing
+          artifact-configuration-slug: app
+          github-artifact-id: ${{ steps.app-artifact.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: publish/signed
+
+      - name: L'exécutable signé reprend sa place
+        if: vars.SIGNPATH_PROJECT != ''
+        shell: pwsh
+        run: |
+          Expand-Archive -Path publish/signed/app.zip `
+                         -DestinationPath publish/Optimus.App -Force
+
+          # Vérifier plutôt que supposer : une archive vide passerait sans bruit.
+          $signature = Get-AuthenticodeSignature publish/Optimus.App/Optimus.App.exe
+          if ($signature.Status -ne 'Valid') {
+            throw "l'exécutable revient de SignPath avec la signature « $($signature.Status) »"
+          }
+          Write-Host "signé par $($signature.SignerCertificate.Subject)"
+
+      # ------------------------------------------------------------------ l'installateur
+      - name: Inno Setup
+        shell: pwsh
+        run: |
+          # Le publish est déjà fait, et il porte maintenant l'exécutable signé.
+          ./tools/build-installer.ps1 -SkipPublish
+
+      # ------------------------------------------------------------------ signature 2/2
+      - uses: actions/upload-artifact@v4
+        if: vars.SIGNPATH_PROJECT != ''
+        id: setup-artifact
+        with:
+          name: installateur-unsigned
+          path: publish/Optimus-${{ steps.version.outputs.value }}-installateur.exe
+
+      - name: Signature de l'installateur
+        if: vars.SIGNPATH_PROJECT != ''
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT }}
+          signing-policy-slug: release-signing
+          artifact-configuration-slug: installateur
+          github-artifact-id: ${{ steps.setup-artifact.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: publish
+
+      # ------------------------------------------------------------------ la publication
+      - name: Empreinte
+        shell: pwsh
+        run: |
+          # Publiée à côté du fichier : c'est le seul moyen qu'a quelqu'un de vérifier
+          # que ce qu'il a téléchargé est bien ce qui est sorti d'ici.
+          $file = "publish/Optimus-${{ steps.version.outputs.value }}-installateur.exe"
+          $hash = (Get-FileHash $file -Algorithm SHA256).Hash.ToLower()
+          "$hash  $(Split-Path $file -Leaf)" |
+            Set-Content publish/SHA256SUMS.txt -Encoding ascii
+          Write-Host $hash
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.value }}
+          files: |
+            publish/Optimus-${{ steps.version.outputs.value }}-installateur.exe
+            publish/SHA256SUMS.txt
