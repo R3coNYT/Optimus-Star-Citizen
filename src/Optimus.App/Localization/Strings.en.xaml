@@ -187,4 +187,40 @@
   <sys:String x:Key="App.Navigation">navigation</sys:String>
   <sys:String x:Key="App.COMBAT">COMBAT</sys:String>
 
+  <!-- ============ Composed in C# ============ -->
+  <sys:String x:Key="Settings.WhisperMissing">Whisper is not installed. Put whisper-cli.exe and at least one ggml-*.bin model in {0} — the Optimus installer can do it for you.</sys:String>
+  <sys:String x:Key="Settings.WhisperTrimmed">Shorter window: about twice as fast, but the word error rate goes from 9.8% to 14.8%.</sys:String>
+  <sys:String x:Key="Settings.WhisperOnDoubt">The fast engine keeps whatever it recognises cleanly — instant, as it is today. Whisper gets everything else: the rejections, but also the doubtful utterances, which is where most free speech actually lands. Reckon on about 900 ms in those cases, and nothing at all on commands it heard properly.</sys:String>
+  <sys:String x:Key="Settings.WhisperAlways">Every utterance is transcribed, commands included. Measured: about 900 ms per command, and 9.8% of words wrong where the closed grammar returns 0.825 confidence — “turn on the lights” can come back as “turn on the light”. Fuzzy matching recovers some of it. Worth trying on your own voice before settling on it.</sys:String>
+  <sys:String x:Key="Settings.WhisperOff">Off. Optimus keeps to its closed grammar: anything that is not a known command is never transcribed, anywhere. The conversational layer is then out of reach by voice.</sys:String>
+  <sys:String x:Key="Settings.AiOff">Disabled. Optimus runs entirely offline: the catalogue and the grammar are enough, and nothing goes over the network.</sys:String>
+  <sys:String x:Key="Settings.AiLocal">The model runs on this machine. What you say does not leave it. It only steps in after the fast path fails, and can only name a command from the catalogue — never a key.</sys:String>
+  <sys:String x:Key="Settings.AiRemote">Remote service: the utterances Optimus did not understand will be sent to it. Any key goes through the OPTIMUS_AI_KEY environment variable, never through a configuration file.</sys:String>
+  <sys:String x:Key="Settings.NoRecognizer">Windows has no speech pack for “{0}” on this machine: Optimus will write and answer in this language, but will not be able to hear you. Add it under Settings &gt; Time &amp; language &gt; Language, ticking “Speech recognition” among the features.</sys:String>
+  <sys:String x:Key="App.DefaultVoice">default voice</sys:String>
+  <sys:String x:Key="App.Simulation">SIMULATION</sys:String>
+  <sys:String x:Key="App.RealMode">REAL MODE</sys:String>
+  <sys:String x:Key="App.Unblock">Unblock commands</sys:String>
+  <sys:String x:Key="App.KillSwitch">EMERGENCY STOP</sys:String>
+  <sys:String x:Key="App.GameDetected">detected · {0}</sys:String>
+  <sys:String x:Key="App.Foreground">in the foreground</sys:String>
+  <sys:String x:Key="App.Background">in the background</sys:String>
+  <sys:String x:Key="App.GameNotDetected">not detected</sys:String>
+  <sys:String x:Key="Cockpit.Listen">Listen</sys:String>
+  <sys:String x:Key="Cockpit.StopListening">Stop listening</sys:String>
+  <sys:String x:Key="Settings.PttExplanation">The key marks out the command. No false trigger is possible, at the cost of a busy finger. The microphone stays open the whole time — opening it on the press would cost 419 ms and clip the start of every sentence.</sys:String>
+  <sys:String x:Key="Settings.AlwaysOnExplanation">The grammar only accepts sentences that start with the wake word: ordinary conversation matches no alternative and is rejected without even being transcribed. Nothing else you say is analysed.</sys:String>
+  <sys:String x:Key="Settings.ThresholdExplanation">Below {0}: ignored without a word.  From {0} to {1}: Optimus offers and waits for “confirm”.  Above {1}: executed.</sys:String>
+  <sys:String x:Key="Settings.PiperMissing">Piper is not installed. Put piper.exe and at least one .onnx model in {0} — the binary comes from the rhasspy/piper releases, the voices from huggingface.co/rhasspy/piper-voices.</sys:String>
+  <sys:String x:Key="Settings.PiperOn">The model runs on this machine: nothing goes over the network. Reckon on about 400 ms per reply with a “medium” voice, against 10 ms for a Windows voice. Since speech comes after the action, that delay lands on the comment, never on the command. A “low” voice halves the wait.</sys:String>
+  <sys:String x:Key="Settings.WindowsVoice">Windows voices: near-instant (7 to 15 ms), always available, but synthetic in timbre. This is the safe choice.</sys:String>
+  <sys:String x:Key="Settings.CopilotMine">“{0}” is yours. It answers to “{1}”, and you can delete it — if it was shadowing a shipped copilot, the original comes back.</sys:String>
+  <sys:String x:Key="Settings.CopilotShipped">“{0}” ships with Optimus and cannot be deleted. It answers to “{1}”. Duplicate it to make one of your own: voice, character and replies follow, and you only have to bend them.</sys:String>
+  <sys:String x:Key="Settings.TokenPending">The token will be issued when you switch this on.</sys:String>
+  <sys:String x:Key="Settings.ApiListening">Listening on {0}</sys:String>
+  <sys:String x:Key="Settings.ApiOffPendingSave">Off. Save to start it.</sys:String>
+  <sys:String x:Key="Settings.ApiOff">Off.</sys:String>
+  <sys:String x:Key="Settings.ApiOnExplanation">Listens on 127.0.0.1 only: Windows refuses network listening to a program without administrator rights, and Optimus has none. It carries intents, never keystrokes — you name a command from the catalogue, and execution goes through the same guard as your voice. The token is encrypted to the current Windows account.</sys:String>
+  <sys:String x:Key="Settings.ApiOffExplanation">Off. Nothing is listening, not even on this machine. Switch it on to plug in a Stream Deck, a Discord bot or an overlay — each will have to present the token.</sys:String>
+
 </ResourceDictionary>

@@ -109,6 +109,11 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
         _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
         _dispatcher = Dispatcher.CurrentDispatcher;
 
+        // Tout ce que ce modele compose en C# est perime quand la langue change. « null »
+        // veut dire « toutes les proprietes » pour WPF : c'est exactement ce qu'on a a dire,
+        // et enumerer trente noms garantirait d'en oublier un au prochain ajout.
+        Localization.Localizer.Changed += RefreshLanguage;
+
         _runtime.Activity += OnActivity;
         _runtime.MicrophoneOpen += OnMicrophone;
         _runtime.StateChanged += OnStateChanged;
@@ -272,7 +277,8 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
 
     public string CopilotName => _runtime.Copilot.Name;
 
-    public string VoiceName => _runtime.Copilot.Voice.VoiceId ?? "voix par défaut";
+    public string VoiceName =>
+        _runtime.Copilot.Voice.VoiceId ?? Localization.Localizer.T("App.DefaultVoice");
 
     public string WakeWord => _runtime.Copilot.WakeWord;
 
@@ -300,23 +306,27 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
 
     public int BlockingCount => Bindings.Count(s => !s.IsBound && s.Need == ActionNeed.Primary);
 
-    public string ListeningLabel => _runtime.IsListening ? "Arrêter l'écoute" : "Écouter";
+    public string ListeningLabel =>
+        Localization.Localizer.T(_runtime.IsListening ? "Cockpit.StopListening" : "Cockpit.Listen");
 
     public bool IsListening => _runtime.IsListening;
 
-    public string ModeLabel => _runtime.SimulationMode ? "SIMULATION" : "MODE RÉEL";
+    public string ModeLabel =>
+        Localization.Localizer.T(_runtime.SimulationMode ? "App.Simulation" : "App.RealMode");
 
     public bool IsReal => !_runtime.SimulationMode;
 
     public bool KillSwitch => _runtime.KillSwitch;
 
-    public string KillSwitchLabel => _runtime.KillSwitch ? "Débloquer les commandes" : "ARRÊT D'URGENCE";
+    public string KillSwitchLabel =>
+        Localization.Localizer.T(_runtime.KillSwitch ? "App.Unblock" : "App.KillSwitch");
 
     public bool CombatActive => _runtime.State.CombatActive;
 
     public string GameLabel => _game.IsRunning
-        ? $"détecté · {(_game.IsForeground ? "au premier plan" : "en arrière-plan")}"
-        : "non détecté";
+        ? Localization.Localizer.T("App.GameDetected",
+            Localization.Localizer.T(_game.IsForeground ? "App.Foreground" : "App.Background"))
+        : Localization.Localizer.T("App.GameNotDetected");
 
     public bool GameReady => _game.IsRunning && _game.IsForeground;
 
@@ -819,6 +829,8 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
     {
         _dispatcher.BeginInvoke(() => Add(open ? "micro ouvert" : "micro fermé", null, ActivityLevel.Muted));
     }
+
+    private void RefreshLanguage() => _dispatcher.BeginInvoke(() => Raise(null));
 
     private void OnStateChanged(object? sender, EventArgs e)
     {

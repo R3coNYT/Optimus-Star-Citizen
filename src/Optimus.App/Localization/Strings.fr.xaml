@@ -183,4 +183,40 @@
   <sys:String x:Key="App.Navigation">navigation</sys:String>
   <sys:String x:Key="App.COMBAT">COMBAT</sys:String>
 
+  <!-- ============ Composé en C# ============ -->
+  <sys:String x:Key="Settings.WhisperMissing">Whisper n'est pas installé. Placez whisper-cli.exe et au moins un modèle ggml-*.bin dans {0} — l'installateur d'Optimus sait le faire pour vous.</sys:String>
+  <sys:String x:Key="Settings.WhisperTrimmed">Fenêtre réduite : environ deux fois plus rapide, mais le taux de mots erronés passe de 9,8 % à 14,8 %.</sys:String>
+  <sys:String x:Key="Settings.WhisperOnDoubt">Le moteur rapide garde la main sur ce qu'il reconnaît franchement — instantané, comme aujourd'hui. Whisper reçoit tout le reste : les rejets, mais aussi les énoncés douteux, où se trouve en réalité l'essentiel de la parole libre. Comptez environ 900 ms dans ces cas-là, et rien sur vos commandes bien entendues.</sys:String>
+  <sys:String x:Key="Settings.WhisperAlways">Chaque énoncé est transcrit, commandes comprises. Mesuré : environ 900 ms par commande, et 9,8 % de mots erronés là où la grammaire fermée rend 0,825 de confiance — « allume les lumières » peut devenir « aume les lumiere ». Le rapprochement flou en rattrape une partie. À essayer sur votre voix avant de vous y tenir.</sys:String>
+  <sys:String x:Key="Settings.WhisperOff">Éteint. Optimus s'en tient à sa grammaire fermée : ce qui n'est pas une commande connue n'est jamais transcrit, nulle part. L'étage conversationnel reste alors inatteignable à la voix.</sys:String>
+  <sys:String x:Key="Settings.AiOff">Désactivé. Optimus fonctionne entièrement hors ligne : le catalogue et la grammaire suffisent, et rien ne part sur le réseau.</sys:String>
+  <sys:String x:Key="Settings.AiLocal">Le modèle tourne sur cette machine. Ce que vous dites ne la quitte pas. N'intervient qu'après l'échec du chemin rapide, et ne peut désigner qu'une commande du catalogue — jamais une touche.</sys:String>
+  <sys:String x:Key="Settings.AiRemote">Service distant : les énoncés qu'Optimus n'a pas compris lui seront envoyés. La clé éventuelle passe par la variable d'environnement OPTIMUS_AI_KEY, jamais par un fichier de configuration.</sys:String>
+  <sys:String x:Key="Settings.NoRecognizer">Windows n'a pas de module vocal pour « {0} » sur cette machine : Optimus écrira et répondra dans cette langue, mais ne pourra pas vous entendre. Ajoutez-le dans Paramètres &gt; Heure et langue &gt; Langue, en cochant « Reconnaissance vocale » parmi les fonctionnalités.</sys:String>
+  <sys:String x:Key="App.DefaultVoice">voix par défaut</sys:String>
+  <sys:String x:Key="App.Simulation">SIMULATION</sys:String>
+  <sys:String x:Key="App.RealMode">MODE RÉEL</sys:String>
+  <sys:String x:Key="App.Unblock">Débloquer les commandes</sys:String>
+  <sys:String x:Key="App.KillSwitch">ARRÊT D'URGENCE</sys:String>
+  <sys:String x:Key="App.GameDetected">détecté · {0}</sys:String>
+  <sys:String x:Key="App.Foreground">au premier plan</sys:String>
+  <sys:String x:Key="App.Background">en arrière-plan</sys:String>
+  <sys:String x:Key="App.GameNotDetected">non détecté</sys:String>
+  <sys:String x:Key="Cockpit.Listen">Écouter</sys:String>
+  <sys:String x:Key="Cockpit.StopListening">Arrêter l'écoute</sys:String>
+  <sys:String x:Key="Settings.PttExplanation">La touche délimite la commande. Aucun faux déclenchement possible, au prix d'un doigt occupé. Le micro reste ouvert en permanence — l'ouvrir à l'appui coûterait 419 ms et tronquerait le début de chaque phrase.</sys:String>
+  <sys:String x:Key="Settings.AlwaysOnExplanation">La grammaire n'accepte que les phrases commençant par le mot d'éveil : une conversation ordinaire ne correspond à aucune alternative et se trouve rejetée sans même avoir été transcrite. Rien de ce que vous dites d'autre n'est analysé.</sys:String>
+  <sys:String x:Key="Settings.ThresholdExplanation">Sous {0} : ignoré sans un mot.  De {0} à {1} : Optimus propose et attend « confirme ».  Au-dessus de {1} : exécuté.</sys:String>
+  <sys:String x:Key="Settings.PiperMissing">Piper n'est pas installé. Placez piper.exe et au moins un modèle .onnx dans {0} — le binaire vient des versions publiées de rhasspy/piper, les voix de huggingface.co/rhasspy/piper-voices.</sys:String>
+  <sys:String x:Key="Settings.PiperOn">Le modèle tourne sur cette machine : rien ne part sur le réseau. Compter environ 400 ms par réplique avec une voix « medium », contre 10 ms pour une voix Windows. La parole venant après l'action, ce délai porte sur le commentaire, jamais sur la commande. Une voix « low » divise l'attente par deux.</sys:String>
+  <sys:String x:Key="Settings.WindowsVoice">Voix Windows : quasi instantanées (7 à 15 ms), toujours disponibles, mais au timbre synthétique. C'est le choix sûr.</sys:String>
+  <sys:String x:Key="Settings.CopilotMine">« {0} » vous appartient. Il répond à « {1} », et vous pouvez le supprimer — s'il masquait un copilote livré, l'original revient.</sys:String>
+  <sys:String x:Key="Settings.CopilotShipped">« {0} » est livré avec Optimus et ne peut pas être supprimé. Il répond à « {1} ». Dupliquez-le pour en faire un à vous : voix, caractère et répliques suivront, et vous n'aurez qu'à les infléchir.</sys:String>
+  <sys:String x:Key="Settings.TokenPending">Le jeton sera émis à l'activation.</sys:String>
+  <sys:String x:Key="Settings.ApiListening">À l'écoute sur {0}</sys:String>
+  <sys:String x:Key="Settings.ApiOffPendingSave">Éteinte. Enregistrez pour la démarrer.</sys:String>
+  <sys:String x:Key="Settings.ApiOff">Éteinte.</sys:String>
+  <sys:String x:Key="Settings.ApiOnExplanation">N'écoute que 127.0.0.1 : Windows refuse à un programme sans droits administrateur d'écouter sur le réseau, et Optimus n'en a pas. Elle transporte des intentions, jamais des touches — on désigne une commande du catalogue, et l'exécution repasse par la même garde que la voix. Le jeton est chiffré au compte Windows courant.</sys:String>
+  <sys:String x:Key="Settings.ApiOffExplanation">Éteinte. Rien n'écoute, pas même sur cette machine. À activer pour brancher un Stream Deck, un bot Discord ou un overlay — chacun devra présenter le jeton.</sys:String>
+
 </ResourceDictionary>

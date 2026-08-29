@@ -80,6 +80,10 @@ public sealed class SettingsViewModel : ObservableObject
             DuplicateCopilotAsync, () => !string.IsNullOrWhiteSpace(CopilotName));
         DeleteCopilotCommand = new AsyncRelayCommand(DeleteCopilotAsync, () => CanDeleteCopilot);
 
+        // Meme raison que dans MainViewModel : les explications de cet ecran sont composees
+        // en C#, et rien ne dirait a la vue de les relire.
+        Localization.Localizer.Changed += () => Raise(null);
+
         Revert();
     }
 
@@ -146,10 +150,7 @@ public sealed class SettingsViewModel : ObservableObject
                 return null;
             }
 
-            return $"Windows n'a pas de module vocal pour « {wanted} » sur cette machine : "
-                 + "Optimus écrira et répondra dans cette langue, mais ne pourra pas vous "
-                 + "entendre. Ajoutez-le dans Paramètres > Heure et langue > Langue, en "
-                 + "cochant « Reconnaissance vocale » parmi les fonctionnalités.";
+            return Localization.Localizer.T("Settings.NoRecognizer", wanted);
         }
     }
 
@@ -210,13 +211,8 @@ public sealed class SettingsViewModel : ObservableObject
     /// Le compromis n'est pas évident : l'écoute permanente n'est sûre que parce que la
     /// grammaire exige le mot d'éveil en tête (D30). Le dire ici évite de le redécouvrir.
     /// </summary>
-    public string ModeExplanation => PushToTalk
-        ? "La touche délimite la commande. Aucun faux déclenchement possible, au prix d'un doigt occupé. "
-          + "Le micro reste ouvert en permanence — l'ouvrir à l'appui coûterait 419 ms et tronquerait "
-          + "le début de chaque phrase."
-        : "La grammaire n'accepte que les phrases commençant par le mot d'éveil : une conversation "
-          + "ordinaire ne correspond à aucune alternative et se trouve rejetée sans même avoir été "
-          + "transcrite. Rien de ce que vous dites d'autre n'est analysé.";
+    public string ModeExplanation =>
+        Localization.Localizer.T(PushToTalk ? "Settings.PttExplanation" : "Settings.AlwaysOnExplanation");
 
     public string PushToTalkKey
     {
@@ -267,10 +263,9 @@ public sealed class SettingsViewModel : ObservableObject
     /// vraies commandes et des phrases hors catalogue se chevauchent, aucun seuil unique ne peut
     /// donc les séparer (D29).
     /// </summary>
-    public string ThresholdExplanation =>
-        $"Sous {NoiseFloor:F2} : ignoré sans un mot.  "
-        + $"De {NoiseFloor:F2} à {ConfidenceThreshold:F2} : Optimus propose et attend « confirme ».  "
-        + $"Au-dessus de {ConfidenceThreshold:F2} : exécuté.";
+    public string ThresholdExplanation => Localization.Localizer.T(
+        "Settings.ThresholdExplanation",
+        NoiseFloor.ToString("F2"), ConfidenceThreshold.ToString("F2"));
 
     public string? VoiceId
     {
@@ -316,16 +311,8 @@ public sealed class SettingsViewModel : ObservableObject
     /// Optimus commente — mais personne ne devrait s'en apercevoir en vol.
     /// </summary>
     public string VoiceEngineExplanation => !NeuralVoiceAvailable
-        ? "Piper n'est pas installé. Placez piper.exe et au moins un modèle .onnx dans "
-          + $"{PiperInstallation.DefaultRoot} — le binaire vient des versions publiées de "
-          + "rhasspy/piper, les voix de huggingface.co/rhasspy/piper-voices."
-        : NeuralVoice
-            ? "Le modèle tourne sur cette machine : rien ne part sur le réseau. Compter environ "
-              + "400 ms par réplique avec une voix « medium », contre 10 ms pour une voix "
-              + "Windows. La parole venant après l'action, ce délai porte sur le commentaire, "
-              + "jamais sur la commande. Une voix « low » divise l'attente par deux."
-            : "Voix Windows : quasi instantanées (7 à 15 ms), toujours disponibles, mais au "
-              + "timbre synthétique. C'est le choix sûr.";
+        ? Localization.Localizer.T("Settings.PiperMissing", PiperInstallation.DefaultRoot)
+        : Localization.Localizer.T(NeuralVoice ? "Settings.PiperOn" : "Settings.WindowsVoice");
 
     /// <summary>
     /// Copilote actif. L'affecter passe réellement la main, sans redémarrer.
@@ -372,12 +359,9 @@ public sealed class SettingsViewModel : ObservableObject
     /// mot d'éveil, son caractère et ses soixante-cinq répliques — c'est pourquoi on duplique
     /// plutôt que de partir de rien : un copilote sans répliques est un copilote muet.
     /// </summary>
-    public string CopilotHint => CanDeleteCopilot
-        ? $"« {_runtime.Copilot.Name} » vous appartient. Il répond à « {_runtime.Copilot.WakeWord} », "
-          + "et vous pouvez le supprimer — s'il masquait un copilote livré, l'original revient."
-        : $"« {_runtime.Copilot.Name} » est livré avec Optimus et ne peut pas être supprimé. "
-          + $"Il répond à « {_runtime.Copilot.WakeWord} ». Dupliquez-le pour en faire un à vous : "
-          + "voix, caractère et répliques suivront, et vous n'aurez qu'à les infléchir.";
+    public string CopilotHint => Localization.Localizer.T(
+        CanDeleteCopilot ? "Settings.CopilotMine" : "Settings.CopilotShipped",
+        _runtime.Copilot.Name, _runtime.Copilot.WakeWord);
 
     /// <summary>Quand l'étage de parole libre intervient.</summary>
     public WhisperMode Whisper
@@ -474,35 +458,18 @@ public sealed class SettingsViewModel : ObservableObject
         {
             if (!WhisperAvailable)
             {
-                return "Whisper n'est pas installé. Placez whisper-cli.exe et au moins un modèle "
-                     + $"ggml-*.bin dans {WhisperInstallation.DefaultRoot} — l'installateur "
-                     + "d'Optimus sait le faire pour vous.";
+                return Localization.Localizer.T("Settings.WhisperMissing", WhisperInstallation.DefaultRoot);
             }
 
             string trimmed = WhisperTrimContext
-                ? " Fenêtre réduite : environ deux fois plus rapide, mais le taux de mots erronés "
-                  + "passe de 9,8 % à 14,8 %."
+                ? " " + Localization.Localizer.T("Settings.WhisperTrimmed")
                 : string.Empty;
 
             return Whisper switch
             {
-                WhisperMode.Rejected =>
-                    "Le moteur rapide garde la main sur ce qu'il reconnaît franchement — "
-                    + "instantané, comme aujourd'hui. Whisper reçoit tout le reste : les rejets, "
-                    + "mais aussi les énoncés douteux, où se trouve en réalité l'essentiel de la "
-                    + "parole libre. Comptez environ 900 ms dans ces cas-là, et rien sur vos "
-                    + "commandes bien entendues." + trimmed,
-
-                WhisperMode.Always =>
-                    "Chaque énoncé est transcrit, commandes comprises. Mesuré : environ 900 ms "
-                    + "par commande, et 9,8 % de mots erronés là où la grammaire fermée rend "
-                    + "0,825 de confiance — « allume les lumières » peut devenir « aume les "
-                    + "lumiere ». Le rapprochement flou en rattrape une partie. À essayer sur "
-                    + "votre voix avant de vous y tenir." + trimmed,
-
-                _ => "Éteint. Optimus s'en tient à sa grammaire fermée : ce qui n'est pas une "
-                   + "commande connue n'est jamais transcrit, nulle part. L'étage conversationnel "
-                   + "reste alors inatteignable à la voix.",
+                WhisperMode.Rejected => Localization.Localizer.T("Settings.WhisperOnDoubt") + trimmed,
+                WhisperMode.Always => Localization.Localizer.T("Settings.WhisperAlways") + trimmed,
+                _ => Localization.Localizer.T("Settings.WhisperOff"),
             };
         }
     }
@@ -546,14 +513,12 @@ public sealed class SettingsViewModel : ObservableObject
     public string ApiTokenSecret =>
         _runtime.ApiTokens.Count > 0
             ? _runtime.ApiTokens[0].Secret
-            : "Le jeton sera émis à l'activation.";
+            : Localization.Localizer.T("Settings.TokenPending");
 
     /// <summary>État réel du serveur, et non le réglage souhaité.</summary>
-    public string ApiState => _runtime.Api is { IsRunning: true }
-        ? $"À l'écoute sur {_runtime.Api.Prefix}"
-        : ApiEnabled
-            ? "Éteinte. Enregistrez pour la démarrer."
-            : "Éteinte.";
+    public string ApiState => _runtime.Api is { IsRunning: true } api
+        ? Localization.Localizer.T("Settings.ApiListening", api.Prefix)
+        : Localization.Localizer.T(ApiEnabled ? "Settings.ApiOffPendingSave" : "Settings.ApiOff");
 
     /// <summary>
     /// Ce que l'API garantit, et ce qu'elle ne garantit pas.
@@ -561,13 +526,8 @@ public sealed class SettingsViewModel : ObservableObject
     /// Les deux propriétés qui comptent sont dites ici, parce qu'un pilote qui ouvre une
     /// interface a le droit de savoir jusqu'où elle va — et où elle s'arrête.
     /// </summary>
-    public string ApiExplanation => ApiEnabled
-        ? "N'écoute que 127.0.0.1 : Windows refuse à un programme sans droits administrateur "
-          + "d'écouter sur le réseau, et Optimus n'en a pas. Elle transporte des intentions, "
-          + "jamais des touches — on désigne une commande du catalogue, et l'exécution repasse "
-          + "par la même garde que la voix. Le jeton est chiffré au compte Windows courant."
-        : "Éteinte. Rien n'écoute, pas même sur cette machine. À activer pour brancher un "
-          + "Stream Deck, un bot Discord ou un overlay — chacun devra présenter le jeton.";
+    public string ApiExplanation =>
+        Localization.Localizer.T(ApiEnabled ? "Settings.ApiOnExplanation" : "Settings.ApiOffExplanation");
 
     public bool AiEnabled
     {
@@ -590,15 +550,10 @@ public sealed class SettingsViewModel : ObservableObject
     /// question de savoir si ce qu'on dit à son copilote quitte la machine.
     /// </summary>
     public string AiExplanation => !AiEnabled
-        ? "Désactivé. Optimus fonctionne entièrement hors ligne : le catalogue et la grammaire "
-          + "suffisent, et rien ne part sur le réseau."
+        ? Localization.Localizer.T("Settings.AiOff")
         : AiProvider.Equals("ollama", StringComparison.OrdinalIgnoreCase)
-            ? "Le modèle tourne sur cette machine. Ce que vous dites ne la quitte pas. "
-              + "N'intervient qu'après l'échec du chemin rapide, et ne peut désigner qu'une "
-              + "commande du catalogue — jamais une touche."
-            : "Service distant : les énoncés qu'Optimus n'a pas compris lui seront envoyés. "
-              + "La clé éventuelle passe par la variable d'environnement OPTIMUS_AI_KEY, "
-              + "jamais par un fichier de configuration.";
+            ? Localization.Localizer.T("Settings.AiLocal")
+            : Localization.Localizer.T("Settings.AiRemote");
 
     public string AiProvider
     {

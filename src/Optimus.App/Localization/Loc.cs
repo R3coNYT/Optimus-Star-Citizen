@@ -23,6 +23,19 @@ public static class Localizer
     public static string Current { get; private set; } = Core.Localization.Language.Fallback;
 
     /// <summary>
+    /// Émis quand les mots changent.
+    ///
+    /// Ce que <c>DynamicResource</c> fait tout seul dans le XAML, personne ne le fait pour une
+    /// phrase composée en C# : la propriété a déjà été lue, et rien ne dit à la vue de la
+    /// relire. Un modèle de vue qui en compose s'abonne ici et se déclare entièrement périmé.
+    ///
+    /// Le défaut se voyait à l'écran : « EMERGENCY STOP » passait en anglais tandis que
+    /// « non détecté » restait en français — la première propriété se trouvait notifiée par
+    /// un autre changement, la seconde ne l'était par rien.
+    /// </summary>
+    public static event Action? Changed;
+
+    /// <summary>
     /// Monte les mots d'une langue, en remplaçant ceux qui étaient là.
     ///
     /// Le dictionnaire de repli reste dessous : une clé oubliée dans la traduction rend alors
@@ -49,6 +62,7 @@ public static class Localizer
         }
 
         Current = wanted;
+        Changed?.Invoke();
     }
 
     /// <summary>La phrase de cette clé, ou la clé elle-même si personne ne l'a traduite.</summary>
