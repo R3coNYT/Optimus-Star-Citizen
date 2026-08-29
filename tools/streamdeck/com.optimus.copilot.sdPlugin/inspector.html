@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Optimus</title>
+    <style>
+      /*
+        Le Stream Deck n'impose pas de feuille de style et n'en fournit plus depuis
+        la v6. On reprend donc sa palette a la main, pour que le panneau ne detonne
+        pas au milieu du logiciel.
+      */
+      body {
+        margin: 0;
+        padding: 12px 14px;
+        font-family: "Segoe UI", system-ui, sans-serif;
+        font-size: 12px;
+        color: #d8d8d8;
+        background: #2d2d2d;
+      }
+
+      .row {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+
+      label {
+        width: 92px;
+        flex: none;
+        text-align: right;
+        padding-right: 10px;
+        color: #969696;
+      }
+
+      input,
+      select,
+      textarea {
+        flex: 1;
+        min-width: 0;
+        padding: 5px 6px;
+        color: #d8d8d8;
+        background: #3d3d3d;
+        border: 1px solid #4a4a4a;
+        border-radius: 3px;
+        font: inherit;
+      }
+
+      textarea {
+        resize: vertical;
+        min-height: 54px;
+      }
+
+      input:focus,
+      select:focus,
+      textarea:focus {
+        outline: none;
+        border-color: #48c8e8;
+      }
+
+      .hint {
+        margin: -4px 0 12px 102px;
+        color: #7a7a7a;
+        line-height: 1.45;
+      }
+
+      .status {
+        margin-top: 14px;
+        padding: 8px 10px;
+        border-left: 2px solid #4a4a4a;
+        color: #969696;
+        line-height: 1.45;
+      }
+
+      .status.ok {
+        border-left-color: #4caf50;
+        color: #b6d7b8;
+      }
+
+      .status.bad {
+        border-left-color: #d05a5a;
+        color: #e0b4b4;
+      }
+
+      .hidden {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="row">
+      <label for="port">Port</label>
+      <input id="port" type="number" min="1024" max="65535" value="8731" />
+    </div>
+
+    <div class="row">
+      <label for="token">Token</label>
+      <input id="token" type="password" placeholder="Settings ▸ Local API" />
+    </div>
+    <div class="hint">
+      Port and token are shared by every Optimus key. Copy the token from
+      Optimus, under Settings ▸ Local API.
+    </div>
+
+    <div id="command-block" class="hidden">
+      <div class="row">
+        <label for="command">Command</label>
+        <select id="command"></select>
+      </div>
+
+      <div class="row">
+        <label for="polarity">Direction</label>
+        <select id="polarity">
+          <option value="">toggle</option>
+          <option value="on">on</option>
+          <option value="off">off</option>
+        </select>
+      </div>
+      <div class="hint">
+        “on” and “off” only mean something for a command that offers a direction.
+        A toggle on a command Optimus has not switched itself may do the opposite
+        of what you expect.
+      </div>
+    </div>
+
+    <div id="say-block" class="hidden">
+      <div class="row">
+        <label for="text">Line</label>
+        <textarea id="text" placeholder="All systems nominal."></textarea>
+      </div>
+      <div class="hint">
+        Spoken with the copilot's own voice and rate.
+      </div>
+    </div>
+
+    <div id="status" class="status">Checking…</div>
+
+    <script src="inspector.js"></script>
+  </body>
+</html>

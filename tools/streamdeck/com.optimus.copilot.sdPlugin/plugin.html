@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Optimus</title>
+  </head>
+  <body>
+    <!--
+      Cette page ne s'affiche jamais. Le Stream Deck la charge dans un navigateur
+      qu'il garde invisible, et tout se passe dans plugin.js.
+
+      C'est ce choix qui evite d'embarquer un executable : un plugin natif aurait
+      demande soit le runtime .NET sur la machine du pilote, soit une quinzaine
+      de megaoctets d'autonome par plugin. Ici, quelques kilo-octets.
+    -->
+    <script src="plugin.js"></script>
+  </body>
+</html>

@@ -34,6 +34,80 @@ public sealed class LocalApiTests : IDisposable
 
     private string Tokens => Path.Combine(_root, "tokens.dat");
 
+    // ------------------------------------------------------------- le jeton d un navigateur
+
+    /// <summary>
+    /// L’en-tête reste la voie normale.
+    ///
+    /// Ouvrir la WebSocket aux sous-protocoles ne doit rien retirer aux clients qui savent poser
+    /// un en-tête — c’est-à-dire tous sauf les navigateurs.
+    /// </summary>
+    [Fact]
+    public void L_en_tete_Authorization_passe_en_premier()
+    {
+        IReadOnlyList<string> presented = LocalApiServer.Presented("Bearer abc", null);
+
+        Assert.Equal(["abc"], presented);
+    }
+
+    /// <summary>
+    /// Un navigateur ne peut PAS poser d’en-tête sur une WebSocket.
+    ///
+    /// <c>new WebSocket(url, ["optimus.v1", token])</c> est la seule voie que l’API JavaScript
+    /// laisse pour porter un secret. Le serveur doit donc lire les sous-protocoles — et écarter
+    /// le nom du protocole, qui annonce la version et n’authentifie rien.
+    /// </summary>
+    [Fact]
+    public void Le_sous_protocole_porte_le_secret_et_pas_le_nom_du_protocole()
+    {
+        IReadOnlyList<string> presented =
+            LocalApiServer.Presented(null, "optimus.v1, le-secret");
+
+        Assert.Equal(["le-secret"], presented);
+    }
+
+    /// <summary>
+    /// Un jeton est émis en base64url sans remplissage. La RFC 6455 admet ces caractères dans un
+    /// nom de sous-protocole, donc il voyage tel quel : aucun réencodage, aucune occasion de se
+    /// tromper. Cet essai fige la promesse.
+    /// </summary>
+    [Fact]
+    public void Un_vrai_jeton_traverse_le_sous_protocole_sans_retouche()
+    {
+        ApiToken token = ApiToken.Issue("Stream Deck", ApiScope.All);
+
+        Assert.DoesNotContain(token.Secret, c => c is '+' or '/' or '=' or ',' or ' ');
+
+        IReadOnlyList<string> presented =
+            LocalApiServer.Presented(null, $"{LocalApiServer.Subprotocol},{token.Secret}");
+
+        Assert.Equal([token.Secret], presented);
+        Assert.True(token.Matches(presented[0]));
+    }
+
+    [Theory]
+    [InlineData(null, null)]
+    [InlineData("", "")]
+    [InlineData("Basic abc", null)]
+    [InlineData(null, "optimus.v1")]
+    public void Rien_de_presentable_ne_donne_aucun_candidat(string? authorization, string? subprotocols)
+    {
+        Assert.Empty(LocalApiServer.Presented(authorization, subprotocols));
+    }
+
+    /// <summary>
+    /// Les deux voies peuvent coexister, et l’ordre compte : l’en-tête est le plus explicite des
+    /// deux, il est donc essayé d’abord.
+    /// </summary>
+    [Fact]
+    public void Les_deux_voies_coexistent_l_en_tete_d_abord()
+    {
+        IReadOnlyList<string> presented =
+            LocalApiServer.Presented("Bearer entete", "optimus.v1, sous-protocole");
+
+        Assert.Equal(["entete", "sous-protocole"], presented);
+    }
+
     // --------------------------------------------------------------- ouvrir et fermer le micro
 
     /// <summary>

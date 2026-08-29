@@ -82,8 +82,20 @@ to wait listens to `/ws/events` rather than to the HTTP response.
    focus, permissions, `dangerous`. No route short-circuits the single point of control.
 4. **Rate limiting** per client (30 executions per minute by default) + logging of the source
    (`source = api | discord | plugin`) in the history.
-5. **CORS closed** by default; an origin is opened explicitly for the tablet companion.
-6. LAN listening is possible **only** through an option shown with a clear warning, with a
+5. **CORS open to every origin, and that is deliberate** (2026-08-29). The guard on this API is
+   the token, not the origin: CORS stops a page from *reading* an answer, it does not stop it
+   being sent, and a page that does not know a 256-bit secret gets a 401 whatever origin it
+   declares. `*` rather than a list, because a Stream Deck plugin loads from a local file and so
+   presents the origin `null`, which no list would have covered.
+   **`Access-Control-Allow-Credentials` is never sent**, and that is the line not to cross:
+   Optimus authenticates through no cookie, so no page can forge an authenticated request behind
+   the pilot's back. Adding it would create the very hole its absence makes impossible.
+6. **The token may also travel as a WebSocket subprotocol.** `new WebSocket(url, protocols)` is
+   the only way a browser client can carry a secret on that handshake — the JavaScript API cannot
+   set a header. The client announces `["optimus.v1", "<token>"]`; the server answers with the
+   protocol name alone, never the secret. It travels verbatim: tokens are issued as base64url
+   without padding, so `A-Za-z0-9-_` only, which RFC 6455 accepts as a subprotocol name.
+7. LAN listening is possible **only** through an option shown with a clear warning, with a
    mandatory token, and never enabled by default.
 
 ---

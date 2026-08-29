@@ -188,11 +188,32 @@ public sealed class LocalApiServer : IAsyncDisposable
     {
         try
         {
+            // Les en-tetes CORS d'abord, pour qu'ils soient poses meme sur un refus : sans eux,
+            // le navigateur montre une erreur reseau au lieu du 401, et le client cherche un
+            // probleme de connexion la ou il n'a qu'un jeton perime.
+            //
+            // Jamais sur une requete WebSocket : la poignee de main ecrit sa propre reponse 101,
+            // et des en-tetes surnumeraires n'y ont rien a faire.
+            if (!context.Request.IsWebSocketRequest)
+            {
+                AllowBrowsers(context.Response);
+            }
+
+            if (string.Equals(context.Request.HttpMethod, "OPTIONS", StringComparison.OrdinalIgnoreCase))
+            {
+                // Le prevol d'un navigateur ne porte JAMAIS l'en-tete Authorization : la norme
+                // l'interdit. Le refuser pour jeton absent rendrait l'API inatteignable depuis
+                // une page sans rien proteger de plus - le prevol ne lit aucune donnee.
+                context.Response.StatusCode = (int)HttpStatusCode.NoContent;
+                context.Response.Close();
+                return;
+            }
+
             ApiToken? token = Authenticate(context.Request);
 
             if (token is null)
             {
-                await RefuseAsync(context, HttpStatusCode.Unauthorized, "Jeton absent ou invalide.")
+                await RefuseAsync(context, HttpStatusCode.Unauthorized, "Missing or invalid token.")
                     .ConfigureAwait(false);
 
                 return;
@@ -457,7 +478,12 @@ public sealed class LocalApiServer : IAsyncDisposable
             text,
             _runtime.Copilot.Voice.VoiceId,
             _runtime.Copilot.EffectiveRate,
-            _runtime.Copilot.Voice.Volume)).ConfigureAwait(false);
+            _runtime.Copilot.Voice.Volume,
+
+            // La langue, comme partout ailleurs : sans elle le moteur prend la voix par defaut
+            // de Windows, donc celle de la langue d'AFFICHAGE du systeme. Ce site avait ete
+            // oublie le 2026-08-29 quand les trois autres ont ete corriges.
+            _runtime.Copilot.Language)).ConfigureAwait(false);
 
         return new { spoken = text };
     }
@@ -527,8 +553,19 @@ public sealed class LocalApiServer : IAsyncDisposable
             return;
         }
 
+        // Un navigateur ROMPT la poignee de main si le serveur ne lui renvoie pas l'un des
+        // sous-protocoles annonces. On lui rend donc le notre - jamais le secret, qui n'a rien
+        // a faire dans une reponse.
+        string? offered = context.Request.Headers["Sec-WebSocket-Protocol"];
+
+        string? agreed =
+            offered is not null
+            && offered.Split(',').Any(p => string.Equals(p.Trim(), Subprotocol, StringComparison.Ordinal))
+                ? Subprotocol
+                : null;
+
         HttpListenerWebSocketContext socket =
-            await context.AcceptWebSocketAsync(null).ConfigureAwait(false);
+            await context.AcceptWebSocketAsync(agreed).ConfigureAwait(false);
 
         await _socketLock.WaitAsync().ConfigureAwait(false);
 
@@ -700,17 +737,86 @@ public sealed class LocalApiServer : IAsyncDisposable
 
     private ApiToken? Authenticate(HttpListenerRequest request)
     {
-        string? header = request.Headers["Authorization"];
-
-        if (string.IsNullOrWhiteSpace(header)
-            || !header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+        foreach (string candidate in Presented(
+            request.Headers["Authorization"],
+            request.IsWebSocketRequest ? request.Headers["Sec-WebSocket-Protocol"] : null))
         {
-            return null;
+            ApiToken? found = _tokens.FirstOrDefault(t => t.Matches(candidate));
+
+            if (found is not null)
+            {
+                return found;
+            }
         }
 
-        string candidate = header["Bearer ".Length..].Trim();
+        return null;
+    }
 
-        return _tokens.FirstOrDefault(t => t.Matches(candidate));
+    /// <summary>Sous-protocole que le client annonce, et que le serveur lui renvoie.</summary>
+    internal const string Subprotocol = "optimus.v1";
+
+    /// <summary>
+    /// Les secrets qu’une requête présente, dans l’ordre où les essayer.
+    ///
+    /// L’en-tête <c>Authorization</c> d’abord, comme toujours. Puis, <b>pour une WebSocket
+    /// seulement</b>, les sous-protocoles annoncés : <c>new WebSocket(url, protocols)</c> est la
+    /// seule voie qu’un navigateur laisse pour porter un secret, l’API JavaScript n’ayant aucun
+    /// moyen de poser un en-tête sur cette poignée de main.
+    ///
+    /// Le secret y voyage tel quel : il est émis en base64url sans remplissage, donc en
+    /// <c>A-Za-z0-9-_</c> uniquement, et ce sont des caractères que la RFC 6455 admet dans un nom
+    /// de sous-protocole. Aucun réencodage, donc aucune occasion de se tromper.
+    ///
+    /// Le nom du protocole lui-même est écarté : il annonce la version, il n’authentifie rien.
+    /// </summary>
+    internal static IReadOnlyList<string> Presented(string? authorization, string? subprotocols)
+    {
+        List<string> candidates = new(2);
+
+        if (!string.IsNullOrWhiteSpace(authorization)
+            && authorization.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+        {
+            candidates.Add(authorization["Bearer ".Length..].Trim());
+        }
+
+        if (string.IsNullOrWhiteSpace(subprotocols))
+        {
+            return candidates;
+        }
+
+        foreach (string offered in subprotocols.Split(','))
+        {
+            string clean = offered.Trim();
+
+            if (clean.Length > 0 && !string.Equals(clean, Subprotocol, StringComparison.Ordinal))
+            {
+                candidates.Add(clean);
+            }
+        }
+
+        return candidates;
+    }
+
+    /// <summary>
+    /// Ouvre l’API aux pages, sans rien céder sur ce qui la garde.
+    ///
+    /// <b>Ce n’est pas CORS qui protège cette API, c’est le jeton.</b> CORS empêche une page de
+    /// LIRE une réponse ; il ne l’empêche pas de l’émettre. La défense qui compte contre une page
+    /// malveillante est qu’elle ignore un secret de 256 bits, et cela ne dépend d’aucune origine.
+    ///
+    /// D’où <c>*</c> plutôt qu’une liste : un plugin Stream Deck se charge depuis un fichier
+    /// local et présente donc l’origine <c>null</c>, qu’aucune liste n’aurait couverte.
+    ///
+    /// <b>Jamais <c>Allow-Credentials</c></b>, et c’est la ligne à ne pas franchir : Optimus
+    /// n’authentifie par aucun cookie, donc aucune page ne peut forger une requête authentifiée
+    /// à l’insu du pilote. L’ajouter créerait la faille que son absence rend impossible.
+    /// </summary>
+    private static void AllowBrowsers(HttpListenerResponse response)
+    {
+        response.AddHeader("Access-Control-Allow-Origin", "*");
+        response.AddHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+        response.AddHeader("Access-Control-Allow-Headers", "Authorization, Content-Type");
+        response.AddHeader("Access-Control-Max-Age", "600");
     }
 
     private static async Task<JsonElement> ReadBodyAsync(HttpListenerRequest request)

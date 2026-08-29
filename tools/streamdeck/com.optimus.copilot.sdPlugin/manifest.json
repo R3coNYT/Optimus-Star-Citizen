@@ -1,0 +1,66 @@
+{
+  "SDKVersion": 2,
+  "Name": "Optimus",
+  "Version": "1.0.0",
+  "Author": "R3coN",
+  "URL": "https://github.com/R3coNYT/Optimus-Star-Citizen",
+  "Description": "Drive the Optimus voice copilot for Star Citizen from your Stream Deck. Keys carry the live state: microphone, emergency stop, simulation.",
+  "Category": "Optimus",
+  "CategoryIcon": "icons/category",
+  "Icon": "icons/category",
+  "CodePath": "plugin.html",
+  "PropertyInspectorPath": "inspector.html",
+  "Software": { "MinimumVersion": "6.0" },
+  "OS": [{ "Platform": "windows", "MinimumVersion": "10" }],
+  "Actions": [
+    {
+      "UUID": "com.optimus.copilot.listening",
+      "Name": "Microphone",
+      "Tooltip": "Open or close the microphone. The key follows the real state.",
+      "Icon": "icons/action",
+      "Controllers": ["Keypad"],
+      "States": [
+        { "Image": "icons/key-off", "TitleAlignment": "bottom", "Title": "MIC" },
+        { "Image": "icons/key-on", "TitleAlignment": "bottom", "Title": "MIC" }
+      ]
+    },
+    {
+      "UUID": "com.optimus.copilot.killswitch",
+      "Name": "Emergency stop",
+      "Tooltip": "Cut every command. The key turns red while it is engaged.",
+      "Icon": "icons/action",
+      "Controllers": ["Keypad"],
+      "States": [
+        { "Image": "icons/key-off", "TitleAlignment": "bottom", "Title": "STOP" },
+        { "Image": "icons/key-alert", "TitleAlignment": "bottom", "Title": "STOP" }
+      ]
+    },
+    {
+      "UUID": "com.optimus.copilot.simulation",
+      "Name": "Simulation",
+      "Tooltip": "Resolve and announce commands without touching the keyboard.",
+      "Icon": "icons/action",
+      "Controllers": ["Keypad"],
+      "States": [
+        { "Image": "icons/key-off", "TitleAlignment": "bottom", "Title": "SIM" },
+        { "Image": "icons/key-on", "TitleAlignment": "bottom", "Title": "SIM" }
+      ]
+    },
+    {
+      "UUID": "com.optimus.copilot.command",
+      "Name": "Run a command",
+      "Tooltip": "Run one command from the Optimus catalogue, with its guard and its reply.",
+      "Icon": "icons/action",
+      "Controllers": ["Keypad"],
+      "States": [{ "Image": "icons/key-on", "TitleAlignment": "bottom" }]
+    },
+    {
+      "UUID": "com.optimus.copilot.say",
+      "Name": "Speak",
+      "Tooltip": "Make the copilot say a line out loud, in its own voice.",
+      "Icon": "icons/action",
+      "Controllers": ["Keypad"],
+      "States": [{ "Image": "icons/key-on", "TitleAlignment": "bottom" }]
+    }
+  ]
+}
