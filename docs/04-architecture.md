@@ -1,29 +1,29 @@
-# PHASE 3 — Architecture générale
+# PHASE 3 — Overall architecture
 
-## 4.1 Principes directeurs
+## 4.1 Guiding principles
 
-1. **Un seul processus applicatif**, des *sidecars* uniquement quand c'est techniquement
-   nécessaire (TTS natif). Pas de microservices (§70 du brief).
-2. **Le cœur ne connaît ni l'UI, ni Windows, ni le réseau.** `Optimus.Core` est une bibliothèque
-   pure, testable en CI sans micro, sans clavier et sans jeu.
-3. **Un pipeline, une direction.** Le flux va toujours de la voix vers le jeu ; aucune couche
-   basse ne rappelle une couche haute autrement que par événement.
-4. **Tout ce qui est variable est une donnée**, pas du code : keybinds, phrases, réponses,
-   personnalités, catégories, providers.
-5. **Le point de contrôle est unique.** Toute exécution passe par le `CommandExecutor`, qui est le
-   seul à pouvoir parler à l'`InputEngine`. C'est là que vivent permissions, kill switch,
-   simulation, cooldowns et journalisation.
+1. **One application process**, with *sidecars* only where technically necessary (native TTS). No
+   microservices (§70 of the brief).
+2. **The core knows neither the UI, nor Windows, nor the network.** `Optimus.Core` is a pure
+   library, testable in CI with no microphone, no keyboard and no game.
+3. **One pipeline, one direction.** The flow always goes from voice to game; no lower layer ever
+   calls back into a higher one except through an event.
+4. **Everything variable is data**, not code: keybinds, phrases, replies, characters, categories,
+   providers.
+5. **There is a single point of control.** Every execution goes through the `CommandExecutor`,
+   which alone may talk to the `InputEngine`. That is where permissions, the kill switch,
+   simulation, cooldowns and logging live.
 
 ---
 
-## 4.2 Vue en couches
+## 4.2 Layered view
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │  PRESENTATION                                                                │
-│  Optimus.App (WPF)          Optimus.Bridge (API locale)     Optimus.Link     │
-│  Dashboard, Commands,       REST + WebSocket 127.0.0.1      (bot Discord)    │
-│  Keybinds, Copilots, …      auth token                      appairage local  │
+│  Optimus.App (WPF)          Optimus.Bridge (local API)      Optimus.Link     │
+│  Dashboard, Commands,       REST + WebSocket 127.0.0.1      (Discord bot)    │
+│  Keybinds, Copilots, …      auth token                      local pairing    │
 └───────────────┬──────────────────────┬───────────────────────────┬──────────┘
                 │  ViewModels/Commands │  DTO                      │  Intent
                 ▼                      ▼                           ▼
@@ -34,12 +34,12 @@
 │        ▲                  ▲                   │                    │         │
 │        │                  │                   ▼                    ▼         │
 │   SessionState      ContextManager      ExecutionGuard         Personality    │
-│                                        (perms, killswitch,       Engine       │
+│                                        (perms, kill switch,      Engine       │
 │                                         simulation, cooldown)                 │
 └───────┬──────────────┬───────────────┬────────────────┬──────────────┬───────┘
         ▼              ▼               ▼                ▼              ▼
 ┌───────────────┬───────────────┬───────────────┬──────────────┬──────────────┐
-│ DOMAINE       │ DOMAINE       │ DOMAINE       │ DOMAINE      │ DOMAINE      │
+│ DOMAIN        │ DOMAIN        │ DOMAIN        │ DOMAIN       │ DOMAIN       │
 │ Commands      │ Bindings      │ Copilots      │ Profiles     │ Plugins      │
 │ Command,      │ BindingProfile│ Copilot,      │ UserProfile, │ IOptimusPlug.│
 │ Action, Macro,│ Binding,      │ Personality,  │ AppSettings  │ PluginHost   │
@@ -47,12 +47,12 @@
 └───────┬───────┴───────┬───────┴───────┬───────┴──────┬───────┴──────┬───────┘
         ▼               ▼               ▼              ▼              ▼
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│  INFRASTRUCTURE  (adaptateurs — seuls à toucher l'OS et le réseau)           │
+│  INFRASTRUCTURE  (adapters — the only code that touches the OS and network)  │
 │                                                                              │
 │  Audio          Speech            Synthesis      AI            Input         │
 │  WasapiCapture  WhisperProvider   SapiProvider   OllamaClient  SendInputEngine│
 │  VadDetector    WindowsSpeechProv PiperProvider  OpenAIClient  SimulatedEngine│
-│  DeviceWatcher  CloudSttProvider  ElevenLabsProv (optionnels)  HotkeyService  │
+│  DeviceWatcher  CloudSttProvider  ElevenLabsProv (optional)    HotkeyService  │
 │                                                                              │
 │  Game                     Storage                  Diagnostics               │
 │  ProcessDetector          SqliteRepository         Serilog sinks             │
@@ -62,218 +62,218 @@
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Règle de dépendance** : les flèches ne remontent jamais. `Domaine` ne dépend de rien,
-`Application` dépend du domaine et d'**interfaces** d'infrastructure, `Infrastructure` implémente
-ces interfaces, `Présentation` ne dépend que d'`Application`. Un test d'architecture
-(NetArchTest) échoue la CI si la règle est violée.
+**Dependency rule**: arrows never point back up. `Domain` depends on nothing, `Application`
+depends on the domain and on infrastructure **interfaces**, `Infrastructure` implements those
+interfaces, `Presentation` depends only on `Application`. An architecture test (NetArchTest)
+fails CI if the rule is broken.
 
 ---
 
-## 4.3 Responsabilité de chaque composant
+## 4.3 What each component is responsible for
 
-### Couche voix
+### Voice layer
 
-| Composant | Responsabilité | Ne fait PAS |
+| Component | Responsibility | Does NOT |
 |---|---|---|
-| `WasapiCapture` | Ouvre le périphérique d'entrée, produit des trames PCM 16 kHz mono | Décider quand c'est de la parole |
-| `VadDetector` | Découpe le flux en *utterances* (début/fin de parole, seuil, silence de fin) | Transcrire |
-| `WakeWordDetector` | Signale la présence du mot d'éveil | Transcrire la phrase entière |
-| `ISpeechToTextProvider` | `Transcribe(audio, lang) → TranscriptionResult{text, confidence, segments}` | Interpréter le sens |
-| `VoicePipeline` | Orchestre capture → VAD → (wake/PTT) → STT, émet `UtteranceRecognized` | Exécuter quoi que ce soit |
+| `WasapiCapture` | Opens the input device, produces 16 kHz mono PCM frames | Decide what counts as speech |
+| `VadDetector` | Cuts the stream into *utterances* (speech start/end, threshold, trailing silence) | Transcribe |
+| `WakeWordDetector` | Signals the presence of the wake word | Transcribe the whole sentence |
+| `ISpeechToTextProvider` | `Transcribe(audio, lang) → TranscriptionResult{text, confidence, segments}` | Interpret meaning |
+| `VoicePipeline` | Orchestrates capture → VAD → (wake/PTT) → STT, raises `UtteranceRecognized` | Execute anything |
 
-### Couche compréhension
+### Understanding layer
 
-| Composant | Responsabilité |
+| Component | Responsibility |
 |---|---|
-| `TextNormalizer` | Minuscules, accents, ponctuation, nombres en toutes lettres → chiffres, mots parasites (« euh », « s'il te plaît ») |
-| `PhraseIndex` | Index inversé des `voice_phrases` de toutes les commandes activées du copilote courant |
-| `FastIntentMatcher` | Exact → préfixe/normalisé → flou (token-set + Levenshtein). Retourne `IntentCandidate[]` scorés |
-| `ContextManager` | `ConversationContext` (N derniers tours, slot ouvert), `GameContext`, `CopilotContext`, `UserContext` |
-| `SlotFiller` | Complète les paramètres manquants depuis le contexte ou déclenche une relance |
-| `ILlmProvider` (optionnel) | Reçoit texte + **liste blanche d'intents** + contexte, renvoie **uniquement** `{intent, parameters, confidence}` en JSON contraint |
-| `IntentResolver` | Arbitre : matcher local vs LLM vs relance vs échec. Sortie unique : `ResolvedIntent` |
+| `TextNormalizer` | Lower case, accents, punctuation, spelled-out numbers → digits, filler words (“er”, “please”) |
+| `PhraseIndex` | An inverted index of the `voice_phrases` of every enabled command of the current copilot |
+| `FastIntentMatcher` | Exact → prefix/normalised → fuzzy (token-set + Levenshtein). Returns scored `IntentCandidate[]` |
+| `ContextManager` | `ConversationContext` (last N turns, open slot), `GameContext`, `CopilotContext`, `UserContext` |
+| `SlotFiller` | Fills missing parameters from the context, or triggers a follow-up question |
+| `ILlmProvider` (optional) | Receives text + an **intent whitelist** + context, returns **only** `{intent, parameters, confidence}` as constrained JSON |
+| `IntentResolver` | The arbiter: local matcher vs LLM vs follow-up vs failure. A single output: `ResolvedIntent` |
 
-### Couche exécution
+### Execution layer
 
-| Composant | Responsabilité |
+| Component | Responsibility |
 |---|---|
-| `CommandRegistry` | Charge/valide/indexe les commandes ; source de vérité de la liste blanche |
-| `ExecutionGuard` | Kill switch, mode simulation, focus jeu, permissions, cooldown, confirmation des actions `dangerous` |
-| `BindingResolver` | `(action_id, actionmap) → InputSpec` depuis le `BindingProfile` actif ; échoue proprement si non lié |
-| `SequenceRunner` | Interprète les étapes (`key`, `wait`, `mouse`, `repeat`, `if`), garantit le relâchement des touches en `finally` |
-| `IInputEngine` | `SendInputEngine` (scancodes) ou `SimulatedInputEngine` (journalise) |
-| `CommandExecutor` | Point de contrôle unique : guard → resolve → run → résultat → historique |
+| `CommandRegistry` | Loads, validates and indexes the commands; the source of truth for the whitelist |
+| `ExecutionGuard` | Kill switch, simulation mode, game focus, permissions, cooldown, confirmation of `dangerous` actions |
+| `BindingResolver` | `(action_id, actionmap) → InputSpec` from the active `BindingProfile`; fails cleanly when unbound |
+| `SequenceRunner` | Interprets the steps (`key`, `wait`, `mouse`, `repeat`, `if`), guarantees keys are released in a `finally` |
+| `IInputEngine` | `SendInputEngine` (scancodes) or `SimulatedInputEngine` (logs) |
+| `CommandExecutor` | The single point of control: guard → resolve → run → result → history |
 
-### Couche personnalité et réponse
+### Character and reply layer
 
-| Composant | Responsabilité |
+| Component | Responsibility |
 |---|---|
-| `PersonalityEngine` | Sélectionne la variante de réponse selon les traits, l'état (combat, échec) et l'historique récent (anti-répétition) |
-| `ResponseComposer` | Interpole les variables (`{ship}`, `{value}`), applique vocabulaire/phrases interdites, borne la longueur |
-| `ITextToSpeechProvider` | Synthétise ; expose voix, vitesse, pitch |
-| `AudioPlayer` | File d'attente, priorité (une alerte coupe une réplique de lore), ducking, barge-in |
+| `PersonalityEngine` | Picks the reply variant from the traits, the state (combat, failure) and the recent history (anti-repetition) |
+| `ResponseComposer` | Interpolates the variables (`{ship}`, `{value}`), applies vocabulary and forbidden phrases, bounds the length |
+| `ITextToSpeechProvider` | Synthesises; exposes voice, rate, pitch |
+| `AudioPlayer` | Queue, priority (an alert cuts a lore line), ducking, barge-in |
 
-### Couche système
+### System layer
 
-| Composant | Responsabilité |
+| Component | Responsibility |
 |---|---|
-| `GameProcessDetector` | Présence de `StarCitizen.exe`, version/canal, chemin d'installation |
-| `ForegroundWatcher` | Le jeu est-il au premier plan (condition d'exécution par défaut) |
-| `ScActionMapImporter` | Parse `defaultProfile.xml` + `layout_*.xml`, produit un `BindingProfile` |
-| `IGameStateProvider` | Interface d'état de jeu. v0.1 : implémentation *déclarative* (mode posé par la voix). V2 : parsing `Game.log`, OCR, ou API si elle existe |
-| `HotkeyService` | Raccourcis globaux (PTT, kill switch, mute) via `RegisterHotKey`/hook bas niveau |
+| `GameProcessDetector` | Presence of `StarCitizen.exe`, version/channel, install path |
+| `ForegroundWatcher` | Whether the game is in the foreground (the default execution condition) |
+| `ScActionMapImporter` | Parses `defaultProfile.xml` + `layout_*.xml`, produces a `BindingProfile` |
+| `IGameStateProvider` | The game-state interface. v0.1: a *declarative* implementation (mode set by voice). V2: parsing `Game.log`, OCR, or an API if one exists |
+| `HotkeyService` | Global shortcuts (PTT, kill switch, mute) through `RegisterHotKey` or a low-level hook |
 
 ---
 
-## 4.4 Modèle de processus
+## 4.4 Process model
 
 ```
-┌──────────────────────────────── Optimus.exe (1 processus) ────────────────────────────────┐
+┌──────────────────────────────── Optimus.exe (1 process) ──────────────────────────────────┐
 │                                                                                            │
-│  UI thread (WPF)   Audio thread (temps réel)   Worker pool          Background services    │
-│  ─────────────     ────────────────────────    ───────────          ───────────────────    │
-│  Rendu, bindings   WASAPI + VAD                STT (Whisper)        Bridge (Kestrel loopb.) │
-│  Dispatcher        buffer circulaire           Intent + exécution   Discord (WebSocket)     │
-│  jamais bloqué     zéro allocation en boucle   TTS                  Watchers fichiers/proc  │
+│  UI thread (WPF)   Audio thread (real time)     Worker pool         Background services    │
+│  ─────────────     ───────────────────────      ───────────         ───────────────────    │
+│  Rendering,        WASAPI + VAD                 STT (Whisper)       Bridge (Kestrel loopb.)│
+│  bindings          ring buffer                  Intent + execution  Discord (WebSocket)    │
+│  never blocked     zero allocation in the loop  TTS                 File/process watchers  │
 │                                                                                            │
-│  Bus d'événements interne (Channel<T> / IObservable) — pas d'appels croisés directs         │
+│  Internal event bus (Channel<T> / IObservable) — no direct cross-calls                      │
 └────────────────────────────────────────────────────────────────────────────────────────────┘
-              │ stdin/stdout ou pipe nommé                      │ HTTP 127.0.0.1
+              │ stdin/stdout or a named pipe                    │ HTTP 127.0.0.1
               ▼                                                  ▼
-      piper.exe (TTS neural, optionnel)               Tablette / navigateur / overlay
+      piper.exe (neural TTS, optional)                Tablet / browser / overlay
 ```
 
-**Pourquoi ce découpage :**
-- Le thread audio ne doit **jamais** attendre un disque, un modèle ou le réseau → il ne fait que
-  remplir un buffer et lever des événements.
-- L'inférence STT est CPU-lourde → pool de workers, une seule inférence à la fois, annulable.
-- Le TTS neural (Piper) est un binaire natif → sidecar process, redémarrable, son crash est sans
-  conséquence (fallback SAPI).
-- Un crash du bot Discord ou du Bridge ne doit pas tuer la boucle voix → services hébergés
-  indépendants avec politique de redémarrage.
+**Why this split:**
+- The audio thread must **never** wait on a disk, a model or the network → it only fills a buffer
+  and raises events.
+- STT inference is CPU-heavy → a worker pool, one inference at a time, cancellable.
+- Neural TTS (Piper) is a native binary → a sidecar process, restartable, whose crash carries no
+  consequence (SAPI fallback).
+- A crash of the Discord bot or the Bridge must not kill the voice loop → independently hosted
+  services with a restart policy.
 
 ---
 
-## 4.5 Flux nominal (séquence détaillée)
+## 4.5 The nominal flow (detailed sequence)
 
 ```
-Utilisateur : « Optimus, ouvre les portes »
+User: “Optimus, open the doors”
 
- t+0     WasapiCapture      trames 20 ms ──────────────────────────────────┐
- t+0     VadDetector        speech_start                                    │ trace_id = 7f3a
- t+1180  VadDetector        speech_end (silence 280 ms)                     │
- t+1185  VoicePipeline      utterance 1.18 s → STT                          │
- t+1490  WhisperProvider    "optimus ouvre les portes"  conf 0.94           │
- t+1492  WakeWordFilter     préfixe "optimus" trouvé → payload "ouvre les portes"
- t+1493  TextNormalizer     "ouvre les portes"
+ t+0     WasapiCapture      20 ms frames ─────────────────────────────────┐
+ t+0     VadDetector        speech_start                                   │ trace_id = 7f3a
+ t+1180  VadDetector        speech_end (280 ms of silence)                 │
+ t+1185  VoicePipeline      1.18 s utterance → STT                         │
+ t+1490  WhisperProvider    "optimus open the doors"  conf 0.94            │
+ t+1492  WakeWordFilter     prefix "optimus" found → payload "open the doors"
+ t+1493  TextNormalizer     "open the doors"
  t+1495  FastIntentMatcher  exact → ship.doors.toggle   score 1.00
  t+1496  ExecutionGuard     killswitch=off · simulation=off · SC foreground=true
                             · permission=local · cooldown ok · dangerous=false
  t+1497  BindingResolver    spaceship_general/v_toggle_all_doors → { key=L, mods=[], tap }
  t+1499  SequenceRunner     scancode 0x26 down → 45 ms → up
- t+1545  PersonalityEngine  variante « Compartiments déverrouillés. » (military 80, humour 30)
- t+1548  TtsProvider        synthèse (streaming) → premier échantillon audible
- t+1620  AudioPlayer        lecture
- t+1621  HistoryRepository  entrée persistée (phrase, intent, score, binding, 128 ms d'exécution)
+ t+1545  PersonalityEngine  variant “Compartments unlocked.” (military 80, humour 30)
+ t+1548  TtsProvider        synthesis (streaming) → first audible sample
+ t+1620  AudioPlayer        playback
+ t+1621  HistoryRepository  entry persisted (phrase, intent, score, binding, 128 ms of execution)
 ```
 
-**Latence perçue = t+1499 − t+1180 ≈ 320 ms** entre la fin de la parole et l'appui touche.
-C'est l'objectif RNF-01. Le TTS arrive *après* l'action : on n'attend jamais la voix pour agir.
+**Perceived latency = t+1499 − t+1180 ≈ 320 ms** between the end of speech and the keypress.
+That is the RNF-01 target. The TTS arrives *after* the action: we never wait for the voice to act.
 
 ---
 
-## 4.6 Chemins alternatifs
+## 4.6 Alternative paths
 
 ```
                        ┌──────────────────────────────┐
-   texte normalisé ───►│ FastIntentMatcher (local)    │
+   normalised text ───►│ FastIntentMatcher (local)    │
                        └───────┬──────────────┬───────┘
                 score ≥ 0.85   │              │  0.55 ≤ score < 0.85
                                ▼              ▼
-                        exécution      ┌───────────────────────┐
-                        immédiate      │ plusieurs candidats ? │
+                        immediate      ┌───────────────────────┐
+                        execution      │ several candidates?   │
                                        └───┬───────────────┬───┘
-                                     oui   │               │ non
+                                     yes   │               │ no
                                            ▼               ▼
-                              relance de désambiguïsation  confirmation
-                              « Boucliers avant ou         « Vous voulez dire … ? »
-                                arrière ? »
+                              disambiguating follow-up   confirmation
+                              “Forward or aft             “Do you mean … ?”
+                               shields?”
                        score < 0.55
                                │
                                ▼
-                    ┌──────────────────────┐   LLM désactivé
-                    │ LLM activé ?         ├──────────────► « Je ne connais pas
-                    └──────────┬───────────┘                  cette commande. »
-                               │ oui                           + log unknown_phrase
+                    ┌──────────────────────┐   LLM disabled
+                    │ LLM enabled?         ├──────────────► “I do not know that
+                    └──────────┬───────────┘                  command.”
+                               │ yes                          + unknown_phrase log
                                ▼
                     ┌────────────────────────────────────┐
-                    │ LLM : texte + liste blanche + ctx  │
+                    │ LLM: text + whitelist + context    │
                     │ → { intent, parameters, confidence}│
                     └──────────┬─────────────────────────┘
                                ▼
-                    intent ∈ liste blanche ?  ── non ──► rejet + log de sécurité
-                               │ oui
+                    intent ∈ whitelist?  ── no ──► reject + security log
+                               │ yes
                                ▼
-                    conversation pure ? ──► réponse TTS seule (aucune action)
+                    pure conversation? ──► TTS reply only (no action)
                                │
                                ▼
-                    ExecutionGuard → … (chemin nominal)
+                    ExecutionGuard → … (the nominal path)
 ```
 
 ---
 
-## 4.7 Isolation par utilisateur (exigences §81–83)
+## 4.7 Per-user isolation (requirements §81–83)
 
 ```
-   PC de A                                   PC de B
+   A's PC                                    B's PC
 ┌──────────────────────────┐              ┌──────────────────────────┐
 │ Optimus A                │              │ Optimus B                │
-│  binds A · copilote A    │              │  binds B · copilote B    │
-│  historique A            │              │  historique B            │
-│  InputEngine ─► clavier A│              │  InputEngine ─► clavier B│
+│  binds A · copilot A     │              │  binds B · copilot B     │
+│  history A               │              │  history B               │
+│  InputEngine ─► keyboard A│             │  InputEngine ─► keyboard B│
 │         ▲                │              │         ▲                │
-│         │ intent validé  │              │         │                │
+│         │ validated intent│             │         │                │
 │  ┌──────┴───────┐        │              │  ┌──────┴───────┐        │
-│  │ Bridge local │        │              │  │ Bridge local │        │
+│  │ Local bridge │        │              │  │ Local bridge │        │
 │  │ 127.0.0.1    │        │              │  │ 127.0.0.1    │        │
 │  └──────▲───────┘        │              │  └──────▲───────┘        │
 └─────────┼────────────────┘              └─────────┼────────────────┘
-          │ WebSocket SORTANT, appairé, chiffré     │
+          │ OUTBOUND WebSocket, paired, encrypted   │
           └──────────────┬──────────────────────────┘
                          │
-                 ┌───────┴────────┐   ne détient QUE des intents et des états,
-                 │ Discord / relai│   jamais de touches, jamais d'accès entrant
+                 ┌───────┴────────┐   holds ONLY intents and states,
+                 │ Discord / relay│   never keystrokes, never inbound access
                  └────────────────┘
 ```
 
-Trois invariants non négociables :
-1. **La frappe est toujours produite localement**, par le processus de l'utilisateur, sur sa
-   machine. Rien d'autre ne peut appeler `SendInput`.
-2. **La connexion est sortante** : aucune instance n'écoute sur le réseau ; le relais ne peut pas
-   « pousser » vers une machine non appairée.
-3. **L'appairage est explicite et local** : code à usage unique généré dans l'app, saisi côté
-   Discord, révocable en un clic, avec `execute_commands = false` par défaut.
+Three non-negotiable invariants:
+1. **Keystrokes are always produced locally**, by the user's own process, on their machine.
+   Nothing else can call `SendInput`.
+2. **The connection is outbound**: no instance listens on the network; the relay cannot “push” to
+   an unpaired machine.
+3. **Pairing is explicit and local**: a one-time code generated in the app, typed on the Discord
+   side, revocable in one click, with `execute_commands = false` by default.
 
-Mode par défaut recommandé pour la V1 : **bot Discord local** (l'utilisateur fournit son propre
-token) — zéro serveur central, isolation garantie par construction. Le mode relais n'apparaît
-qu'en V2, et reste optionnel.
+The recommended default for V1 is a **local Discord bot** (the user supplies their own token) —
+no central server, isolation guaranteed by construction. A relay mode only appears in V2, and
+stays optional.
 
 ---
 
-## 4.8 Nomenclature retenue
+## 4.8 Naming
 
-| Élément | Nom | Rôle |
+| Item | Name | Role |
 |---|---|---|
-| Produit | **Optimus** | La plateforme |
-| Application desktop | **Optimus Command Center** (`Optimus.App`) | L'interface |
-| Moteur | **Optimus Core** (`Optimus.Core`) | Pipeline, domaine, orchestration |
-| API locale | **Optimus Bridge** (`Optimus.Bridge`) | REST + WS loopback |
-| Intégration Discord | **Optimus Link** (`Optimus.Link`) | Bot + appairage |
-| SDK plugins | **Optimus SDK** (`Optimus.Sdk`) | Contrats publics stables |
-| Pack de copilote | **`.optcopilot`** | Archive ZIP signée |
-| Un copilote | **Copilot** | Optimus, Synthia, Virgil, Atlas… |
+| Product | **Optimus** | The platform |
+| Desktop application | **Optimus Command Center** (`Optimus.App`) | The interface |
+| Engine | **Optimus Core** (`Optimus.Core`) | Pipeline, domain, orchestration |
+| Local API | **Optimus Bridge** (`Optimus.Bridge`) | REST + WS on loopback |
+| Discord integration | **Optimus Link** (`Optimus.Link`) | Bot + pairing |
+| Plugin SDK | **Optimus SDK** (`Optimus.Sdk`) | Stable public contracts |
+| Copilot pack | **`.optcopilot`** | A signed ZIP archive |
+| A copilot | **Copilot** | Optimus, Synthia, Virgil, Atlas… |
 
-> Remarque : *Optimus* est aussi une marque forte associée à une franchise connue. Pour une
-> diffusion publique, prévoir une vérification de disponibilité du nom, ou un nom de produit
-> distinct avec « Optimus » comme nom du copilote par défaut. Point à trancher avant le
-> packaging public — sans impact sur l'architecture.
+> Note: *Optimus* is also a strong trademark associated with a well-known franchise. Before any
+> public distribution, plan a name availability check, or a distinct product name with “Optimus”
+> as the default copilot's name. To be settled before public packaging — with no impact on the
+> architecture.
