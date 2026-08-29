@@ -33,8 +33,12 @@ let settings = { port: 8731, token: '' };
 /**
  * Le dernier etat connu d'Optimus.
  *
- * `null` veut dire « on ne sait pas encore » et ce n'est pas la meme chose que
- * `false` : une touche qui ne sait pas doit le montrer, pas afficher « eteint ».
+ * `null` veut dire « on ne sait pas » : Optimus est ferme, ou son interface
+ * locale est eteinte. Faute d'une troisieme image, ces touches-la retombent sur
+ * « eteint », ce qui est vrai de l'arret d'urgence et de la simulation - rien ne
+ * tourne pour les engager. Pour le micro c'est une approximation : Optimus peut
+ * ecouter sans que l'API soit ouverte. Le panneau de reglages, lui, dit
+ * franchement s'il ne joint personne.
  */
 let state = { listening: null, kill_switch: null, simulation: null };
 
@@ -89,7 +93,15 @@ function connectElgatoStreamDeckSocket(port, uuid, registerEvent, info) {
         break;
 
       case 'keyDown':
-        press(data).catch(() => alert(data.context));
+        press(data).catch(() => {
+          alert(data.context);
+
+          // Repeindre APRES l'echec, et non seulement prevenir. Le Stream Deck a
+          // pu faire avancer l'etat de son cote avant que l'appel ne parte ; sans
+          // ce retour a la verite, la touche reste sur un etat que rien n'a
+          // produit - et le pilote voit « allume » sur un micro ferme.
+          paint(data.context, data.action, (data.payload && data.payload.settings) || {});
+        });
         break;
     }
   };
@@ -144,7 +156,7 @@ function connectOptimus() {
     // L'etat courant ne s'obtient pas du flux : il ne pousse que les CHANGEMENTS.
     // Sans cette lecture, une touche resterait ignorante jusqu'au premier
     // evenement, ce qui peut durer toute une session tranquille.
-    api('GET', '/api/status').then(applyStatus).catch(() => {});
+    api('GET', '/api/status').then(merge).catch(() => {});
   };
 
   optimus.onmessage = (message) => {
@@ -175,12 +187,23 @@ function retry() {
   backoff = Math.min(backoff * 2, 30);
 }
 
-function applyStatus(status) {
-  state = {
-    listening: status.listening,
-    kill_switch: status.kill_switch,
-    simulation: status.simulation,
-  };
+/**
+ * Retient ce que la reponse dit, et RIEN de plus.
+ *
+ * Les trois routes systeme ne rendent que le champ qu'elles ont change :
+ * /api/system/killswitch rend « kill_switch » seul. Ecraser l'etat entier avec
+ * une reponse partielle effacait les deux autres, et leurs touches passaient a
+ * l'eteint - alors que rien n'avait bouge de leur cote.
+ *
+ * /api/status, lui, porte les trois : la fusion vaut donc pour les deux cas.
+ */
+function merge(answer) {
+  ['listening', 'kill_switch', 'simulation'].forEach((field) => {
+    if (typeof answer[field] === 'boolean') {
+      state[field] = answer[field];
+    }
+  });
+
   repaint();
 }
 
@@ -211,17 +234,15 @@ async function press(data) {
     case 'com.optimus.copilot.listening':
       // Corps vide : la route bascule. C'est exactement le cas pour lequel elle
       // a ete ecrite - une touche est un bouton unique.
-      applyStatus(await api('POST', '/api/system/listening', {}));
+      merge(await api('POST', '/api/system/listening', {}));
       return;
 
     case 'com.optimus.copilot.killswitch':
-      applyStatus(
-        await api('POST', '/api/system/killswitch', { engaged: !state.kill_switch }));
+      merge(await api('POST', '/api/system/killswitch', { engaged: !state.kill_switch }));
       return;
 
     case 'com.optimus.copilot.simulation':
-      applyStatus(
-        await api('POST', '/api/system/simulation', { simulation: !state.simulation }));
+      merge(await api('POST', '/api/system/simulation', { simulation: !state.simulation }));
       return;
 
     case 'com.optimus.copilot.command': {

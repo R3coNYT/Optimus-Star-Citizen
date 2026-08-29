@@ -15,6 +15,7 @@
   "Actions": [
     {
       "UUID": "com.optimus.copilot.listening",
+      "DisableAutomaticStates": true,
       "Name": "Microphone",
       "Tooltip": "Open or close the microphone. The key follows the real state.",
       "Icon": "icons/action-mic",
@@ -26,6 +27,7 @@
     },
     {
       "UUID": "com.optimus.copilot.killswitch",
+      "DisableAutomaticStates": true,
       "Name": "Emergency stop",
       "Tooltip": "Cut every command. The key turns red while it is engaged.",
       "Icon": "icons/action-stop",
@@ -37,6 +39,7 @@
     },
     {
       "UUID": "com.optimus.copilot.simulation",
+      "DisableAutomaticStates": true,
       "Name": "Simulation",
       "Tooltip": "Resolve and announce commands without touching the keyboard.",
       "Icon": "icons/action-sim",
@@ -48,6 +51,7 @@
     },
     {
       "UUID": "com.optimus.copilot.command",
+      "DisableAutomaticStates": true,
       "Name": "Run a command",
       "Tooltip": "Run one command from the Optimus catalogue, with its guard and its reply. Two states, so the key can show what it last did.",
       "Icon": "icons/action-command",
