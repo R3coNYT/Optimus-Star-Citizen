@@ -1,243 +1,255 @@
 # PHASES 10 · 11 · 12 — MVP, V1, V2
 
-## 11.1 MVP v0.1 — « Optimus obéit »
+## 11.1 MVP v0.1 — “Optimus obeys”
 
-**Objectif unique** : que la phrase « Optimus, ouvre les portes » ouvre réellement les portes,
-de façon fiable, configurable et sûre. Tout le reste est hors périmètre.
+**A single goal**: that the sentence “Optimus, open the doors” actually opens the doors —
+reliably, configurably and safely. Everything else is out of scope.
 
-### Inclus
+### Included
 
-| # | Fonction | Détail | Réf. |
+| # | Feature | Detail | Ref. |
 |---|---|---|---|
-| 1 | Détection de Star Citizen | processus + premier plan + chemin d'installation + version | RF-E07 |
-| 2 | Capture micro + VAD | WASAPI, Silero VAD, pré-roll 3 s, choix du périphérique | RF-V01 |
-| 3 | STT local | Whisper.net `small` (téléchargé au 1ᵉʳ lancement), fr/en | RF-V02 |
-| 4 | Déclenchement | push-to-talk (défaut) + wake word par préfixe de transcription | RF-V03/04 |
-| 5 | Matcher d'intent local | normalisation + exact + flou, seuils configurables, **sans LLM** | RF-C01 |
-| 6 | Catalogue de commandes | **~60 commandes** Star Citizen soigneusement choisies (voir §11.2), JSON validé par schéma | RF-C02 |
-| 7 | Import keybinds SC | `defaultProfile.xml` + `layout_*.xml`, fusion, rapport d'import | RF-K01/02 |
-| 8 | Keybind Manager | liste, recherche, capture de touche, conflits, non-assignés | RF-K03/04 |
-| 9 | Moteur d'exécution | `SendInput` scancode, tap/hold/double-tap, séquences + délais, souris | RF-E01→04 |
-| 10 | Garde d'exécution | kill switch global, focus jeu, cooldown, confirmation des `dangerous` | RS-06/07 |
-| 11 | **Mode simulation** | aucune touche envoyée, trace complète | RF-E08 |
-| 12 | TTS | Windows OneCore (zéro installation) + variantes de réponse | RF-V06 |
-| 13 | Personnalité | 8 traits, sélection pondérée, anti-répétition, lexique | RF-P02/03 |
-| 14 | Copilote Optimus | 1 copilote livré, éditable (identité, voix, traits) | RF-P01 (partiel) |
+| 1 | Star Citizen detection | process + foreground + install path + version | RF-E07 |
+| 2 | Microphone capture + VAD | WASAPI, Silero VAD, 3 s pre-roll, device selection | RF-V01 |
+| 3 | Local STT | Whisper.net `small` (downloaded at first launch), fr/en | RF-V02 |
+| 4 | Trigger | push-to-talk (default) + a wake word by transcript prefix | RF-V03/04 |
+| 5 | Local intent matcher | normalisation + exact + fuzzy, configurable thresholds, **no LLM** | RF-C01 |
+| 6 | Command catalogue | **~60** carefully chosen Star Citizen commands (see §11.2), JSON validated by schema | RF-C02 |
+| 7 | SC keybind import | `defaultProfile.xml` + `layout_*.xml`, merge, import report | RF-K01/02 |
+| 8 | Keybind Manager | list, search, key capture, conflicts, unassigned | RF-K03/04 |
+| 9 | Execution engine | scancode `SendInput`, tap/hold/double-tap, sequences + delays, mouse | RF-E01→04 |
+| 10 | Execution guard | global kill switch, game focus, cooldown, confirmation of `dangerous` | RS-06/07 |
+| 11 | **Simulation mode** | no key sent, a full trace | RF-E08 |
+| 12 | TTS | Windows OneCore (nothing to install) + reply variants | RF-V06 |
+| 13 | Character | 8 traits, weighted selection, anti-repetition, lexicon | RF-P02/03 |
+| 14 | The Optimus copilot | one copilot shipped, editable (identity, voice, traits) | RF-P01 (partial) |
 | 15 | UI | Dashboard · Commands · Keybinds · Voice · Personality · Logs · Settings | RF-U01→06 |
-| 16 | Historique + trace debug | SQLite, écran PIPELINE TRACE, export d'incident | RF-U04/05 |
-| 17 | Logs fichiers | Serilog, rotation, niveaux | RF-U06 |
-| 18 | Tray + démarrage Windows | + mode compact | RF-U10 |
-| 19 | Installeur | Velopack, MAJ auto, données dans `%APPDATA%` | RNF-10/11 |
+| 16 | History + debug trace | SQLite, the PIPELINE TRACE screen, incident export | RF-U04/05 |
+| 17 | File logs | Serilog, rotation, levels | RF-U06 |
+| 18 | Tray + start with Windows | + compact mode | RF-U10 |
+| 19 | Installer | Velopack, auto-update, data in `%APPDATA%` | RNF-10/11 |
 
-### Explicitement **exclu** du MVP
+### Explicitly **excluded** from the MVP
 
-Discord · plugins chargeables (l'**API** existe, aucun plugin livré) · LLM · macros conditionnelles
-(`if`) · Command Builder · multi-copilotes · profils de binding multiples · API locale ·
-gamepad/HOTAS · overlay · télémétrie · store · packs `.optcopilot` · analytics avancées ·
-multi-langue au-delà de fr/en.
+Discord · loadable plugins (the **API** exists, no plugin ships) · LLM · conditional macros (`if`)
+· Command Builder · multi-copilot · multiple binding profiles · local API · gamepad/HOTAS ·
+overlay · telemetry · store · `.optcopilot` packs · advanced analytics · languages beyond fr/en.
 
-### Définition de « terminé » pour le MVP
+### Definition of done for the MVP
 
-- [ ] 20 commandes exécutées de bout en bout avec **≥ 95 % de succès** sur 3 voix différentes.
-- [ ] Latence voix → touche **p50 ≤ 700 ms**, **p95 ≤ 1 200 ms**, mesurée automatiquement.
-- [ ] Fonctionne **carte réseau désactivée**, après le téléchargement initial du modèle.
-- [ ] Impact FPS mesuré **≤ 2 %** sur une session de 30 min.
-- [ ] Aucune constante de touche hors de la couche `Input` (test d'architecture vert).
-- [ ] Kill switch coupe une séquence en cours **et relâche toutes les touches** (test).
-- [ ] Session de 8 h sans fuite mémoire ni dérive de latence.
-- [ ] Installation, mise à jour et désinstallation propres sur une VM vierge.
-- [ ] Assistant de premier lancement complété en < 3 min par un testeur non initié.
+- [ ] 20 commands executed end to end with **≥ 95% success** across 3 different voices.
+- [ ] Voice → key latency **p50 ≤ 700 ms**, **p95 ≤ 1,200 ms**, measured automatically.
+- [ ] Works with the **network adapter disabled**, after the model's initial download.
+- [ ] FPS impact measured at **≤ 2%** over a 30-minute session.
+- [ ] No key constant outside the `Input` layer (the architecture test is green).
+- [ ] The kill switch cuts a running sequence **and releases every key** (tested).
+- [ ] An 8-hour session with no memory leak and no latency drift.
+- [ ] Clean install, update and uninstall on a fresh VM.
+- [ ] The first-run wizard completed in under 3 minutes by an uninitiated tester.
 
-### Découpage indicatif (temps plein ; ×2,5 en temps partiel)
+### Indicative breakdown (full time; ×2.5 part time)
 
-| Sprint | Contenu | Durée |
+| Sprint | Content | Duration |
 |---|---|---|
-| **S0** | **Spikes de risque** : ① injection scancode acceptée par SC ② latence Whisper sur la machine cible ③ hotkeys globaux en plein écran ④ parsing de `defaultProfile.xml` | 1 sem. |
-| S1 | Squelette de solution, domaine, chargement JSON + schémas, `SimulatedInputEngine`, tests | 1 sem. |
-| S2 | Importer SC + `BindingProfile` + `BindingResolver` + `SequenceRunner` réel | 1,5 sem. |
-| S3 | Audio + VAD + Whisper + normalisation + matcher + catalogue de 60 commandes | 2 sem. |
-| S4 | Personnalité + TTS + composition de réponses | 1 sem. |
-| S5 | UI : Dashboard, Commands, Keybinds, Voice, Personality, Logs | 2,5 sem. |
-| S6 | Garde d'exécution, kill switch, historique, trace debug, assistant de 1ᵉʳ lancement | 1 sem. |
-| S7 | Packaging, MAJ, durcissement, tests de bout en bout, documentation | 1 sem. |
-| | **Total** | **≈ 11 semaines** |
+| **S0** | **Risk spikes**: ① scancode injection accepted by SC ② Whisper latency on the target machine ③ global hotkeys in full screen ④ parsing `defaultProfile.xml` | 1 wk |
+| S1 | Solution skeleton, domain, JSON loading + schemas, `SimulatedInputEngine`, tests | 1 wk |
+| S2 | SC importer + `BindingProfile` + `BindingResolver` + a real `SequenceRunner` | 1.5 wk |
+| S3 | Audio + VAD + Whisper + normalisation + matcher + a 60-command catalogue | 2 wk |
+| S4 | Character + TTS + reply composition | 1 wk |
+| S5 | UI: Dashboard, Commands, Keybinds, Voice, Personality, Logs | 2.5 wk |
+| S6 | Execution guard, kill switch, history, debug trace, first-run wizard | 1 wk |
+| S7 | Packaging, updates, hardening, end-to-end tests, documentation | 1 wk |
+| | **Total** | **≈ 11 weeks** |
 
-*Le sprint S0 n'est pas négociable : si l'injection ne passe pas dans Star Citizen, toute
-l'architecture d'exécution change. On le découvre en semaine 1, pas en semaine 9.*
+*Sprint S0 is not negotiable: if injection does not get through to Star Citizen, the whole
+execution architecture changes. We find that out in week 1, not in week 9.*
 
 ---
 
-## 11.2 Les ~60 commandes du MVP
+## 11.2 The ~60 MVP commands
 
-Sélection guidée par la répartition observée chez Jean-Bot (Navigation 33 %, Combat 30 %,
-Minage 29 %) **et** par le principe « une commande est utile si l'on n'a pas le doigt libre » :
+The selection is guided by the distribution observed at Jean-Bot (Navigation 33%, Combat 30%,
+Mining 29%) **and** by the principle “a command is useful when you have no finger free”:
 
-| Catégorie | ~n | Exemples |
+| Category | ~n | Examples |
 |---|---|---|
-| Ship & systèmes | 12 | portes, allumage/extinction, moteurs, boucliers on/off, armes on/off, lumières, train, VTOL, verrouillage cockpit |
-| Navigation & quantum | 10 | mode d'atterrissage, auto-atterrissage, quantum, cruise control, découplé, frein spatial, limiteur de vitesse |
-| Combat | 12 | groupes d'armes, missiles, contre-mesures (leurre/chaff), gimbal, mode ciblage, cibler hostile/ami/attaquant le plus proche, pin |
-| Puissance & boucliers | 8 | presets de puissance, +/- moteur/armes/boucliers, quadrant de bouclier (avant/arrière/gauche/droite), reset |
-| Scan & minage | 8 | scan, ping, mode minage, laser, puissance de minage, throttle, cycle de tête |
-| Caméra & confort | 5 | vue libre, mobiGlas, carte stellaire, contacts, sous-titres |
-| Système Optimus | 5 | « rapport système », « mode simulation », « tais-toi », « répète », « annule » |
+| Ship & systems | 12 | doors, power on/off, engines, shields on/off, weapons on/off, lights, gear, VTOL, cockpit lock |
+| Navigation & quantum | 10 | landing mode, autoland, quantum, cruise control, decoupled, space brake, speed limiter |
+| Combat | 12 | weapon groups, missiles, countermeasures (decoy/chaff), gimbal, targeting mode, target nearest hostile/friendly/attacker, pin |
+| Power & shields | 8 | power presets, ± engines/weapons/shields, shield quadrant (front/rear/left/right), reset |
+| Scanning & mining | 8 | scan, ping, mining mode, laser, mining power, throttle, head cycling |
+| Camera & comfort | 5 | free look, mobiGlas, starmap, contacts, subtitles |
+| Optimus system | 5 | “system report”, “simulation mode”, “be quiet”, “repeat”, “cancel” |
 
-**Trois macros de démonstration** (mode combat, mode minage, préparation au quantum) pour prouver
-le langage de séquence sans ouvrir le chantier des conditions.
+**Three demonstration macros** (combat mode, mining mode, quantum preparation) to prove the
+sequence language without opening the conditions worksite.
 
 ---
 
-## 11.2 bis — Le plan de travail, arrêté le 2026-08-26
+## 11.2 bis — The work plan, settled on 2026-08-26
 
-Ce que le socle sait déjà faire est décrit dans le registre des décisions (D1 à D44). Ce qui
-suit est la file d'attente convenue avec le pilote, dans l'ordre.
+What the foundation can already do is described in the decision log (D1 to D44). What follows is
+the queue agreed with the maintainer, in order.
 
-| # | Chantier | Pourquoi maintenant | État |
+| # | Worksite | Why now | State |
 |---|---|---|---|
-| **1** | **Alias sur ce qui n'a pas été compris** | Un écran qui liste ce qu'Optimus a entendu sans agir, et permet d'y attacher la formulation réellement employée. Le travail de calibration — accents (D39), seuils (D29), formulations — devient cumulatif au lieu de dépendre d'une passe de développement à chaque fois. C'est la seule fonction qui améliore les autres. | **fait le 2026-08-26** |
-| **2** | **Étage conversationnel (LLM)** | « Qu'est-ce que tu penses de ce vaisseau ? » obtenait une réplique de catalogue. Le modèle ne rend **jamais qu'une intention validée contre la liste blanche, jamais une touche** (§73, §75) et reste **facultatif** (§84) : désactivé par défaut, tout continue de fonctionner hors ligne sans lui. | **fait le 2026-08-26** — voir la réserve ci-dessous |
-| **3** | **Conditions dans les macros** | `si`, `sinon` et `répéter`. Tranchées au dépliage (D51), sur cinq sujets qui se limitent à ce qu'Optimus sait réellement (D53) — pas de télémétrie inventée. Premier usage livré : la demande ATC des séquences de décollage et d'atterrissage, qui faisait refuser la macro entière quand la touche manquait (D54). | **fait le 2026-08-26** |
-| **4** | **Voix neuronale locale (Piper)** | Mesuré : 0,6 s de chargement au démarrage, 377 à 455 ms par réplique en `medium`, 214 ms en `low`, contre 7 à 15 ms pour les voix Windows. Acceptable parce que **l'action ne dépend jamais du TTS** — le délai porte sur le commentaire. Reste local, doublé par les voix Windows (D55 à D57). | **fait le 2026-08-27** |
-| **5** | **Profils de touches** | Créer, dupliquer, renommer, supprimer ; bascule à chaud depuis l'écran **ou à la voix** (« profil minage »). Un profil est un jeu d'assignations nommé, pas une copie des défauts du jeu (D63 à D65). | **fait le 2026-08-27** |
-| **6** | **API locale** | Huit routes et un flux d'événements sur `127.0.0.1`, jeton chiffré, trois portées, plafond d'exécutions. Windows lui-même interdit l'écoute réseau à Optimus, qui n'a pas les droits pour cela (D66 à D68). | **fait le 2026-08-27** |
-| **7** | **Discord** | Bot local, appairage, notifications. Transmet des **intentions**, jamais des frappes : aucun serveur ne touche au clavier de personne. | à faire |
-| **8** | **Plugins** | Chargement à chaud, permissions, deux plugins de référence. | à faire |
-| **9** | **Multi-copilotes** | Dupliquer, renommer, supprimer, basculer à chaud depuis l'écran **ou à la voix** (« passe à Virgil »). Le mot d'éveil, la voix et le caractère changent ensemble (D70, D71). | **fait le 2026-08-28** |
-| **10** | **HOTAS et périphériques** | Manette, palonnier, Stream Deck. Change la façon de déclencher, pas ce qui est déclenché. | à faire |
-| **11** | **Overlay in-game** | HUD transparent : état, dernière commande, confirmations. **Incertitude réelle** : l'interaction avec l'anti-triche reste à valider avant d'y engager quoi que ce soit. | à faire |
+| **1** | **Aliases for what was not understood** | A screen listing what Optimus heard without acting on, letting you attach the phrasing actually used. The calibration work — accents (D39), thresholds (D29), phrasings — becomes cumulative instead of depending on a development pass each time. It is the only feature that improves the others. | **done 2026-08-26** |
+| **2** | **Conversational layer (LLM)** | “What do you make of this ship?” got a catalogue line. The model returns **only an intent validated against the whitelist, never a key** (§73, §75) and stays **optional** (§84): off by default, everything keeps working offline without it. | **done 2026-08-26** — see the reservation below |
+| **3** | **Conditions inside macros** | `if`, `else` and `repeat`. Decided at expansion time (D51), over five subjects limited to what Optimus actually knows (D53) — no invented telemetry. First shipped use: the ATC request in the takeoff and landing sequences, which used to make the whole macro fail when the key was missing (D54). | **done 2026-08-26** |
+| **4** | **Local neural voice (Piper)** | Measured: 0.6 s to load at startup, 377 to 455 ms per reply on `medium`, 214 ms on `low`, against 7 to 15 ms for Windows voices. Acceptable because **the action never depends on the TTS** — the delay lands on the comment. Stays local, doubled by the Windows voices (D55 to D57). | **done 2026-08-27** |
+| **5** | **Key profiles** | Create, duplicate, rename, delete; switched hot from the screen **or by voice** (“mining profile”). A profile is a named set of assignments, not a copy of the game's defaults (D63 to D65). | **done 2026-08-27** |
+| **6** | **Local API** | Eight routes and an event stream on `127.0.0.1`, an encrypted token, three scopes, an execution cap. Windows itself forbids network listening to Optimus, which lacks the rights for it (D66 to D68). | **done 2026-08-27** |
+| **7** | **Discord** | A local bot, pairing, notifications. It carries **intents**, never keystrokes: no server touches anybody's keyboard. | to do |
+| **8** | **Plugins** | Hot loading, permissions, two reference plugins. | to do |
+| **9** | **Multi-copilot** | Duplicate, rename, delete, switch hot from the screen **or by voice** (“switch to Virgil”). The wake word, the voice and the character change together (D70, D71). | **done 2026-08-28** |
+| **10** | **HOTAS and peripherals** | Stick, rudder pedals, Stream Deck. It changes how you trigger, not what gets triggered. | to do |
+| **11** | **In-game overlay** | A transparent HUD: state, last command, confirmations. **A real uncertainty**: the interaction with anti-cheat has to be settled before committing anything to it. | to do |
 
-| **12** | **Installateur** | Un seul `.exe`, installation par utilisateur sans UAC, avec une page de choix des composants : Piper et ses voix y sont **facultatifs et téléchargés** (D58 à D61). C'est aussi ce qui remplace la clé USB entre deux postes. | **fait le 2026-08-27** — voir la réserve ci-dessous |
+| **12** | **Installer** | A single `.exe`, per-user installation without UAC, with a component selection page: Piper and its voices are **optional and downloaded** (D58 to D61). It is also what replaces the USB stick between two machines. | **done 2026-08-27** — see the reservation below |
 
-**Réserve sur le chantier 12.** L'installateur **ne résout pas R16**, il le concentre. L'exécutable n'est pas signé : SmartScreen avertira chaque personne qui le téléchargera, et Smart App Control le refusera, exactement comme il a refusé les binaires nus. Le gain est réel mais indirect — il y a désormais **un** fichier à signer au lieu de vingt-quatre, ce qui rend le problème soluble par un seul certificat. **Tant que cette signature n'existe pas, la diffusion publique reste bloquée**, et c'est le prochain verrou, pas une formalité.
+**Reservation on worksite 12.** The installer **does not solve R16**, it concentrates it. The
+executable is not signed: SmartScreen will warn everyone who downloads it, and Smart App Control
+will refuse it, exactly as it refused the bare binaries. The gain is real but indirect — there is
+now **one** file to sign instead of twenty-four, which makes the problem solvable with a single
+certificate. **Until that signature exists, public distribution stays blocked**, and that is the
+next lock, not a formality.
 
-**Chantier 13 — parole libre (Whisper) : fait le 2026-08-28.** L'étage de parole libre est monté,
-et la réserve du chantier 2 est levée. Trois positions au choix du pilote, avec leur coût mesuré
-affiché à l'écran : éteint, quand le moteur rapide doute, ou sur tout. Whisper n'ouvre jamais de
-micro — il transcrit l'audio que le moteur rapide lui tend (D74 à D76).
+**Worksite 13 — free speech (Whisper): done on 2026-08-28.** The free-speech layer is built, and
+the reservation on worksite 2 is lifted. Three positions the pilot chooses between, with their
+measured cost shown on screen: off, when the fast engine hesitates, or on everything. Whisper
+never opens a microphone — it transcribes the audio the fast engine hands it (D74 to D76).
 
-**Ce qui reste à éprouver** : la chaîne complète micro → doute → transcription → escalade, sur une
-voix réelle. Le transcripteur est vérifié contre le vrai binaire, l'installateur pose le moteur en
-soixante secondes, et le montage se voit dans le journal — mais l'essai en boucle
-haut-parleur/micro n'est pas concluant sur ce portable, dont l'annulation d'écho filtre la
-lecture. Cette mesure-là demande de parler dans le micro.
+**What remains to be proven**: the whole chain, microphone → doubt → transcription → escalation,
+on a real voice. The transcriber is verified against the real binary, the installer puts the
+engine in place in sixty seconds, and the assembly shows up in the log — but the
+speaker-to-microphone loop test is inconclusive on this laptop, whose echo cancellation filters
+the playback. That measurement needs someone speaking into the microphone.
 
-*Réserve historique du chantier 2, conservée pour mémoire.* L'étage conversationnel était en place
-mais **la conversation libre à la voix n'était pas atteignable**. La grammaire est fermée (D28, D30) : un énoncé hors catalogue ne parvient jamais à Optimus sous forme de texte — le moteur rend la formulation connue la plus proche, assortie d'une faible confiance, jamais ce qui a été dit. Le modèle sert donc aujourd'hui deux entrées : le champ « essayer un énoncé », et les énoncés vocaux ressortis en `Unknown`. Parler librement à son copilote demande l'étage de parole libre (Whisper, D28 phase B), qui n'est pas encore monté.
+*The historical reservation on worksite 2, kept for the record.* The conversational layer was in
+place but **free conversation by voice was not reachable**. The grammar is closed (D28, D30): an
+utterance outside the catalogue never reaches Optimus as text — the engine returns the closest
+known phrasing with a low confidence, never what was actually said. The model therefore served
+two inputs: the “try a phrase” field, and the spoken utterances that came back as `Unknown`.
+Talking freely to your copilot needs the free-speech layer (Whisper, D28 phase B), which was not
+yet built.
 
-**Réserve sur le chantier 7.** Repoussé à la demande du pilote le 2026-08-28, pour une raison
-qui n'est pas technique : un bot Discord exige une **application créée sur son compte Discord**,
-que personne ne peut créer ni posséder à sa place. Sans jeton, la connexion à la passerelle
-resterait non vérifiée — et un bot qui se déconnecte en silence est pire que pas de bot.
+**Reservation on worksite 7.** Postponed at the maintainer's request on 2026-08-28, for a reason
+that is not technical: a Discord bot requires an **application created on their own Discord
+account**, which nobody can create or own on their behalf. Without a token the gateway connection
+would stay unverified — and a bot that disconnects silently is worse than no bot.
 
-Rien n'est perdu : la conception tient dans docs/12.2, et **l'API locale est déjà le socle qu'il
-lui faut** (D66 à D68). Le bot n'aura pas à réinventer la garde, les portées ni le plafond
-d'exécutions : il s'y branchera.
+Nothing is lost: the design holds in docs/12.2, and **the local API is already the foundation it
+needs** (D66 to D68). The bot will not have to reinvent the guard, the scopes or the execution
+cap: it will plug into them.
 
-Deux points sont acquis pour le jour où on le reprendra : **Discord.Net** comme bibliothèque
-(D69), et le jeton de bot **chiffré par DPAPI** comme les jetons d'API (D68), jamais dans
-`data/` ni dans le dépôt.
+Two points are settled for the day this is picked up again: **Discord.Net** as the library (D69),
+and the bot token **encrypted with DPAPI** like the API tokens (D68), never in `data/` and never
+in the repository.
 
-**Réserve sur le chantier 10.** Repoussé le 2026-08-28, faute de matériel à portée. Toute la
-fonction tient à une seule propriété : Optimus doit lire le manche **pendant que Star Citizen a
-le focus**. Une API qui ne délivre l'entrée qu'à la fenêtre au premier plan rendrait le chantier
-entièrement inutile — et cela ne se mesure qu'avec un périphérique branché, pas sur le papier.
+**Reservation on worksite 10.** Postponed on 2026-08-28, for want of hardware within reach. The
+whole feature hangs on a single property: Optimus must read the stick **while Star Citizen has
+focus**. An API that only delivers input to the foreground window would make the worksite entirely
+useless — and that cannot be measured on paper, only with a device plugged in.
 
-L'analyse est faite et consignée (D72) : trois API candidates, leurs limites, et la contrainte
-héritée de D36 — rester proportionné, un hook global de trop ayant déjà fait bloquer Optimus par
-Smart App Control.
+The analysis is done and recorded (D72): three candidate APIs, their limits, and the constraint
+inherited from D36 — stay proportionate, since one global hook too many already got Optimus
+blocked by Smart App Control.
 
-Le **Stream Deck**, lui, n'attend rien : il passe déjà par l'API locale (D66). C'est la partie du
-chantier qui est en réalité déjà livrée.
+The **Stream Deck** is waiting for nothing: it already goes through the local API (D66). That is
+the part of the worksite that has, in fact, already shipped.
 
-**Réserve sur le chantier 11.** Retiré de la file à la demande du pilote le 2026-08-28, et
-gardé comme fonctionnalité **facultative, sans échéance**. Le calcul n'est pas technique mais
-asymétrique : le gain est un confort — ne pas quitter le jeu des yeux — la perte possible est un
-compte banni, sur lequel des vaisseaux ont été achetés avec de l'argent réel.
+**Reservation on worksite 11.** Removed from the queue at the maintainer's request on 2026-08-28,
+and kept as an **optional feature with no deadline**. The calculation is not technical but
+asymmetric: the gain is comfort — not taking your eyes off the game — while the possible loss is a
+banned account, on which ships were bought with real money.
 
-Pour le jour où la question se rouvrira, une distinction que la décision doit garder en tête :
-« overlay » recouvre **deux techniques que rien ne rapproche**.
+For the day the question reopens, a distinction the decision must keep in mind: “overlay” covers
+**two techniques with nothing in common**.
 
-- L'**injection** dans la chaîne de présentation du jeu, comme le font Steam et Discord. C'est
-  ce que l'anti-triche surveille, et c'est elle qui justifie la prudence. **Écartée.**
-- Une **fenêtre séparée, transparente et toujours au-dessus**, qui n'entre jamais dans le
-  processus du jeu — indiscernable d'un navigateur posé par-dessus. Elle ne fonctionne qu'en
-  fenêtré sans bordure, jamais en plein écran exclusif : c'est sa seule vraie limite. **Reste
-  ouverte.**
+- **Injection** into the game's presentation chain, as Steam and Discord do. That is what
+  anti-cheat watches, and that is what justifies the caution. **Rejected.**
+- A **separate, transparent, always-on-top window** that never enters the game's process —
+  indistinguishable from a browser placed on top. It only works in borderless windowed mode, never
+  in exclusive full screen: that is its one real limit. **Still open.**
 
-En attendant, l'état d'Optimus se lit dans sa fenêtre, et un client branché sur `/ws/events`
-(D66) peut déjà l'afficher où il veut — sur un second écran, une tablette, un Stream Deck.
+In the meantime Optimus's state is readable in its own window, and a client hooked to
+`/ws/events` (D66) can already show it wherever it likes — a second screen, a tablet, a Stream
+Deck.
 
-**Dernier chantier, ouvert le 2026-08-29 : la signature de code (R16).**
-Le détail vit désormais dans [`15-code-signing.md`](15-code-signing.md) : conditions relevées chez la fondation, chaîne de compilation, politique de signature et ce qu'il reste à faire. **Trois des conditions manquent, et elles tiennent toutes à une seule décision du pilote** — rendre le dépôt public sous une licence libre.
+**The last worksite, opened on 2026-08-29: code signing (R16).**
+The detail now lives in [`15-code-signing.md`](15-code-signing.md): the conditions taken from the
+foundation, the build pipeline, the signing policy and what is left to do. **Three of the
+conditions were missing, and they all hung on a single decision by the maintainer** — making the
+repository public under an open source licence.
 
-Voie retenue le 2026-08-27 : **SignPath Foundation**, qui signe gratuitement les projets open
-source. Les certificats commerciaux coûtent de 100 à 600 € par an, ce qui est hors budget — et un
-certificat qu'on ne renouvelle pas laisse un binaire signé par une clé expirée, soit pire que rien.
+The route chosen on 2026-08-27: the **SignPath Foundation**, which signs open source projects for
+free. Commercial certificates cost €100 to €600 a year, which is out of budget — and a
+certificate you fail to renew leaves a binary signed by an expired key, which is worse than
+nothing.
 
-En contrepartie, SignPath exige un dépôt public, une licence OSI et une compilation depuis les
-sources sur une CI publique. **C'est donc autant une décision de diffusion qu'une décision
-technique** : la question « privé / open source / produit » de 13.5 se trouve tranchée par le
-même geste.
+In return, SignPath requires a public repository, an OSI licence, and a build from source on a
+public CI. **It is therefore as much a distribution decision as a technical one**: the
+“private / open source / product” question from 13.5 is settled by the same gesture.
 
-Ce qu'il restera à faire, dans cet ordre :
+What will remain to be done, in this order:
 
-1. Publier le dépôt et choisir la licence.
-2. Monter la compilation en GitHub Actions, reproductible depuis les sources.
-3. Déposer le dossier auprès de SignPath Foundation.
-4. Brancher la signature sur `tools/build-installer.ps1`, pour l'exécutable **et** l'installateur.
+1. Publish the repository and choose the licence.
+2. Set up the build in GitHub Actions, reproducible from source.
+3. Submit the application to the SignPath Foundation.
+4. Wire signing into `tools/build-installer.ps1`, for the executable **and** the installer.
 
-D'ici là, Optimus s'installe et fonctionne : l'avertissement SmartScreen se franchit par
-« Informations complémentaires → Exécuter quand même », une fois par version.
+Until then Optimus installs and runs: the SmartScreen warning is cleared through “More info → Run
+anyway”, once per version.
 
 
 ---
 
-## 11.3 V1 — « Optimus devient une plateforme » (+ 3 à 4 mois)
+## 11.3 V1 — “Optimus becomes a platform” (+ 3 to 4 months)
 
-| Bloc | Contenu |
+| Block | Content |
 |---|---|
-| **Multi-copilotes** | CRUD complet, Synthia et Virgil livrés, duplication, import/export `.optcopilot` (sans signature) |
-| **Personnalité avancée** | règles comportementales, événements système, banter d'inactivité, aperçu vocal en direct |
-| **Voix** | Piper (TTS neural local, FR/EN), cache TTS, providers cloud optionnels (ElevenLabs, Azure, OpenAI) |
-| **Wake word natif** | openWakeWord ONNX, modèle « Optimus » + mots personnalisés |
-| **LLM optionnel** | Ollama / OpenAI-compatible / Anthropic, sortie JSON contrainte, liste blanche, budget et compteur de tokens, désambiguïsation et conversation |
-| **Contexte** | `ConversationContext`, slots, anaphores, `GameContext` déclaratif |
-| **Macros & conditions** | `if` / `repeat` / `wait`, éditeur visuel, bibliothèque de macros |
-| **Command Builder** | création sans code, validation d'ambiguïté, test en simulation |
-| **Profils de binding** | Default / Fighter / Mining / Cargo / Racing / FPS, bascule à chaud, import/export/backup |
-| **API locale** | REST + WebSocket, token, documentation OpenAPI |
-| **Discord** | mode bot local, appairage, permissions, embeds de statut, notifications d'événements |
-| **Plugins** | chargement à chaud, permissions, 2 plugins de référence (Spotify, System) |
-| **Analytics** | commandes les plus utilisées, échecs, **phrases non reconnues → proposition d'alias en un clic** |
-| **Feuille de vol** | export PDF/HTML des favoris avec les vraies touches |
-| **i18n** | interface FR/EN, copilotes multilingues |
+| **Multi-copilot** | Full CRUD, Synthia and Virgil shipped, duplication, `.optcopilot` import/export (unsigned) |
+| **Advanced character** | Behaviour rules, system events, idle banter, live spoken preview |
+| **Voice** | Piper (local neural TTS, FR/EN), TTS cache, optional cloud providers (ElevenLabs, Azure, OpenAI) |
+| **Native wake word** | openWakeWord in ONNX, an “Optimus” model + custom words |
+| **Optional LLM** | Ollama / OpenAI-compatible / Anthropic, constrained JSON output, whitelist, budget and token counter, disambiguation and conversation |
+| **Context** | `ConversationContext`, slots, anaphora, a declarative `GameContext` |
+| **Macros & conditions** | `if` / `repeat` / `wait`, a visual editor, a macro library |
+| **Command Builder** | Creation without code, ambiguity validation, testing in simulation |
+| **Binding profiles** | Default / Fighter / Mining / Cargo / Racing / FPS, hot switching, import/export/backup |
+| **Local API** | REST + WebSocket, token, OpenAPI documentation |
+| **Discord** | Local bot mode, pairing, permissions, status embeds, event notifications |
+| **Plugins** | Hot loading, permissions, 2 reference plugins (Spotify, System) |
+| **Analytics** | Most used commands, failures, **unrecognised phrases → a one-click alias proposal** |
+| **Flight sheet** | PDF/HTML export of the favourites with the real keys |
+| **i18n** | FR/EN interface, multilingual copilots |
 
 ---
 
-## 11.4 V2 — « Optimus comprend le vaisseau » (+ 6 mois et plus)
+## 11.4 V2 — “Optimus understands the ship” (+ 6 months and beyond)
 
-| Bloc | Contenu | Incertitude |
+| Block | Content | Uncertainty |
 |---|---|---|
-| **Télémétrie de jeu** | `IGameStateProvider` réel. **Spike fait le 2026-08-26, résultat négatif pour l'essentiel** : `Game.log` ne consigne <b>ni le mode de vol, ni l'état des portes</b>. Les occurrences de « NAV » y sont des faux positifs venus de `ItemNavigation` ; ce qu'on y trouve est du routage quantique (`CSCItemNavigation`, `FinalStop=`) et des entités voisines. Sans conséquence : les actions dirigées du jeu (D41) rendent portes et mode de vol exacts sans rien observer. Restent à explorer si le besoin revient — l'OCR ciblé du HUD, et le vaisseau courant que le log semble nommer | ⚠ `Game.log` écarté pour l'état du vaisseau |
-| **Overlay in-game** | HUD transparent (DirectX/overlay externe) : état, dernière commande, confirmations | ⚠ interaction avec l'anti-triche à valider |
-| **Multi-agents** | plusieurs copilotes actifs, dialogues croisés, routage par rôle (combat/minage/navigation) | |
-| **Store de copilotes** | packs signés, catalogue, notation, mise à jour — **sans jamais donner au serveur le moindre pouvoir sur le clavier** | |
-| **Synchronisation** | sauvegarde chiffrée de bout en bout des configs, multi-PC | |
-| **Compagnon mobile / SIMPIT** | consommation de l'API locale, PWA plein écran + wake lock (idée reprise de Jean-Bot) | |
-| **Périphériques** | gamepad, HOTAS, Stream Deck, MIDI | |
-| **Compatibilité VoiceAttack** | plugin d'import de profils VAP, jamais une dépendance | |
-| **Relais Discord** | mode multi-machines, appairage, connexions sortantes uniquement | |
-| **IA avancée** | génération de commandes, coaching, résumé de session, mémoire longue durée | |
+| **Game telemetry** | A real `IGameStateProvider`. **Spike done on 2026-08-26, mostly a negative result**: `Game.log` records <b>neither the flight mode nor the state of the doors</b>. The occurrences of “NAV” in it are false positives coming from `ItemNavigation`; what it does hold is quantum routing (`CSCItemNavigation`, `FinalStop=`) and nearby entities. Without consequence: the game's directed actions (D41) give exact doors and flight mode without observing anything. Still to explore if the need returns — targeted OCR of the HUD, and the current ship, which the log appears to name | ⚠ `Game.log` rejected for ship state |
+| **In-game overlay** | A transparent HUD (DirectX / external overlay): state, last command, confirmations | ⚠ interaction with anti-cheat to be settled |
+| **Multi-agent** | Several copilots active, cross-talk, routing by role (combat/mining/navigation) | |
+| **Copilot store** | Signed packs, catalogue, ratings, updates — **without ever giving the server the slightest power over the keyboard** | |
+| **Synchronisation** | End-to-end encrypted backup of the configuration, across PCs | |
+| **Mobile / SIMPIT companion** | Consuming the local API, a full-screen PWA + wake lock (an idea taken from Jean-Bot) | |
+| **Peripherals** | Gamepad, HOTAS, Stream Deck, MIDI | |
+| **VoiceAttack compatibility** | A VAP profile import plugin, never a dependency | |
+| **Discord relay** | Multi-machine mode, pairing, outbound connections only | |
+| **Advanced AI** | Command generation, coaching, session summaries, long-term memory | |
 
 ---
 
-## 11.5 Ce qui ne sera jamais fait (décisions de principe)
+## 11.5 What will never be done (decisions of principle)
 
-| Non-fonctionnalité | Raison |
+| Non-feature | Reason |
 |---|---|
-| Automatisation continue de gameplay (aim assist, farming, macros en boucle) | Sort du cadre « copilote » et met l'utilisateur en risque vis-à-vis des règles du jeu |
-| Contrôle d'un PC tiers depuis Discord ou le cloud | §81–83 : l'exécution est toujours locale |
-| LLM obligatoire | §84 |
-| Keybinds en dur | §72 |
-| Envoi de télémétrie sans consentement explicite | RS-11 |
-| Dépendance obligatoire à VoiceAttack | §71 |
+| Continuous gameplay automation (aim assist, farming, looping macros) | Falls outside the “copilot” frame and puts the user at risk against the game's rules |
+| Controlling a third-party PC from Discord or the cloud | §81–83: execution is always local |
+| A mandatory LLM | §84 |
+| Hard-coded key bindings | §72 |
+| Sending telemetry without explicit consent | RS-11 |
+| A mandatory dependency on VoiceAttack | §71 |
