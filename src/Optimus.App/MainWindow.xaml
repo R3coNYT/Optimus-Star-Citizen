@@ -25,7 +25,7 @@
         </Grid.ColumnDefinitions>
 
         <StackPanel Grid.Column="0" VerticalAlignment="Center">
-          <TextBlock Text="OPTIMUS" FontSize="21" FontWeight="Bold"
+          <TextBlock Text="{DynamicResource App.OPTIMUS}" FontSize="21" FontWeight="Bold"
                      Foreground="{StaticResource Accent}" Effect="{StaticResource Glow}" />
           <TextBlock Foreground="{StaticResource TextMuted}" FontSize="11">
             <Run Text="{Binding CopilotName, Mode=OneWay}" />
@@ -37,7 +37,7 @@
         <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center"
                     VerticalAlignment="Center">
           <StackPanel Margin="18,0">
-            <TextBlock Text="STAR CITIZEN" Style="{StaticResource Label}" />
+            <TextBlock Text="{DynamicResource App.STARCITIZEN}" Style="{StaticResource Label}" />
             <TextBlock Text="{Binding GameLabel}">
               <TextBlock.Style>
                 <Style TargetType="TextBlock">
@@ -53,7 +53,7 @@
           </StackPanel>
 
           <StackPanel Margin="18,0">
-            <TextBlock Text="MODE" Style="{StaticResource Label}" />
+            <TextBlock Text="{DynamicResource App.MODE}" Style="{StaticResource Label}" />
             <TextBlock Text="{Binding ModeLabel}">
               <TextBlock.Style>
                 <Style TargetType="TextBlock">
@@ -70,15 +70,15 @@
           </StackPanel>
 
           <StackPanel Margin="18,0">
-            <TextBlock Text="VOL" Style="{StaticResource Label}" />
+            <TextBlock Text="{DynamicResource App.VOL}" Style="{StaticResource Label}" />
             <TextBlock>
               <TextBlock.Style>
                 <Style TargetType="TextBlock">
-                  <Setter Property="Text" Value="navigation" />
+                  <Setter Property="Text" Value="{DynamicResource App.Navigation}" />
                   <Setter Property="Foreground" Value="{StaticResource TextMuted}" />
                   <Style.Triggers>
                     <DataTrigger Binding="{Binding CombatActive}" Value="True">
-                      <Setter Property="Text" Value="COMBAT" />
+                      <Setter Property="Text" Value="{DynamicResource App.COMBAT}" />
                       <Setter Property="Foreground" Value="{StaticResource Warn}" />
                       <Setter Property="FontWeight" Value="Bold" />
                     </DataTrigger>
@@ -112,7 +112,7 @@
     <TabControl Grid.Row="1" Background="Transparent" BorderThickness="0">
 
       <!-- ========================= Poste de pilotage ========================= -->
-      <TabItem Header="Poste de pilotage">
+      <TabItem Header="{DynamicResource Cockpit.PostePilotage}">
         <Grid Margin="0,12,0,0">
           <Grid.ColumnDefinitions>
             <ColumnDefinition Width="320" />
@@ -130,21 +130,21 @@
 
             <Border Height="1" Background="{StaticResource Line}" Margin="0,16" />
 
-            <TextBlock Text="ENVOI DE TOUCHES" Style="{StaticResource Label}" />
+            <TextBlock Text="{DynamicResource Cockpit.ENVOITOUCHES}" Style="{StaticResource Label}" />
             <Button Command="{Binding ToggleSimulationCommand}" Content="{Binding ModeLabel}" />
             <TextBlock Margin="0,8,0,0" TextWrapping="Wrap" Foreground="{StaticResource TextMuted}"
                        FontSize="11"
-                       Text="En simulation, rien n'est envoyé au jeu : la séquence est tracée telle qu'elle aurait été jouée." />
+                       Text="{DynamicResource Cockpit.SimulationRienNEnvoye}" />
 
             <Border Height="1" Background="{StaticResource Line}" Margin="0,16" />
 
-            <TextBlock Text="ESSAYER UN ÉNONCÉ" Style="{StaticResource Label}" />
+            <TextBlock Text="{DynamicResource Cockpit.ESSAYERENONCE}" Style="{StaticResource Label}" />
             <TextBox Text="{Binding Utterance, UpdateSourceTrigger=PropertyChanged}"
                      KeyDown="OnUtteranceKeyDown" />
-            <Button Command="{Binding SendCommand}" Content="Envoyer" Margin="0,8,0,0" />
+            <Button Command="{Binding SendCommand}" Content="{DynamicResource Cockpit.Envoyer}" Margin="0,8,0,0" />
             <TextBlock Margin="0,8,0,0" TextWrapping="Wrap" Foreground="{StaticResource TextMuted}"
                        FontSize="11"
-                       Text="Passe par la même chaîne que la voix, sans le micro. Utile pour vérifier une formulation." />
+                       Text="{DynamicResource Cockpit.PasseMemeChaineVoix}" />
           </StackPanel>
 
           <ContentControl Grid.Column="1" Style="{StaticResource Card}"
@@ -156,12 +156,12 @@
               </Grid.RowDefinitions>
 
               <Grid Grid.Row="0" Margin="14,10">
-                <TextBlock Text="JOURNAL" Style="{StaticResource Label}" VerticalAlignment="Center" />
+                <TextBlock Text="{DynamicResource Cockpit.JOURNAL}" Style="{StaticResource Label}" VerticalAlignment="Center" />
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                  <Button Command="{Binding OpenLogsCommand}" Content="Journaux sur disque"
+                  <Button Command="{Binding OpenLogsCommand}" Content="{DynamicResource Cockpit.JournauxDisque}"
                           Padding="10,4" FontSize="11"
-                          ToolTip="Ouvre le dossier contenant les journaux et les rapports de plantage." />
-                  <Button Command="{Binding ClearJournalCommand}" Content="Effacer"
+                          ToolTip="{DynamicResource Cockpit.OuvreDossierContenantJournaux}" />
+                  <Button Command="{Binding ClearJournalCommand}" Content="{DynamicResource Cockpit.Effacer}"
                           Padding="10,4" FontSize="11" Margin="6,0,0,0" />
                 </StackPanel>
               </Grid>
@@ -212,7 +212,7 @@
       </TabItem>
 
       <!-- ============================= Commandes ============================= -->
-      <TabItem Header="Commandes">
+      <TabItem Header="{DynamicResource Commands.Commandes}">
         <Grid Margin="0,12,0,0">
           <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -222,7 +222,7 @@
           <Grid Grid.Row="0" Margin="0,0,0,10">
             <TextBlock Text="{Binding CatalogSummary}" Foreground="{StaticResource TextMuted}"
                        VerticalAlignment="Center" />
-            <Button Command="{Binding TestCommandCommand}" Content="Tester la commande choisie"
+            <Button Command="{Binding TestCommandCommand}" Content="{DynamicResource Commands.TesterCommandeChoisie}"
                     HorizontalAlignment="Right" />
           </Grid>
 
@@ -231,9 +231,9 @@
                     ItemContainerStyle="{StaticResource GridRow}">
             <ListView.View>
               <GridView>
-                <GridViewColumn Header="CATÉGORIE" Width="110" DisplayMemberBinding="{Binding Category}" />
-                <GridViewColumn Header="COMMANDE" Width="210" DisplayMemberBinding="{Binding Name}" />
-                <GridViewColumn Header="TOUCHE" Width="190">
+                <GridViewColumn Header="{DynamicResource Commands.CATEGORIE}" Width="110" DisplayMemberBinding="{Binding Category}" />
+                <GridViewColumn Header="{DynamicResource Commands.COMMANDE}" Width="210" DisplayMemberBinding="{Binding Name}" />
+                <GridViewColumn Header="{DynamicResource Commands.TOUCHE}" Width="190">
                   <GridViewColumn.CellTemplate>
                     <DataTemplate>
                       <TextBlock Text="{Binding Binding}" FontFamily="Consolas">
@@ -250,7 +250,7 @@
                     </DataTemplate>
                   </GridViewColumn.CellTemplate>
                 </GridViewColumn>
-                <GridViewColumn Header="FORMULATIONS" Width="520" DisplayMemberBinding="{Binding Phrases}" />
+                <GridViewColumn Header="{DynamicResource Commands.FORMULATIONS}" Width="520" DisplayMemberBinding="{Binding Phrases}" />
               </GridView>
             </ListView.View>
           </ListView>
@@ -258,7 +258,7 @@
       </TabItem>
 
       <!-- ============================== Touches ============================== -->
-      <TabItem Header="Touches">
+      <TabItem Header="{DynamicResource Keys.Touches}">
         <Grid Margin="0,12,0,0">
           <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -269,7 +269,7 @@
 
           <ContentControl Grid.Row="0" Style="{StaticResource Card}" Margin="0,0,0,10">
             <StackPanel>
-              <TextBlock Text="PROFIL DE TOUCHES" Style="{StaticResource Label}" />
+              <TextBlock Text="{DynamicResource Keys.PROFILTOUCHES}" Style="{StaticResource Label}" />
 
               <Grid Margin="0,6,0,0">
                 <Grid.ColumnDefinitions>
@@ -283,14 +283,14 @@
 
                 <TextBox Grid.Column="1" Margin="10,0,0,0"
                          Text="{Binding ProfileName, UpdateSourceTrigger=PropertyChanged}"
-                         ToolTip="Nom du profil a creer, dupliquer ou renommer" />
+                         ToolTip="{DynamicResource Keys.NomProfilCreerDupliquer}" />
 
                 <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="10,0,0,0">
-                  <Button Command="{Binding CreateProfileCommand}" Content="Creer" />
-                  <Button Command="{Binding DuplicateProfileCommand}" Content="Dupliquer" Margin="6,0,0,0" />
-                  <Button Command="{Binding RenameProfileCommand}" Content="Renommer" Margin="6,0,0,0" />
+                  <Button Command="{Binding CreateProfileCommand}" Content="{DynamicResource Keys.Creer}" />
+                  <Button Command="{Binding DuplicateProfileCommand}" Content="{DynamicResource Keys.Dupliquer}" Margin="6,0,0,0" />
+                  <Button Command="{Binding RenameProfileCommand}" Content="{DynamicResource Keys.Renommer}" Margin="6,0,0,0" />
                   <Border Width="1" Background="{StaticResource Line}" Margin="12,2" />
-                  <Button Command="{Binding DeleteProfileCommand}" Content="Supprimer" />
+                  <Button Command="{Binding DeleteProfileCommand}" Content="{DynamicResource Keys.Supprimer}" />
                 </StackPanel>
               </Grid>
 
@@ -304,7 +304,7 @@
               <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
             <TextBox Grid.Column="0" Text="{Binding BindingFilter, UpdateSourceTrigger=PropertyChanged}"
-                     ToolTip="Cherchez par libellé ou par ce que vous dites : « lumieres », « portes »…" />
+                     ToolTip="{DynamicResource Keys.CherchezLibelleVousDites}" />
             <TextBlock Grid.Column="1" Text="{Binding BindingSummary}" Margin="14,0,0,0"
                        Foreground="{StaticResource TextMuted}" VerticalAlignment="Center" />
           </Grid>
@@ -313,17 +313,17 @@
                     ItemContainerStyle="{StaticResource GridRow}">
             <ListView.View>
               <GridView>
-                <GridViewColumn Header="ÉTAT" Width="120">
+                <GridViewColumn Header="{DynamicResource Keys.ETAT}" Width="120">
                   <GridViewColumn.CellTemplate>
                     <DataTemplate>
                       <TextBlock>
                         <TextBlock.Style>
                           <Style TargetType="TextBlock">
-                            <Setter Property="Text" Value="à configurer" />
+                            <Setter Property="Text" Value="{DynamicResource Keys.Configurer}" />
                             <Setter Property="Foreground" Value="{StaticResource Warn}" />
                             <Style.Triggers>
                               <DataTrigger Binding="{Binding IsBound}" Value="True">
-                                <Setter Property="Text" Value="liée" />
+                                <Setter Property="Text" Value="{DynamicResource Keys.Liee}" />
                                 <Setter Property="Foreground" Value="{StaticResource Ok}" />
                               </DataTrigger>
                               <MultiDataTrigger>
@@ -332,7 +332,7 @@
                                   <Condition Binding="{Binding Need}"
                                              Value="{x:Static bind:ActionNeed.Directed}" />
                                 </MultiDataTrigger.Conditions>
-                                <Setter Property="Text" Value="facultative" />
+                                <Setter Property="Text" Value="{DynamicResource Keys.Facultative}" />
                                 <Setter Property="Foreground" Value="{StaticResource TextMuted}" />
                               </MultiDataTrigger>
                             </Style.Triggers>
@@ -342,35 +342,35 @@
                     </DataTemplate>
                   </GridViewColumn.CellTemplate>
                 </GridViewColumn>
-                <GridViewColumn Header="COMMANDE" Width="210" DisplayMemberBinding="{Binding CommandName}" />
-                <GridViewColumn Header="TOUCHE" Width="180">
+                <GridViewColumn Header="{DynamicResource Commands.COMMANDE}" Width="210" DisplayMemberBinding="{Binding CommandName}" />
+                <GridViewColumn Header="{DynamicResource Commands.TOUCHE}" Width="180">
                   <GridViewColumn.CellTemplate>
                     <DataTemplate>
                       <TextBlock Text="{Binding Input}" FontFamily="Consolas" />
                     </DataTemplate>
                   </GridViewColumn.CellTemplate>
                 </GridViewColumn>
-                <GridViewColumn Header="ACTION DU JEU" Width="380" DisplayMemberBinding="{Binding ActionId}" />
-                <GridViewColumn Header="ORIGINE" Width="110" DisplayMemberBinding="{Binding Origin}" />
+                <GridViewColumn Header="{DynamicResource Keys.ACTIONJEU}" Width="380" DisplayMemberBinding="{Binding ActionId}" />
+                <GridViewColumn Header="{DynamicResource Keys.ORIGINE}" Width="110" DisplayMemberBinding="{Binding Origin}" />
               </GridView>
             </ListView.View>
           </ListView>
 
           <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,10,0,0">
-            <Button Command="{Binding AssignCommand}" Content="Assigner une touche" />
-            <Button Command="{Binding UnassignCommand}" Content="Retirer" Margin="8,0,0,0" />
+            <Button Command="{Binding AssignCommand}" Content="{DynamicResource Keys.AssignerTouche}" />
+            <Button Command="{Binding UnassignCommand}" Content="{DynamicResource Keys.Retirer}" Margin="8,0,0,0" />
             <Border Width="1" Background="{StaticResource Line}" Margin="14,2" />
-            <Button Command="{Binding ImportLayoutCommand}" Content="Importer depuis le jeu" />
-            <Button Command="{Binding ExportLayoutCommand}" Content="Exporter vers le jeu" Margin="8,0,0,0" />
+            <Button Command="{Binding ImportLayoutCommand}" Content="{DynamicResource Keys.ImporterDepuisJeu}" />
+            <Button Command="{Binding ExportLayoutCommand}" Content="{DynamicResource Keys.ExporterVersJeu}" Margin="8,0,0,0" />
             <TextBlock Margin="16,0,0,0" VerticalAlignment="Center" FontSize="11"
                        Foreground="{StaticResource TextMuted}" TextWrapping="Wrap"
-                       Text="Assigner ici ne suffit pas : le jeu n'obéit qu'à ses propres bindings. Exportez, puis « pp_RebindKeys optimus »." />
+                       Text="{DynamicResource Keys.AssignerIciSuffitJeu}" />
           </StackPanel>
         </Grid>
       </TabItem>
 
       <!-- ============================= Réglages ============================= -->
-      <TabItem Header="Réglages" DataContext="{Binding Settings}">
+      <TabItem Header="{DynamicResource Settings.Reglages}" DataContext="{Binding Settings}">
         <Grid Margin="0,12,0,0">
           <Grid.RowDefinitions>
             <RowDefinition Height="*" />
@@ -388,13 +388,13 @@
 
                 <ContentControl Style="{StaticResource Card}">
                   <StackPanel>
-                    <TextBlock Text="LANGUE — LANGUAGE" Style="{StaticResource Label}" />
+                    <TextBlock Text="{DynamicResource Settings.LANGUELANGUAGE}" Style="{StaticResource Label}" />
 
                     <ComboBox ItemsSource="{Binding Languages}"
                               SelectedItem="{Binding ActiveLanguage}" />
 
                     <TextBlock Style="{StaticResource Hint}"
-                               Text="Le changement prend effet aussitôt, sans passer par Enregistrer : l'écran, les commandes que vous prononcez et les réponses d'Optimus changent ensemble." />
+                               Text="{DynamicResource Settings.ChangementPrendEffetAussitot}" />
 
                     <TextBlock Style="{StaticResource Hint}" Foreground="{StaticResource Warn}"
                                Text="{Binding LanguageWarning}"
@@ -404,7 +404,7 @@
 
                 <ContentControl Style="{StaticResource Card}">
                   <StackPanel>
-                    <TextBlock Text="COPILOTE" Style="{StaticResource Label}" />
+                    <TextBlock Text="{DynamicResource Settings.COPILOTE}" Style="{StaticResource Label}" />
 
                     <Grid>
                       <Grid.ColumnDefinitions>
@@ -415,7 +415,7 @@
                       <ComboBox Grid.Column="0" ItemsSource="{Binding Copilots}"
                                 SelectedItem="{Binding ActiveCopilot}" />
 
-                      <Button Grid.Column="1" Margin="8,0,0,0" Content="Supprimer"
+                      <Button Grid.Column="1" Margin="8,0,0,0" Content="{DynamicResource Keys.Supprimer}"
                               Command="{Binding DeleteCopilotCommand}" />
                     </Grid>
 
@@ -429,24 +429,24 @@
 
                       <TextBox Grid.Column="0"
                                Text="{Binding CopilotName, UpdateSourceTrigger=PropertyChanged}"
-                               ToolTip="Nom du copilote a creer" />
+                               ToolTip="{DynamicResource Settings.NomCopiloteCreer}" />
 
-                      <Button Grid.Column="1" Margin="8,0,0,0" Content="Dupliquer"
+                      <Button Grid.Column="1" Margin="8,0,0,0" Content="{DynamicResource Keys.Dupliquer}"
                               Command="{Binding DuplicateCopilotCommand}" />
                     </Grid>
 
                     <TextBlock Style="{StaticResource Hint}"
-                               Text="Le changement prend effet aussitôt, sans passer par Enregistrer : mot d'éveil, voix et caractère changent ensemble." />
+                               Text="{DynamicResource Settings.ChangementPrendEffetAussitot2}" />
                   </StackPanel>
                 </ContentControl>
 
                 <ContentControl Style="{StaticResource Card}">
                   <StackPanel>
-                    <TextBlock Text="ÉCOUTE" Style="{StaticResource Label}" />
+                    <TextBlock Text="{DynamicResource Settings.ECOUTE}" Style="{StaticResource Label}" />
                     <RadioButton GroupName="Mode" IsChecked="{Binding AlwaysOn}"
-                                 Content="Écoute permanente, déclenchée par le mot d'éveil" />
+                                 Content="{DynamicResource Settings.EcoutePermanenteDeclencheeMot}" />
                     <RadioButton GroupName="Mode" IsChecked="{Binding PushToTalk}"
-                                 Content="Push-to-talk : une touche maintenue" />
+                                 Content="{DynamicResource Settings.PushToTalkTouche}" />
                     <TextBlock Text="{Binding ModeExplanation}" Style="{StaticResource Hint}" />
 
                     <Grid Margin="0,14,0,0" IsEnabled="{Binding PushToTalk}">
@@ -456,36 +456,36 @@
                       </Grid.ColumnDefinitions>
                       <TextBox Grid.Column="0" Text="{Binding PushToTalkKey}" IsReadOnly="True"
                                FontFamily="Consolas" VerticalContentAlignment="Center" />
-                      <Button Grid.Column="1" Margin="8,0,0,0" Content="Presser une touche"
+                      <Button Grid.Column="1" Margin="8,0,0,0" Content="{DynamicResource Settings.PresserTouche}"
                               Command="{Binding CaptureKeyCommand}" />
                     </Grid>
                     <CheckBox IsChecked="{Binding RequireWakeWordInPushToTalk}"
                               IsEnabled="{Binding PushToTalk}"
-                              Content="Exiger quand même le mot d'éveil" />
+                              Content="{DynamicResource Settings.ExigerQuandMemeMot}" />
                   </StackPanel>
                 </ContentControl>
 
                 <ContentControl Style="{StaticResource Card}">
                   <StackPanel>
-                    <TextBlock Text="MOT D'ÉVEIL" Style="{StaticResource Label}" />
+                    <TextBlock Text="{DynamicResource Settings.MOTDEVEIL}" Style="{StaticResource Label}" />
                     <TextBox Text="{Binding WakeWord, UpdateSourceTrigger=PropertyChanged}" />
                     <TextBlock Style="{StaticResource Hint}"
-                               Text="Le changer reconstruit toute la grammaire. Choisissez un mot que vous ne prononcez pas par hasard en vol." />
+                               Text="{DynamicResource Settings.ChangerReconstruitTouteGrammaire}" />
                   </StackPanel>
                 </ContentControl>
 
                 <ContentControl Style="{StaticResource Card}">
                   <StackPanel>
-                    <TextBlock Text="SEUILS DE RECONNAISSANCE" Style="{StaticResource Label}" />
+                    <TextBlock Text="{DynamicResource Settings.SEUILSRECONNAISSANCE}" Style="{StaticResource Label}" />
 
                     <TextBlock Margin="0,6,0,0" FontSize="12">
-                      <Run Text="Plancher de bruit :" />
+                      <Run Text="{DynamicResource Settings.PlancherBruit}" />
                       <Run Text="{Binding NoiseFloor, StringFormat={}{0:F2}}" FontFamily="Consolas" />
                     </TextBlock>
                     <Slider Value="{Binding NoiseFloor}" Minimum="0" Maximum="0.6" TickFrequency="0.01" />
 
                     <TextBlock Margin="0,6,0,0" FontSize="12">
-                      <Run Text="Exécution à partir de :" />
+                      <Run Text="{DynamicResource Settings.ExecutionPartir}" />
                       <Run Text="{Binding ConfidenceThreshold, StringFormat={}{0:F2}}" FontFamily="Consolas" />
                     </TextBlock>
                     <Slider Value="{Binding ConfidenceThreshold}" Minimum="0.3" Maximum="0.95" TickFrequency="0.01" />
@@ -496,32 +496,32 @@
 
                 <ContentControl Style="{StaticResource Card}">
                   <StackPanel>
-                    <TextBlock Text="VOIX" Style="{StaticResource Label}" />
+                    <TextBlock Text="{DynamicResource Settings.VOIX}" Style="{StaticResource Label}" />
 
                     <CheckBox IsChecked="{Binding NeuralVoice}"
                               IsEnabled="{Binding NeuralVoiceAvailable}"
-                              Content="Voix neuronale locale (Piper)" />
+                              Content="{DynamicResource Settings.VoixNeuronaleLocalePiper}" />
                     <TextBlock Text="{Binding VoiceEngineExplanation}" Style="{StaticResource Hint}" />
 
                     <ComboBox ItemsSource="{Binding Voices}" SelectedItem="{Binding VoiceId}"
                               Margin="0,10,0,0" />
 
                     <TextBlock Margin="0,10,0,0" FontSize="12">
-                      <Run Text="Débit :" />
+                      <Run Text="{DynamicResource Settings.Debit}" />
                       <Run Text="{Binding Rate, StringFormat={}{0:F2}}" FontFamily="Consolas" />
                     </TextBlock>
                     <Slider Value="{Binding Rate}" Minimum="0.5" Maximum="1.6" TickFrequency="0.01" />
 
                     <TextBlock Margin="0,6,0,0" FontSize="12">
-                      <Run Text="Volume :" />
+                      <Run Text="{DynamicResource Settings.Volume}" />
                       <Run Text="{Binding Volume, StringFormat={}{0:F2}}" FontFamily="Consolas" />
                     </TextBlock>
                     <Slider Value="{Binding Volume}" Minimum="0.1" Maximum="1.0" TickFrequency="0.01" />
 
-                    <Button Content="Écouter un essai" Command="{Binding TestVoiceCommand}"
+                    <Button Content="{DynamicResource Settings.EcouterEssai}" Command="{Binding TestVoiceCommand}"
                             Margin="0,12,0,0" HorizontalAlignment="Left" />
                     <TextBlock Style="{StaticResource Hint}"
-                               Text="L'essai emploie les réglages affichés, pas ceux enregistrés : vous entendez avant de valider." />
+                               Text="{DynamicResource Settings.LEssaiEmploieReglages}" />
                   </StackPanel>
                 </ContentControl>
               </StackPanel>
@@ -529,9 +529,9 @@
               <StackPanel Grid.Column="1" Margin="8,0,0,0">
                 <ContentControl Style="{StaticResource Card}">
                   <StackPanel>
-                    <TextBlock Text="API LOCALE" Style="{StaticResource Label}" />
+                    <TextBlock Text="{DynamicResource Settings.APILOCALE}" Style="{StaticResource Label}" />
                     <CheckBox IsChecked="{Binding ApiEnabled}"
-                              Content="Ouvrir l'interface locale (Stream Deck, Discord, overlay)" />
+                              Content="{DynamicResource Settings.OuvrirLInterfaceLocale}" />
                     <TextBlock Text="{Binding ApiExplanation}" Style="{StaticResource Hint}" />
 
                     <Grid Margin="0,12,0,0" IsEnabled="{Binding ApiEnabled}">
@@ -545,23 +545,23 @@
                         <RowDefinition Height="Auto" />
                       </Grid.RowDefinitions>
 
-                      <TextBlock Grid.Row="0" Grid.Column="0" Text="Port"
+                      <TextBlock Grid.Row="0" Grid.Column="0" Text="{DynamicResource Settings.Port}"
                                  Style="{StaticResource Hint}" Margin="0,0,8,0" VerticalAlignment="Center" />
                       <TextBox Grid.Row="0" Grid.Column="1"
                                Text="{Binding ApiPort, UpdateSourceTrigger=PropertyChanged}" />
 
-                      <TextBlock Grid.Row="1" Grid.Column="0" Text="Exécutions/min"
+                      <TextBlock Grid.Row="1" Grid.Column="0" Text="{DynamicResource Settings.ExecutionsMin}"
                                  Style="{StaticResource Hint}" Margin="0,10,8,0" VerticalAlignment="Center" />
                       <TextBox Grid.Row="1" Grid.Column="1" Margin="0,10,0,0"
                                Text="{Binding ApiRate, UpdateSourceTrigger=PropertyChanged}" />
 
-                      <TextBlock Grid.Row="2" Grid.Column="0" Text="Jeton"
+                      <TextBlock Grid.Row="2" Grid.Column="0" Text="{DynamicResource Settings.Jeton}"
                                  Style="{StaticResource Hint}" Margin="0,10,8,0" VerticalAlignment="Center" />
                       <TextBox Grid.Row="2" Grid.Column="1" Margin="0,10,0,0" IsReadOnly="True"
                                FontFamily="Consolas" Text="{Binding ApiTokenSecret, Mode=OneWay}" />
                     </Grid>
 
-                    <Button Content="Régénérer le jeton" Command="{Binding RegenerateTokenCommand}"
+                    <Button Content="{DynamicResource Settings.RegenererJeton}" Command="{Binding RegenerateTokenCommand}"
                             Margin="0,12,0,0" HorizontalAlignment="Left" />
                     <TextBlock Text="{Binding ApiState}" Style="{StaticResource Hint}"
                                Foreground="{StaticResource Accent}" />
@@ -570,18 +570,18 @@
 
                 <ContentControl Style="{StaticResource Card}">
                   <StackPanel>
-                    <TextBlock Text="PAROLE LIBRE (WHISPER)" Style="{StaticResource Label}" />
+                    <TextBlock Text="{DynamicResource Settings.PAROLELIBREWHISPER}" Style="{StaticResource Label}" />
 
                     <StackPanel IsEnabled="{Binding WhisperAvailable}">
                       <RadioButton GroupName="Whisper" IsChecked="{Binding WhisperOff}"
-                                   Content="Éteint — grammaire fermée seulement" />
+                                   Content="{DynamicResource Settings.EteintGrammaireFermeeSeulement}" />
                       <RadioButton GroupName="Whisper" IsChecked="{Binding WhisperOnRejects}"
-                                   Content="Quand le moteur rapide doute — vos commandes restent instantanées" />
+                                   Content="{DynamicResource Settings.QuandMoteurRapideDoute}" />
                       <RadioButton GroupName="Whisper" IsChecked="{Binding WhisperOnEverything}"
-                                   Content="Sur tout — commandes comprises, plus lent" />
+                                   Content="{DynamicResource Settings.ToutCommandesComprisesPlus}" />
 
                       <CheckBox IsChecked="{Binding WhisperTrimContext}" Margin="0,8,0,0"
-                                Content="Fenêtre réduite (plus rapide, moins sûr)" />
+                                Content="{DynamicResource Settings.FenetreReduitePlusRapide}" />
                     </StackPanel>
 
                     <TextBlock Text="{Binding WhisperExplanation}" Style="{StaticResource Hint}" />
@@ -590,9 +590,9 @@
 
                 <ContentControl Style="{StaticResource Card}">
                   <StackPanel>
-                    <TextBlock Text="ÉTAGE CONVERSATIONNEL" Style="{StaticResource Label}" />
+                    <TextBlock Text="{DynamicResource Settings.ETAGECONVERSATIONNEL}" Style="{StaticResource Label}" />
                     <CheckBox IsChecked="{Binding AiEnabled}"
-                              Content="Faire appel à un modèle quand rien n'est compris" />
+                              Content="{DynamicResource Settings.FaireAppelModeleQuand}" />
                     <TextBlock Text="{Binding AiExplanation}" Style="{StaticResource Hint}" />
 
                     <Grid Margin="0,12,0,0" IsEnabled="{Binding AiEnabled}">
@@ -607,31 +607,31 @@
                         <RowDefinition Height="Auto" />
                       </Grid.RowDefinitions>
 
-                      <TextBlock Grid.Row="0" Grid.Column="0" Text="Fournisseur"
+                      <TextBlock Grid.Row="0" Grid.Column="0" Text="{DynamicResource Settings.Fournisseur}"
                                  Style="{StaticResource Hint}" Margin="0,0,8,0" VerticalAlignment="Center" />
                       <ComboBox Grid.Row="0" Grid.Column="1" SelectedValue="{Binding AiProvider}"
                                 SelectedValuePath="Content">
-                        <ComboBoxItem Content="ollama" />
-                        <ComboBoxItem Content="openai" />
+                        <ComboBoxItem Content="{DynamicResource Settings.Ollama}" />
+                        <ComboBoxItem Content="{DynamicResource Settings.Openai}" />
                       </ComboBox>
 
-                      <TextBlock Grid.Row="1" Grid.Column="0" Text="Adresse"
+                      <TextBlock Grid.Row="1" Grid.Column="0" Text="{DynamicResource Settings.Adresse}"
                                  Style="{StaticResource Hint}" Margin="0,10,8,0" VerticalAlignment="Center" />
                       <TextBox Grid.Row="1" Grid.Column="1" Margin="0,10,0,0"
                                Text="{Binding AiEndpoint, UpdateSourceTrigger=PropertyChanged}" />
 
-                      <TextBlock Grid.Row="2" Grid.Column="0" Text="Modèle"
+                      <TextBlock Grid.Row="2" Grid.Column="0" Text="{DynamicResource Settings.Modele}"
                                  Style="{StaticResource Hint}" Margin="0,10,8,0" VerticalAlignment="Center" />
                       <TextBox Grid.Row="2" Grid.Column="1" Margin="0,10,0,0"
                                Text="{Binding AiModel, UpdateSourceTrigger=PropertyChanged}" />
 
-                      <TextBlock Grid.Row="3" Grid.Column="0" Text="Appels max"
+                      <TextBlock Grid.Row="3" Grid.Column="0" Text="{DynamicResource Settings.AppelsMax}"
                                  Style="{StaticResource Hint}" Margin="0,10,8,0" VerticalAlignment="Center" />
                       <TextBox Grid.Row="3" Grid.Column="1" Margin="0,10,0,0"
                                Text="{Binding AiBudget, UpdateSourceTrigger=PropertyChanged}" />
                     </Grid>
 
-                    <Button Content="Vérifier la connexion" Command="{Binding ProbeAiCommand}"
+                    <Button Content="{DynamicResource Settings.VerifierConnexion}" Command="{Binding ProbeAiCommand}"
                             Margin="0,12,0,0" HorizontalAlignment="Left" />
                     <TextBlock Text="{Binding AiProbe}" Style="{StaticResource Hint}"
                                Foreground="{StaticResource Warn}" />
@@ -640,35 +640,35 @@
 
                 <ContentControl Style="{StaticResource Card}">
                   <StackPanel>
-                    <TextBlock Text="CARACTÈRE" Style="{StaticResource Label}" />
+                    <TextBlock Text="{DynamicResource Settings.CARACTERE}" Style="{StaticResource Label}" />
 
                     <TextBlock Margin="0,6,0,0" FontSize="12">
-                      <Run Text="Formalité" /><Run Text="  " /><Run Text="{Binding Formality}" FontFamily="Consolas" />
+                      <Run Text="{DynamicResource Settings.Formalite}" /><Run Text="  " /><Run Text="{Binding Formality}" FontFamily="Consolas" />
                     </TextBlock>
                     <Slider Value="{Binding Formality}" Minimum="0" Maximum="100" TickFrequency="1" />
 
                     <TextBlock Margin="0,6,0,0" FontSize="12">
-                      <Run Text="Humour" /><Run Text="  " /><Run Text="{Binding Humor}" FontFamily="Consolas" />
+                      <Run Text="{DynamicResource Settings.Humour}" /><Run Text="  " /><Run Text="{Binding Humor}" FontFamily="Consolas" />
                     </TextBlock>
                     <Slider Value="{Binding Humor}" Minimum="0" Maximum="100" TickFrequency="1" />
 
                     <TextBlock Margin="0,6,0,0" FontSize="12">
-                      <Run Text="Ironie" /><Run Text="  " /><Run Text="{Binding Sarcasm}" FontFamily="Consolas" />
+                      <Run Text="{DynamicResource Settings.Ironie}" /><Run Text="  " /><Run Text="{Binding Sarcasm}" FontFamily="Consolas" />
                     </TextBlock>
                     <Slider Value="{Binding Sarcasm}" Minimum="0" Maximum="100" TickFrequency="1" />
 
                     <TextBlock Margin="0,6,0,0" FontSize="12">
-                      <Run Text="Chaleur" /><Run Text="  " /><Run Text="{Binding Warmth}" FontFamily="Consolas" />
+                      <Run Text="{DynamicResource Settings.Chaleur}" /><Run Text="  " /><Run Text="{Binding Warmth}" FontFamily="Consolas" />
                     </TextBlock>
                     <Slider Value="{Binding Warmth}" Minimum="0" Maximum="100" TickFrequency="1" />
 
                     <TextBlock Margin="0,6,0,0" FontSize="12">
-                      <Run Text="Calme" /><Run Text="  " /><Run Text="{Binding Calmness}" FontFamily="Consolas" />
+                      <Run Text="{DynamicResource Settings.Calme}" /><Run Text="  " /><Run Text="{Binding Calmness}" FontFamily="Consolas" />
                     </TextBlock>
                     <Slider Value="{Binding Calmness}" Minimum="0" Maximum="100" TickFrequency="1" />
 
                     <TextBlock Margin="0,6,0,0" FontSize="12">
-                      <Run Text="Verbosité" /><Run Text="  " /><Run Text="{Binding Verbosity}" FontFamily="Consolas" />
+                      <Run Text="{DynamicResource Settings.Verbosite}" /><Run Text="  " /><Run Text="{Binding Verbosity}" FontFamily="Consolas" />
                     </TextBlock>
                     <Slider Value="{Binding Verbosity}" Minimum="0" Maximum="100" TickFrequency="1" />
                     <TextBlock Text="{Binding VerbosityEffect}" Style="{StaticResource Hint}" Margin="0,2,0,0" />
@@ -677,11 +677,11 @@
 
                 <ContentControl Style="{StaticResource Card}">
                   <StackPanel>
-                    <TextBlock Text="CE QUE ÇA DONNE" Style="{StaticResource Label}" />
+                    <TextBlock Text="{DynamicResource Settings.CADONNE}" Style="{StaticResource Label}" />
                     <TextBlock Text="{Binding Preview}" FontStyle="Italic" LineHeight="22"
                                Foreground="{StaticResource Accent}" TextWrapping="Wrap" />
                     <TextBlock Style="{StaticResource Hint}"
-                               Text="Trois répliques tirées du vrai catalogue, composées avec les curseurs ci-contre. Une variante ironique n'apparaît qu'au-dessus d'un certain seuil." />
+                               Text="{DynamicResource Settings.TroisRepliquesTireesVrai}" />
                   </StackPanel>
                 </ContentControl>
               </StackPanel>
@@ -689,10 +689,10 @@
           </ScrollViewer>
 
           <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,10,0,0">
-            <Button Command="{Binding SaveCommand}" Content="Enregistrer" Padding="20,8" FontWeight="SemiBold" />
-            <Button Command="{Binding RevertCommand}" Content="Annuler les modifications" Margin="8,0,0,0" />
+            <Button Command="{Binding SaveCommand}" Content="{DynamicResource Settings.Enregistrer}" Padding="20,8" FontWeight="SemiBold" />
+            <Button Command="{Binding RevertCommand}" Content="{DynamicResource Settings.AnnulerModifications}" Margin="8,0,0,0" />
             <TextBlock Margin="16,0,0,0" VerticalAlignment="Center" FontSize="11"
-                       Foreground="{StaticResource Warn}" Text="Modifications non enregistrées">
+                       Foreground="{StaticResource Warn}" Text="{DynamicResource Settings.ModificationsNonEnregistrees}">
               <TextBlock.Style>
                 <Style TargetType="TextBlock">
                   <Setter Property="Visibility" Value="Collapsed" />
@@ -709,7 +709,7 @@
       </TabItem>
 
       <!-- ============================== Macros ============================== -->
-      <TabItem Header="Macros" DataContext="{Binding MacroEditor}">
+      <TabItem Header="{DynamicResource Macros.Macros}" DataContext="{Binding MacroEditor}">
         <Grid Margin="0,12,0,0">
           <Grid.ColumnDefinitions>
             <ColumnDefinition Width="290" />
@@ -745,9 +745,9 @@
             </ListBox>
 
             <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,8,0,0">
-              <Button Command="{Binding NewCommand}" Content="Nouvelle" />
-              <Button Command="{Binding DuplicateCommand}" Content="Dupliquer" Margin="6,0,0,0" />
-              <Button Command="{Binding DeleteCommand}" Content="Supprimer" Margin="6,0,0,0" />
+              <Button Command="{Binding NewCommand}" Content="{DynamicResource Macros.Nouvelle}" />
+              <Button Command="{Binding DuplicateCommand}" Content="{DynamicResource Keys.Dupliquer}" Margin="6,0,0,0" />
+              <Button Command="{Binding DeleteCommand}" Content="{DynamicResource Keys.Supprimer}" Margin="6,0,0,0" />
             </StackPanel>
           </Grid>
 
@@ -769,26 +769,26 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Grid.Column="0" Margin="0,0,10,0">
-                  <TextBlock Text="NOM" Style="{StaticResource Label}" />
+                  <TextBlock Text="{DynamicResource Macros.NOM}" Style="{StaticResource Label}" />
                   <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" />
                   <TextBlock Style="{StaticResource Hint}"
-                             Text="Ce qu'Optimus prononce quand il en parle." />
+                             Text="{DynamicResource Macros.QuOptimusPrononceQuand}" />
                 </StackPanel>
 
                 <StackPanel Grid.Column="1" Margin="0,0,10,0">
-                  <TextBlock Text="FORMULATIONS — UNE PAR LIGNE" Style="{StaticResource Label}" />
+                  <TextBlock Text="{DynamicResource Macros.FORMULATIONSLIGNE}" Style="{StaticResource Label}" />
                   <TextBox Text="{Binding Phrases, UpdateSourceTrigger=PropertyChanged}"
                            AcceptsReturn="True" MinHeight="72" VerticalScrollBarVisibility="Auto"
                            TextWrapping="NoWrap" />
                   <TextBlock Style="{StaticResource Hint}"
-                             Text="Écrivez-les accentuées : le moteur en déduit la prononciation." />
+                             Text="{DynamicResource Macros.EcrivezAccentueesMoteurDeduit}" />
                 </StackPanel>
 
                 <StackPanel Grid.Column="2">
-                  <TextBlock Text="TEMPORISATION" Style="{StaticResource Label}" />
+                  <TextBlock Text="{DynamicResource Macros.TEMPORISATION}" Style="{StaticResource Label}" />
                   <TextBox Text="{Binding CooldownMs, UpdateSourceTrigger=PropertyChanged}" />
                   <TextBlock Style="{StaticResource Hint}"
-                             Text="En millisecondes. Empêche de la relancer pendant qu'elle se déroule." />
+                             Text="{DynamicResource Macros.MillisecondesEmpecheRelancerPendant}" />
                 </StackPanel>
               </Grid>
             </ContentControl>
@@ -835,10 +835,10 @@
               <ContentControl Grid.Column="1" Style="{StaticResource Card}" Margin="10,0,0,0"
                       DataContext="{Binding SelectedStep}">
                 <StackPanel>
-                  <TextBlock Text="ÉTAPE CHOISIE" Style="{StaticResource Label}" />
+                  <TextBlock Text="{DynamicResource Macros.ETAPECHOISIE}" Style="{StaticResource Label}" />
 
                   <TextBlock Style="{StaticResource Hint}" Margin="0,4,0,0"
-                             Text="Choisissez une étape dans la séquence pour la modifier.">
+                             Text="{DynamicResource Macros.ChoisissezEtapeSequenceModifier}">
                     <TextBlock.Visibility>
                       <Binding Path="." Converter="{StaticResource NullToVisible}"
                                FallbackValue="Visible" TargetNullValue="Visible" />
@@ -846,95 +846,95 @@
                   </TextBlock>
 
                   <StackPanel Visibility="{Binding IsCommand, Converter={StaticResource BoolToVisible}, FallbackValue=Collapsed, TargetNullValue=Collapsed}">
-                    <TextBlock Text="Commande" Style="{StaticResource Hint}" Margin="0,6,0,2" />
+                    <TextBlock Text="{DynamicResource Macros.Commande}" Style="{StaticResource Hint}" Margin="0,6,0,2" />
                     <ComboBox ItemsSource="{Binding DataContext.Callable,
                                             RelativeSource={RelativeSource AncestorType=TabItem}}"
                               SelectedItem="{Binding CommandId}" />
 
-                    <TextBlock Text="Sens" Style="{StaticResource Hint}" Margin="0,10,0,2" />
+                    <TextBlock Text="{DynamicResource Macros.Sens}" Style="{StaticResource Hint}" Margin="0,10,0,2" />
                     <ComboBox SelectedIndex="{Binding Polarity, Converter={StaticResource PolarityToIndex}}">
-                      <ComboBoxItem Content="basculer" />
-                      <ComboBoxItem Content="allumer" />
-                      <ComboBoxItem Content="éteindre" />
+                      <ComboBoxItem Content="{DynamicResource Macros.Basculer}" />
+                      <ComboBoxItem Content="{DynamicResource Macros.Allumer}" />
+                      <ComboBoxItem Content="{DynamicResource Macros.Eteindre}" />
                     </ComboBox>
 
                     <CheckBox IsChecked="{Binding RequireDirected}"
-                              Content="Exiger un sens garanti" />
+                              Content="{DynamicResource Macros.ExigerSensGaranti}" />
                     <TextBlock Style="{StaticResource Hint}"
-                               Text="Renonce à l'étape plutôt que de basculer à l'aveugle. À cocher quand l'état de départ est incertain — les portes, par exemple." />
+                               Text="{DynamicResource Macros.RenonceLEtapePlutot}" />
                   </StackPanel>
 
                   <StackPanel Visibility="{Binding IsBranch, Converter={StaticResource BoolToVisible}, FallbackValue=Collapsed, TargetNullValue=Collapsed}">
-                    <TextBlock Text="Ce qui est interrogé" Style="{StaticResource Hint}" Margin="0,6,0,2" />
+                    <TextBlock Text="{DynamicResource Macros.Interroge}" Style="{StaticResource Hint}" Margin="0,6,0,2" />
                     <ComboBox SelectedIndex="{Binding Subject, Converter={StaticResource SubjectToIndex}}">
-                      <ComboBoxItem Content="la commande a toutes ses touches" />
-                      <ComboBoxItem Content="le sens est garanti par le jeu" />
-                      <ComboBoxItem Content="Optimus simule" />
-                      <ComboBoxItem Content="le mode de vol" />
-                      <ComboBoxItem Content="l'état supposé d'une bascule" />
+                      <ComboBoxItem Content="{DynamicResource Macros.CommandeToutesTouches}" />
+                      <ComboBoxItem Content="{DynamicResource Macros.SensGarantiJeu}" />
+                      <ComboBoxItem Content="{DynamicResource Macros.OptimusSimule}" />
+                      <ComboBoxItem Content="{DynamicResource Macros.ModeVol}" />
+                      <ComboBoxItem Content="{DynamicResource Macros.LEtatSupposeD}" />
                     </ComboBox>
                     <TextBlock Text="{Binding SubjectCaveat}" Style="{StaticResource Hint}" />
 
                     <StackPanel Visibility="{Binding ConditionNeedsCommand, Converter={StaticResource BoolToVisible}, FallbackValue=Collapsed}">
-                      <TextBlock Text="Commande visée" Style="{StaticResource Hint}" Margin="0,10,0,2" />
+                      <TextBlock Text="{DynamicResource Macros.CommandeVisee}" Style="{StaticResource Hint}" Margin="0,10,0,2" />
                       <ComboBox ItemsSource="{Binding DataContext.Callable,
                                               RelativeSource={RelativeSource AncestorType=TabItem}}"
                                 SelectedItem="{Binding ConditionCommandId}" />
                     </StackPanel>
 
                     <StackPanel Visibility="{Binding ConditionNeedsPolarity, Converter={StaticResource BoolToVisible}, FallbackValue=Collapsed}">
-                      <TextBlock Text="Sens" Style="{StaticResource Hint}" Margin="0,10,0,2" />
+                      <TextBlock Text="{DynamicResource Macros.Sens}" Style="{StaticResource Hint}" Margin="0,10,0,2" />
                       <ComboBox SelectedIndex="{Binding ConditionPolarity, Converter={StaticResource PolarityToIndex}}">
-                        <ComboBoxItem Content="basculer" IsEnabled="False" />
-                        <ComboBoxItem Content="allumer" />
-                        <ComboBoxItem Content="éteindre" />
+                        <ComboBoxItem Content="{DynamicResource Macros.Basculer}" IsEnabled="False" />
+                        <ComboBoxItem Content="{DynamicResource Macros.Allumer}" />
+                        <ComboBoxItem Content="{DynamicResource Macros.Eteindre}" />
                       </ComboBox>
                     </StackPanel>
 
                     <StackPanel Visibility="{Binding ConditionNeedsValue, Converter={StaticResource BoolToVisible}, FallbackValue=Collapsed}">
-                      <TextBlock Text="Valeur attendue" Style="{StaticResource Hint}" Margin="0,10,0,2" />
+                      <TextBlock Text="{DynamicResource Macros.ValeurAttendue}" Style="{StaticResource Hint}" Margin="0,10,0,2" />
                       <ComboBox ItemsSource="{Binding ConditionValues}" SelectedItem="{Binding ConditionValue}" />
                     </StackPanel>
 
-                    <CheckBox IsChecked="{Binding ConditionNegated}" Content="Inverser la condition" />
+                    <CheckBox IsChecked="{Binding ConditionNegated}" Content="{DynamicResource Macros.InverserCondition}" />
                     <TextBlock Style="{StaticResource Hint}"
-                               Text="Les étapes suivantes indentées forment le « alors ». Celles placées sous « sinon » ne se jouent que si la condition ne tient pas." />
+                               Text="{DynamicResource Macros.EtapesSuivantesIndenteesForment}" />
                   </StackPanel>
 
                   <StackPanel Visibility="{Binding IsLoop, Converter={StaticResource BoolToVisible}, FallbackValue=Collapsed, TargetNullValue=Collapsed}">
-                    <TextBlock Text="Nombre de tours" Style="{StaticResource Hint}" Margin="0,6,0,2" />
+                    <TextBlock Text="{DynamicResource Macros.NombreTours}" Style="{StaticResource Hint}" Margin="0,6,0,2" />
                     <TextBox Text="{Binding Times, UpdateSourceTrigger=PropertyChanged}" />
                     <TextBlock Style="{StaticResource Hint}"
-                               Text="Un compte fixe, entre 1 et 20. Une boucle « tant que » ne pourrait pas être planifiée à l'avance, et le garde ne pourrait plus vérifier la séquence complète avant qu'une touche ne parte." />
+                               Text="{DynamicResource Macros.CompteFixeEntre1}" />
                   </StackPanel>
 
                   <StackPanel Visibility="{Binding IsWait, Converter={StaticResource BoolToVisible}, FallbackValue=Collapsed, TargetNullValue=Collapsed}">
-                    <TextBlock Text="Attente (ms)" Style="{StaticResource Hint}" Margin="0,6,0,2" />
+                    <TextBlock Text="{DynamicResource Macros.AttenteMs}" Style="{StaticResource Hint}" Margin="0,6,0,2" />
                     <TextBox Text="{Binding WaitMs, UpdateSourceTrigger=PropertyChanged}" />
                     <TextBlock Style="{StaticResource Hint}"
-                               Text="Le jeu ne répond pas à deux touches envoyées dans la même milliseconde." />
+                               Text="{DynamicResource Macros.JeuRepondDeuxTouches}" />
                   </StackPanel>
 
                   <StackPanel Visibility="{Binding IsSay, Converter={StaticResource BoolToVisible}, FallbackValue=Collapsed, TargetNullValue=Collapsed}">
-                    <TextBlock Text="Clé de réplique" Style="{StaticResource Hint}" Margin="0,6,0,2" />
+                    <TextBlock Text="{DynamicResource Macros.CleReplique}" Style="{StaticResource Hint}" Margin="0,6,0,2" />
                     <TextBox Text="{Binding ResponseKey, UpdateSourceTrigger=PropertyChanged}" />
                     <TextBlock Style="{StaticResource Hint}"
-                               Text="Une entrée de responses.fr.json. Optimus se tait si elle n'existe pas." />
+                               Text="{DynamicResource Macros.EntreeResponsesFrJson}" />
                   </StackPanel>
                 </StackPanel>
               </ContentControl>
             </Grid>
 
             <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,10,0,0">
-              <Button Command="{Binding AddCommandStepCommand}" Content="+ Commande" />
-              <Button Command="{Binding AddWaitStepCommand}" Content="+ Attente" Margin="6,0,0,0" />
-              <Button Command="{Binding AddSayStepCommand}" Content="+ Parole" Margin="6,0,0,0" />
-              <Button Command="{Binding AddBranchStepCommand}" Content="+ Si" Margin="6,0,0,0" />
-              <Button Command="{Binding AddLoopStepCommand}" Content="+ Répéter" Margin="6,0,0,0" />
+              <Button Command="{Binding AddCommandStepCommand}" Content="{DynamicResource Macros.Commande2}" />
+              <Button Command="{Binding AddWaitStepCommand}" Content="{DynamicResource Macros.Attente}" Margin="6,0,0,0" />
+              <Button Command="{Binding AddSayStepCommand}" Content="{DynamicResource Macros.Parole}" Margin="6,0,0,0" />
+              <Button Command="{Binding AddBranchStepCommand}" Content="{DynamicResource Macros.Si}" Margin="6,0,0,0" />
+              <Button Command="{Binding AddLoopStepCommand}" Content="{DynamicResource Macros.Repeter}" Margin="6,0,0,0" />
               <Border Width="1" Background="{StaticResource Line}" Margin="12,2" />
-              <Button Command="{Binding MoveUpCommand}" Content="Monter" />
-              <Button Command="{Binding MoveDownCommand}" Content="Descendre" Margin="6,0,0,0" />
-              <Button Command="{Binding RemoveStepCommand}" Content="Retirer" Margin="6,0,0,0" />
+              <Button Command="{Binding MoveUpCommand}" Content="{DynamicResource Macros.Monter}" />
+              <Button Command="{Binding MoveDownCommand}" Content="{DynamicResource Macros.Descendre}" Margin="6,0,0,0" />
+              <Button Command="{Binding RemoveStepCommand}" Content="{DynamicResource Keys.Retirer}" Margin="6,0,0,0" />
             </StackPanel>
 
             <Grid Grid.Row="3" Margin="0,10,0,0">
@@ -944,10 +944,10 @@
               </Grid.ColumnDefinitions>
 
               <StackPanel Grid.Column="0" Orientation="Horizontal">
-                <Button Command="{Binding SaveCommand}" Content="Enregistrer" Padding="20,8"
+                <Button Command="{Binding SaveCommand}" Content="{DynamicResource Settings.Enregistrer}" Padding="20,8"
                         FontWeight="SemiBold" />
-                <Button Command="{Binding RevertCommand}" Content="Annuler" Margin="6,0,0,0" />
-                <Button Command="{Binding TestCommand}" Content="Essayer en simulation"
+                <Button Command="{Binding RevertCommand}" Content="{DynamicResource Macros.Annuler}" Margin="6,0,0,0" />
+                <Button Command="{Binding TestCommand}" Content="{DynamicResource Macros.EssayerSimulation}"
                         Margin="6,0,0,0" />
               </StackPanel>
 
@@ -960,7 +960,7 @@
       </TabItem>
 
       <!-- =========================== Compréhension =========================== -->
-      <TabItem Header="Compréhension" DataContext="{Binding Understanding}">
+      <TabItem Header="{DynamicResource Understanding.Comprehension}" DataContext="{Binding Understanding}">
         <Grid Margin="0,12,0,0">
           <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -971,7 +971,7 @@
             <StackPanel>
               <TextBlock Text="{Binding Summary}" FontWeight="SemiBold" TextWrapping="Wrap" />
               <TextBlock Style="{StaticResource Hint}"
-                         Text="La grammaire est fermée : Optimus ne peut restituer qu'une formulation qu'il connaît déjà. Cette liste dit sur quelle commande il a hésité, pas ce que vous avez dit — c'est à vous d'écrire la tournure que vous employez." />
+                         Text="{DynamicResource Understanding.GrammaireFermeeOptimusPeut}" />
             </StackPanel>
           </ContentControl>
 
@@ -994,20 +994,20 @@
                         ItemContainerStyle="{StaticResource GridRow}">
                 <ListView.View>
                   <GridView>
-                    <GridViewColumn Header="ENTENDU" Width="190" DisplayMemberBinding="{Binding Heard}" />
-                    <GridViewColumn Header="CE QU'IL EN A FAIT" Width="160" DisplayMemberBinding="{Binding Kind}" />
-                    <GridViewColumn Header="COMMANDE ENVISAGÉE" Width="170" DisplayMemberBinding="{Binding CommandName}" />
-                    <GridViewColumn Header="FRÉQUENCE" Width="230" DisplayMemberBinding="{Binding Detail}" />
+                    <GridViewColumn Header="{DynamicResource Understanding.ENTENDU}" Width="190" DisplayMemberBinding="{Binding Heard}" />
+                    <GridViewColumn Header="{DynamicResource Understanding.QUILFAIT}" Width="160" DisplayMemberBinding="{Binding Kind}" />
+                    <GridViewColumn Header="{DynamicResource Understanding.COMMANDEENVISAGEE}" Width="170" DisplayMemberBinding="{Binding CommandName}" />
+                    <GridViewColumn Header="{DynamicResource Understanding.FREQUENCE}" Width="230" DisplayMemberBinding="{Binding Detail}" />
                   </GridView>
                 </ListView.View>
               </ListView>
 
               <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,10,0,0">
-                <Button Command="{Binding IgnoreCommand}" Content="Ignorer cette ligne" />
-                <Button Command="{Binding ClearCommand}" Content="Vider la liste" Margin="6,0,0,0" />
+                <Button Command="{Binding IgnoreCommand}" Content="{DynamicResource Understanding.IgnorerCetteLigne}" />
+                <Button Command="{Binding ClearCommand}" Content="{DynamicResource Understanding.ViderListe}" Margin="6,0,0,0" />
               </StackPanel>
 
-              <TextBlock Grid.Row="2" Text="VOS FORMULATIONS" Style="{StaticResource Label}"
+              <TextBlock Grid.Row="2" Text="{DynamicResource Understanding.VOSFORMULATIONS}" Style="{StaticResource Label}"
                          Margin="0,16,0,4" />
 
               <Grid Grid.Row="3">
@@ -1021,14 +1021,14 @@
                           ItemContainerStyle="{StaticResource GridRow}">
                   <ListView.View>
                     <GridView>
-                      <GridViewColumn Header="FORMULATION" Width="260" DisplayMemberBinding="{Binding Phrase}" />
-                      <GridViewColumn Header="COMMANDE" Width="230" DisplayMemberBinding="{Binding CommandName}" />
-                      <GridViewColumn Header="SENS" Width="120" DisplayMemberBinding="{Binding Sense}" />
+                      <GridViewColumn Header="{DynamicResource Understanding.FORMULATION}" Width="260" DisplayMemberBinding="{Binding Phrase}" />
+                      <GridViewColumn Header="{DynamicResource Commands.COMMANDE}" Width="230" DisplayMemberBinding="{Binding CommandName}" />
+                      <GridViewColumn Header="{DynamicResource Understanding.SENS}" Width="120" DisplayMemberBinding="{Binding Sense}" />
                     </GridView>
                   </ListView.View>
                 </ListView>
 
-                <Button Grid.Column="1" Command="{Binding RemoveAliasCommand}" Content="Retirer"
+                <Button Grid.Column="1" Command="{Binding RemoveAliasCommand}" Content="{DynamicResource Keys.Retirer}"
                         Margin="8,0,0,0" VerticalAlignment="Top" />
               </Grid>
             </Grid>
@@ -1036,33 +1036,33 @@
             <ContentControl Grid.Column="1" Style="{StaticResource Card}" Margin="10,0,0,0"
                     VerticalAlignment="Top">
               <StackPanel>
-                <TextBlock Text="APPRENDRE UNE FORMULATION" Style="{StaticResource Label}" />
+                <TextBlock Text="{DynamicResource Understanding.APPRENDREFORMULATION}" Style="{StaticResource Label}" />
 
-                <TextBlock Text="Ce que vous dites réellement" Style="{StaticResource Hint}"
+                <TextBlock Text="{DynamicResource Understanding.VousDitesReellement}" Style="{StaticResource Hint}"
                            Margin="0,8,0,2" />
                 <TextBox Text="{Binding Phrase, UpdateSourceTrigger=PropertyChanged}" />
                 <TextBlock Style="{StaticResource Hint}"
-                           Text="Écrivez-la accentuée : le moteur en déduit la prononciation." />
+                           Text="{DynamicResource Understanding.EcrivezAccentueeMoteurDeduit}" />
 
-                <TextBlock Text="Commande à déclencher" Style="{StaticResource Hint}"
+                <TextBlock Text="{DynamicResource Understanding.CommandeDeclencher}" Style="{StaticResource Hint}"
                            Margin="0,12,0,2" />
                 <ComboBox ItemsSource="{Binding Commands}" SelectedItem="{Binding TargetCommand}" />
 
-                <TextBlock Text="Sens" Style="{StaticResource Hint}" Margin="0,12,0,2" />
+                <TextBlock Text="{DynamicResource Macros.Sens}" Style="{StaticResource Hint}" Margin="0,12,0,2" />
                 <ComboBox SelectedIndex="{Binding Polarity, Converter={StaticResource PolarityToIndex}}">
-                  <ComboBoxItem Content="aucun — bascule" />
-                  <ComboBoxItem Content="activation" />
-                  <ComboBoxItem Content="extinction" />
+                  <ComboBoxItem Content="{DynamicResource Understanding.AucunBascule}" />
+                  <ComboBoxItem Content="{DynamicResource Understanding.Activation}" />
+                  <ComboBoxItem Content="{DynamicResource Understanding.Extinction}" />
                 </ComboBox>
 
-                <Button Command="{Binding AddCommand}" Content="Apprendre" Margin="0,16,0,0"
+                <Button Command="{Binding AddCommand}" Content="{DynamicResource Understanding.Apprendre}" Margin="0,16,0,0"
                         Padding="20,8" FontWeight="SemiBold" HorizontalAlignment="Left" />
 
                 <TextBlock Text="{Binding Verdict}" Style="{StaticResource Hint}"
                            Foreground="{StaticResource Warn}" Margin="0,10,0,0" />
 
                 <TextBlock Style="{StaticResource Hint}" Margin="0,14,0,0"
-                           Text="La formulation est enregistrée hors du catalogue livré : elle survit aux mises à jour d'Optimus." />
+                           Text="{DynamicResource Understanding.FormulationEnregistreeHorsCatalogue}" />
               </StackPanel>
             </ContentControl>
           </Grid>

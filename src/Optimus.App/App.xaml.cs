@@ -55,6 +55,10 @@ public partial class App : Application
             DiagnosticLog.Info("chargement des données", dataRoot);
             OptimusRuntime runtime = OptimusRuntime.Load(dataRoot);
 
+            // Avant la fenetre : sans cela elle se peindrait en francais, puis se corrigerait
+            // sous les yeux du pilote.
+            Localization.Localizer.Apply(runtime.User.Language);
+
             DiagnosticLog.Info(
                 "données chargées",
                 $"{runtime.Catalog.Count} commandes · {runtime.Bindings.BoundCount} actions liées · "
