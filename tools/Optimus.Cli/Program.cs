@@ -621,7 +621,9 @@ public static class Program
         Console.WriteLine($"  {copilot.Name,-11} « {spoken.Text} »   ({spoken.CandidateCount} variantes){rules}");
 
         await speech.SpeakAsync(
-            new SpeechRequest(spoken.Text, copilot.Voice.VoiceId, copilot.EffectiveRate, copilot.Voice.Volume))
+            new SpeechRequest(
+                spoken.Text, copilot.Voice.VoiceId, copilot.EffectiveRate, copilot.Voice.Volume,
+                copilot.Language))
             .ConfigureAwait(false);
     }
 

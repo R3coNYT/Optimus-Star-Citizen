@@ -13,10 +13,21 @@ public sealed record VoiceInfo(string Id, string DisplayName, string Language, b
 
 /// <summary>Demande de synthèse.</summary>
 /// <param name="Text">Texte à prononcer.</param>
-/// <param name="VoiceId">Voix souhaitée. Null = voix par défaut du moteur.</param>
+/// <param name="VoiceId">Voix précise. Null = au moteur de choisir, selon <paramref name="Language"/>.</param>
 /// <param name="Rate">Débit, 1.0 étant le débit naturel de la voix.</param>
 /// <param name="Volume">Volume, de 0 à 1.</param>
-public sealed record SpeechRequest(string Text, string? VoiceId = null, double Rate = 1.0, double Volume = 1.0);
+/// <param name="Language">
+/// Langue du texte, par exemple <c>en-US</c>. Sert à choisir une voix quand aucune n'est
+/// imposée : sans elle, le moteur prend la voix par défaut de Windows, qui suit la langue
+/// d'affichage du système et non celle du copilote. Un texte anglais dit par une voix
+/// française est inintelligible bien avant d'être désagréable.
+/// </param>
+public sealed record SpeechRequest(
+    string Text,
+    string? VoiceId = null,
+    double Rate = 1.0,
+    double Volume = 1.0,
+    string? Language = null);
 
 /// <summary>
 /// Synthèse vocale.

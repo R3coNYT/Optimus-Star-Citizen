@@ -78,6 +78,7 @@
   <sys:String x:Key="Settings.VoixNeuronaleLocalePiper">Local neural voice (Piper)</sys:String>
   <sys:String x:Key="Settings.Debit">Rate:</sys:String>
   <sys:String x:Key="Settings.Volume">Volume:</sys:String>
+  <sys:String x:Key="Settings.VoiceTestSentence">All systems online. Standing by for your orders, commander.</sys:String>
   <sys:String x:Key="Settings.EcouterEssai">Hear a sample</sys:String>
   <sys:String x:Key="Settings.LEssaiEmploieReglages">The sample uses the settings shown, not the saved ones: you hear before you commit.</sys:String>
   <sys:String x:Key="Settings.APILOCALE">LOCAL API</sys:String>

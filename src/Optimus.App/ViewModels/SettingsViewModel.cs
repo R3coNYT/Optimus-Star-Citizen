@@ -873,11 +873,15 @@ public sealed class SettingsViewModel : ObservableObject
 
         await using ITextToSpeechProvider engine = SpeechFactory.For(preview);
 
+        // La phrase suit la langue affichée, comme tout le reste de l'écran. Elle était en
+        // français en dur : le pilote anglophone qui cliquait « Hear a sample » entendait du
+        // français, ce qui ne teste ni sa voix ni son débit.
         await engine.SpeakAsync(new SpeechRequest(
-            "Systèmes en ligne. À vos ordres, commandant.",
+            Localization.Localizer.T("Settings.VoiceTestSentence"),
             preview.Voice.VoiceId,
             preview.EffectiveRate,
-            preview.Voice.Volume))
+            preview.Voice.Volume,
+            preview.Language))
             .ConfigureAwait(true);
     }
 

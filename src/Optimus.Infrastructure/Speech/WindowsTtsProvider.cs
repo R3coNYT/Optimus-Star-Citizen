@@ -60,7 +60,7 @@ public sealed class WindowsTtsProvider : ITextToSpeechProvider
 
         try
         {
-            SelectVoice(request.VoiceId);
+            SelectVoice(request.VoiceId, request.Language);
 
             _synthesizer.Options.SpeakingRate = Math.Clamp(request.Rate, 0.5, 6.0);
             _synthesizer.Options.AudioVolume = Math.Clamp(request.Volume, 0.0, 1.0);
@@ -120,7 +120,7 @@ public sealed class WindowsTtsProvider : ITextToSpeechProvider
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
 
-        SelectVoice(voiceId);
+        SelectVoice(voiceId, language: null);
 
         using SpeechSynthesisStream stream = await _synthesizer
             .SynthesizeTextToStreamAsync("Initialisation.")
@@ -131,38 +131,102 @@ public sealed class WindowsTtsProvider : ITextToSpeechProvider
     }
 
     /// <summary>
-    /// Sélectionne une voix par identifiant ou par nom affiché.
+    /// Sélectionne une voix par identifiant, par nom affiché, ou à défaut par langue.
     ///
     /// Accepter le nom affiché est délibéré : c'est ce que voit l'utilisateur dans l'interface
     /// et ce qu'il écrira dans son fichier de copilote. Lui imposer un identifiant technique
     /// serait une fausse rigueur.
+    ///
+    /// Le repli par langue répare un défaut mesuré le 2026-08-29, sur une machine dont Windows
+    /// s'affiche en français. Un copilote sans voix imposée (<c>"voice_id": null</c>, ce que
+    /// livre Optimus) tombait sur la voix par défaut du système, donc Hortense : le copilote
+    /// passé en anglais prononçait un texte anglais avec une voix française. Le contrat
+    /// l'annonçait pourtant depuis toujours — <c>VoiceConfig.VoiceId</c> dit « null = voix par
+    /// défaut du moteur <b>pour la langue</b> ». Il n'était simplement pas tenu.
     /// </summary>
-    private void SelectVoice(string? voiceId)
+    private void SelectVoice(string? voiceId, string? language)
     {
-        if (string.IsNullOrWhiteSpace(voiceId))
+        if (!string.IsNullOrWhiteSpace(voiceId))
         {
-            return;
+            foreach (VoiceInformation voice in SpeechSynthesizer.AllVoices)
+            {
+                if (string.Equals(voice.Id, voiceId, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(voice.DisplayName, voiceId, StringComparison.OrdinalIgnoreCase))
+                {
+                    _synthesizer.Voice = voice;
+                    return;
+                }
+            }
+
+            // Voix introuvable : on ne s'arrête pas là. Une voix inattendue vaut mieux qu'un
+            // copilote muet, et l'anomalie se voit à l'oreille.
+            //
+            // Elle se lit aussi, desormais : le cas le plus frequent est un identifiant Piper
+            // arrive ici apres un repli, et un pilote qui entend soudain une autre voix merite
+            // mieux qu'une devinette.
+            Optimus.Core.Diagnostics.DiagnosticLog.Warn(
+                $"voix Windows « {voiceId} » introuvable",
+                "Optimus se rabat sur une voix de la langue du copilote.");
         }
 
-        foreach (VoiceInformation voice in SpeechSynthesizer.AllVoices)
+        VoiceInformation? matching = MatchLanguage(language);
+
+        if (matching is null && !string.IsNullOrWhiteSpace(language))
         {
-            if (string.Equals(voice.Id, voiceId, StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(voice.DisplayName, voiceId, StringComparison.OrdinalIgnoreCase))
+            // Le cas se produit vraiment : Windows installé en français n'a que des voix
+            // françaises, et un copilote passé en anglais parlera anglais avec l'accent
+            // français tant que le module vocal n'est pas posé. Autant le dire, parce que le
+            // pilote qui entend ça croira à un bogue d'Optimus.
+            //
+            // Attention au piège : ces voix-là sont celles de OneCore, pas celles de SAPI.
+            // Windows livre Zira (anglaise) à SAPI sur toutes les machines, et elle n'apparait
+            // pas ici. Lire la mauvaise liste ferait conclure que tout va bien.
+            Optimus.Core.Diagnostics.DiagnosticLog.Warn(
+                $"aucune voix Windows installée pour « {language} »",
+                "Le copilote garde la voix par défaut du système. "
+                + "Ajoutez le module « synthèse vocale » de cette langue dans "
+                + "Paramètres ▸ Heure et langue.");
+        }
+
+        // Remettre la voix par défaut quand rien ne correspond n'est pas une politesse : le
+        // synthétiseur garde la voix posée à l'appel précédent, et sans cette ligne un essai de
+        // voix dans les réglages teindrait toutes les répliques suivantes.
+        _synthesizer.Voice = matching ?? SpeechSynthesizer.DefaultVoice;
+    }
+
+    /// <summary>
+    /// Première voix installée dans cette langue, étiquette complète d'abord (<c>en-US</c>),
+    /// puis code de langue seul (<c>en</c>) — une voix britannique dit l'anglais bien mieux
+    /// qu'une voix française.
+    /// </summary>
+    internal static VoiceInformation? MatchLanguage(string? language)
+    {
+        if (string.IsNullOrWhiteSpace(language))
+        {
+            return null;
+        }
+
+        IReadOnlyList<VoiceInformation> voices = SpeechSynthesizer.AllVoices;
+
+        foreach (VoiceInformation voice in voices)
+        {
+            if (string.Equals(voice.Language, language, StringComparison.OrdinalIgnoreCase))
             {
-                _synthesizer.Voice = voice;
-                return;
+                return voice;
             }
         }
 
-        // Voix introuvable : on garde celle par défaut plutôt que d'échouer. Une voix
-        // inattendue vaut mieux qu'un copilote muet, et l'anomalie se voit à l'oreille.
-        //
-        // Elle se lit aussi, desormais : le cas le plus frequent est un identifiant Piper arrive
-        // ici apres un repli, et un pilote qui entend soudain une autre voix merite mieux qu'une
-        // devinette.
-        Optimus.Core.Diagnostics.DiagnosticLog.Warn(
-            $"voix Windows « {voiceId} » introuvable",
-            "La voix par défaut du système prend le relais.");
+        string prefix = language.Split('-')[0];
+
+        foreach (VoiceInformation voice in voices)
+        {
+            if (voice.Language.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return voice;
+            }
+        }
+
+        return null;
     }
 
     public ValueTask DisposeAsync()

@@ -1076,7 +1076,8 @@ public sealed class OptimusRuntime : IAsyncDisposable
         try
         {
             await Speech.SpeakAsync(new SpeechRequest(
-                text, Copilot.Voice.VoiceId, Copilot.EffectiveRate, Copilot.Voice.Volume))
+                text, Copilot.Voice.VoiceId, Copilot.EffectiveRate, Copilot.Voice.Volume,
+                Copilot.Language))
                 .ConfigureAwait(false);
         }
         catch (Exception exception)
@@ -1111,7 +1112,8 @@ public sealed class OptimusRuntime : IAsyncDisposable
         }
 
         await Speech.SpeakAsync(new SpeechRequest(
-            composed.Text, Copilot.Voice.VoiceId, Copilot.EffectiveRate, Copilot.Voice.Volume))
+            composed.Text, Copilot.Voice.VoiceId, Copilot.EffectiveRate, Copilot.Voice.Volume,
+            Copilot.Language))
             .ConfigureAwait(false);
         return composed.Text;
     }

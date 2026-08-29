@@ -77,6 +77,7 @@
   <sys:String x:Key="Settings.VoixNeuronaleLocalePiper">Voix neuronale locale (Piper)</sys:String>
   <sys:String x:Key="Settings.Debit">Débit :</sys:String>
   <sys:String x:Key="Settings.Volume">Volume :</sys:String>
+  <sys:String x:Key="Settings.VoiceTestSentence">Systèmes en ligne. À vos ordres, commandant.</sys:String>
   <sys:String x:Key="Settings.EcouterEssai">Écouter un essai</sys:String>
   <sys:String x:Key="Settings.LEssaiEmploieReglages">L'essai emploie les réglages affichés, pas ceux enregistrés : vous entendez avant de valider.</sys:String>
   <sys:String x:Key="Settings.APILOCALE">API LOCALE</sys:String>

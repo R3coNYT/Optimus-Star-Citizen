@@ -13,6 +13,74 @@ namespace Optimus.Infrastructure.Tests;
 /// </summary>
 public sealed class SpeechTests
 {
+    // ----------------------------------------------------------- la voix suit la langue
+    //
+    // Defaut mesure le 2026-08-29, sur une machine dont Windows s'affiche en francais :
+    // le copilote passe en anglais prononcait un texte anglais avec une voix francaise.
+    // « voice_id » valant null, la selection rendait la main sans rien poser, et le
+    // synthetiseur gardait la voix par defaut du systeme. Le contrat promettait pourtant
+    // « voix par defaut du moteur POUR LA LANGUE » depuis le premier jour.
+    //
+    // Ces essais ne postulent aucune voix en particulier : ils interrogent celles qui sont
+    // reellement installees. Exiger l'anglais ferait echouer l'essai sur une machine
+    // francaise sans que rien ne soit casse — et c'est exactement ce qui vient d'arriver.
+
+    /// <summary>Etiquettes de langue effectivement installees, par exemple <c>fr-FR</c>.</summary>
+    private static IReadOnlyList<string> InstalledLanguages() =>
+        Windows.Media.SpeechSynthesis.SpeechSynthesizer.AllVoices
+            .Select(v => v.Language)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+    [Fact]
+    public void ChaqueLangueInstalleeTrouveUneVoixDeCetteLangue()
+    {
+        IReadOnlyList<string> languages = InstalledLanguages();
+
+        Assert.NotEmpty(languages);
+
+        foreach (string language in languages)
+        {
+            Windows.Media.SpeechSynthesis.VoiceInformation? voice =
+                WindowsTtsProvider.MatchLanguage(language);
+
+            Assert.NotNull(voice);
+            Assert.Equal(language, voice!.Language, ignoreCase: true);
+        }
+    }
+
+    [Fact]
+    public void LeCodeDeLangueSeulSuffit()
+    {
+        // « en » doit trouver en-GB quand en-US manque : une voix britannique dit l'anglais
+        // infiniment mieux qu'une voix francaise.
+        foreach (string language in InstalledLanguages())
+        {
+            string prefix = language.Split('-')[0];
+
+            Windows.Media.SpeechSynthesis.VoiceInformation? voice =
+                WindowsTtsProvider.MatchLanguage(prefix);
+
+            Assert.NotNull(voice);
+            Assert.StartsWith(prefix, voice!.Language, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    [Fact]
+    public void UneLangueAbsenteNeRendRien()
+    {
+        // Rendre null est ce qui permet a l'appelant de retomber sur la voix par defaut
+        // plutot que sur une voix prise au hasard — et de le dire au journal.
+        Assert.Null(WindowsTtsProvider.MatchLanguage("zz-ZZ"));
+    }
+
+    [Fact]
+    public void SansLangueOnNeChoisitPas()
+    {
+        Assert.Null(WindowsTtsProvider.MatchLanguage(null));
+        Assert.Null(WindowsTtsProvider.MatchLanguage("   "));
+    }
+
     /// <summary>Un moteur dont on décide s'il tombe, et qui compte ce qu'on lui demande.</summary>
     private sealed class StubTts(string id, bool fails = false) : ITextToSpeechProvider
     {
