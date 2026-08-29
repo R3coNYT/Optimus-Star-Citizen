@@ -97,25 +97,33 @@ MinVersion=10.0.19041
 UninstallDisplayName={#AppName} {#Version}
 UninstallDisplayIcon={app}\Optimus.App.exe
 
+; L'assistant parle anglais, pour tout le monde.
+;
+; Ce n'est pas une preference : c'est la seule langue qu'on puisse presumer d'un pilote
+; de Star Citizen, jeu qui n'existe qu'en anglais. Offrir le francais a qui a un Windows
+; francais aurait paru attentionne, mais aurait surtout produit deux assistants a tenir
+; a jour pour un ecran qu'on voit une fois.
+;
+; L'APPLICATION, elle, se choisit sa langue : c'est la qu'on passe du temps.
 [Languages]
-Name: "fr"; MessagesFile: "compiler:Languages\French.isl"
+Name: "en"; MessagesFile: "compiler:Default.isl"
 
 [CustomMessages]
-fr.ComponentApp=Optimus (obligatoire)
-fr.ComponentPiper=Voix neuronale locale (Piper) : moteur, 37 Mo téléchargés
-fr.ComponentTom=Voix Tom : masculine, qualité medium (60 Mo)
-fr.ComponentGilles=Voix Gilles : masculine, plus rapide (60 Mo)
-fr.ComponentSiwis=Voix Siwis : féminine, qualité medium (60 Mo)
-fr.ComponentWhisper=Parole libre (Whisper) : comprendre ce qui n'est pas une commande (161 Mo)
-fr.TaskDesktop=Créer un raccourci sur le Bureau
-fr.DownloadFailed=Le téléchargement a échoué.%n%n%1%n%nOptimus s'installera sans les voix neuronales : les voix Windows prendront le relais, et vous pourrez ajouter Piper plus tard.
-fr.ExtractFailed=L'archive Piper n'a pas pu être ouverte. Optimus s'installera sans les voix neuronales.
-fr.PurgeData=Supprimer aussi vos données ?%n%nCela effacerait vos assignations de touches, vos macros, les formulations apprises et les voix Piper téléchargées, dans :%n%1%n%nRépondez Non pour les conserver en vue d'une réinstallation.
+en.ComponentApp=Optimus (required)
+en.ComponentPiper=Local neural voice (Piper): engine, 37 MB downloaded
+en.ComponentTom=Tom voice: male, medium quality (60 MB)
+en.ComponentGilles=Gilles voice: male, faster (60 MB)
+en.ComponentSiwis=Siwis voice: female, medium quality (60 MB)
+en.ComponentWhisper=Free speech (Whisper): understand what isn't a command (161 MB)
+en.TaskDesktop=Create a desktop shortcut
+en.DownloadFailed=The download failed.%n%n%1%n%nOptimus will install without the neural voices: Windows voices take over, and you can add Piper later.
+en.ExtractFailed=The Piper archive could not be opened. Optimus will install without the neural voices.
+en.PurgeData=Also delete your data?%n%nThis would erase your key bindings, your macros, the phrasings Optimus has learned, and the Piper voices you downloaded, in:%n%1%n%nAnswer No to keep them for a reinstall.
 
 [Types]
-Name: "standard"; Description: "Optimus seul — rien à télécharger"
-Name: "complet"; Description: "Complète : voix neuronales et parole libre (~380 Mo téléchargés)"
-Name: "perso"; Description: "Installation personnalisée"; Flags: iscustom
+Name: "standard"; Description: "Optimus alone — nothing to download"
+Name: "complet"; Description: "Complete: neural voices and free speech (~380 MB downloaded)"
+Name: "perso"; Description: "Custom installation"; Flags: iscustom
 
 ; « ExtraDiskSpaceRequired » n'est pas une coquetterie : Inno calcule l'espace annonce a
 ; partir des fichiers EMBARQUES, et ces composants-la sont telecharges par le code. Sans ces
@@ -158,11 +166,11 @@ Source: "{#SourceDir}\data\copilots\optimus\personality.json"; DestDir: "{app}\d
 
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\Optimus.App.exe"
-Name: "{group}\Désinstaller {#AppName}"; Filename: "{uninstallexe}"
+Name: "{group}\Uninstall {#AppName}"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\{#AppName}"; Filename: "{app}\Optimus.App.exe"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\Optimus.App.exe"; Description: "Lancer {#AppName}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\Optimus.App.exe"; Description: "Launch {#AppName}"; Flags: nowait postinstall skipifsilent
 
 [Code]
 var
