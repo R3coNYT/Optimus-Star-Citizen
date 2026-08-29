@@ -276,6 +276,15 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
 
     public string WakeWord => _runtime.Copilot.WakeWord;
 
+    /// <summary>
+    /// « Dites « Optimus, … » pour être entendu. »
+    ///
+    /// Composée ici plutôt que découpée en trois fragments dans le XAML. Le découpage tenait
+    /// tant qu'il n'y avait qu'une langue : une autre ne remet pas les morceaux dans le même
+    /// ordre, et le mot d'éveil n'y tombe pas au même endroit.
+    /// </summary>
+    public string WakeHint => Localization.Localizer.T("Cockpit.WakeHint", WakeWord);
+
     public string CatalogSummary =>
         $"{_runtime.Catalog.Count} commandes · {_runtime.Catalog.Commands.Sum(c => c.AllPhrases.Count())} formulations";
 
@@ -824,6 +833,7 @@ public sealed class MainViewModel : ObservableObject, IAsyncDisposable
             Raise(nameof(CombatActive));
             Raise(nameof(BindingSummary));
             Raise(nameof(WakeWord));
+            Raise(nameof(WakeHint));
             Raise(nameof(VoiceName));
             Raise(nameof(CopilotName));
 

@@ -125,7 +125,7 @@
 
             <TextBlock Margin="0,10,0,0" TextWrapping="Wrap" Foreground="{StaticResource TextMuted}"
                        FontSize="11">
-              <Run Text="Dites «&#160;" /><Run Text="{Binding WakeWord, Mode=OneWay}" /><Run Text=",&#160;…&#160;» pour être entendu." />
+              <Run Text="{Binding WakeHint, Mode=OneWay}" />
             </TextBlock>
 
             <Border Height="1" Background="{StaticResource Line}" Margin="0,16" />

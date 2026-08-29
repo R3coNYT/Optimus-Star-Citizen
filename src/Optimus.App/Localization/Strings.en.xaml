@@ -1,0 +1,190 @@
+<!--
+  The words of the interface, in English.
+
+  This dictionary is merged ON TOP of the French one, never instead of it. A key nobody
+  translated therefore falls back to French, which reads — rather than to the key name,
+  which does not.
+
+  Two liberties were taken with the source, both deliberate. « Formulation » became
+  « phrasing » rather than the false friend « formulation »: what the pilot types is the
+  way they happen to say a thing, not a formula. And « mot d'éveil » became « wake word »,
+  the term the speech-recognition world already uses — inventing a synonym would only make
+  the setting harder to search for.
+-->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+  <!-- ================= Cockpit ================= -->
+  <sys:String x:Key="Cockpit.PostePilotage">Cockpit</sys:String>
+  <sys:String x:Key="Cockpit.ENVOITOUCHES">KEY OUTPUT</sys:String>
+  <sys:String x:Key="Cockpit.SimulationRienNEnvoye">In simulation, nothing reaches the game: the sequence is traced exactly as it would have been played.</sys:String>
+  <sys:String x:Key="Cockpit.ESSAYERENONCE">TRY A PHRASE</sys:String>
+  <sys:String x:Key="Cockpit.Envoyer">Send</sys:String>
+  <sys:String x:Key="Cockpit.PasseMemeChaineVoix">Goes through the same chain as your voice, without the microphone. Useful for checking a phrasing.</sys:String>
+  <sys:String x:Key="Cockpit.WakeHint">Say “{0},&#160;…” to be heard.</sys:String>
+  <sys:String x:Key="Cockpit.JOURNAL">LOG</sys:String>
+  <sys:String x:Key="Cockpit.JournauxDisque">Logs on disk</sys:String>
+  <sys:String x:Key="Cockpit.OuvreDossierContenantJournaux">Opens the folder holding the logs and the crash reports.</sys:String>
+  <sys:String x:Key="Cockpit.Effacer">Clear</sys:String>
+
+  <!-- ================= Commands ================= -->
+  <sys:String x:Key="Commands.Commandes">Commands</sys:String>
+  <sys:String x:Key="Commands.TesterCommandeChoisie">Test the selected command</sys:String>
+  <sys:String x:Key="Commands.CATEGORIE">CATEGORY</sys:String>
+  <sys:String x:Key="Commands.COMMANDE">COMMAND</sys:String>
+  <sys:String x:Key="Commands.TOUCHE">KEY</sys:String>
+  <sys:String x:Key="Commands.FORMULATIONS">PHRASINGS</sys:String>
+
+  <!-- ================= Keys ================= -->
+  <sys:String x:Key="Keys.Touches">Keys</sys:String>
+  <sys:String x:Key="Keys.PROFILTOUCHES">KEY PROFILE</sys:String>
+  <sys:String x:Key="Keys.NomProfilCreerDupliquer">Name of the profile to create, duplicate or rename</sys:String>
+  <sys:String x:Key="Keys.Creer">Create</sys:String>
+  <sys:String x:Key="Keys.Dupliquer">Duplicate</sys:String>
+  <sys:String x:Key="Keys.Renommer">Rename</sys:String>
+  <sys:String x:Key="Keys.Supprimer">Delete</sys:String>
+  <sys:String x:Key="Keys.CherchezLibelleVousDites">Search by label or by what you say: “lights”, “doors”…</sys:String>
+  <sys:String x:Key="Keys.ETAT">STATE</sys:String>
+  <sys:String x:Key="Keys.Configurer">to configure</sys:String>
+  <sys:String x:Key="Keys.Liee">bound</sys:String>
+  <sys:String x:Key="Keys.Facultative">optional</sys:String>
+  <sys:String x:Key="Keys.ACTIONJEU">GAME ACTION</sys:String>
+  <sys:String x:Key="Keys.ORIGINE">ORIGIN</sys:String>
+  <sys:String x:Key="Keys.AssignerTouche">Assign a key</sys:String>
+  <sys:String x:Key="Keys.Retirer">Remove</sys:String>
+  <sys:String x:Key="Keys.ImporterDepuisJeu">Import from the game</sys:String>
+  <sys:String x:Key="Keys.ExporterVersJeu">Export to the game</sys:String>
+  <sys:String x:Key="Keys.AssignerIciSuffitJeu">Assigning here is not enough: the game obeys only its own bindings. Export, then run “pp_RebindKeys optimus”.</sys:String>
+
+  <!-- ================= Settings ================= -->
+  <sys:String x:Key="Settings.Reglages">Settings</sys:String>
+  <sys:String x:Key="Settings.LANGUELANGUAGE">LANGUE — LANGUAGE</sys:String>
+  <sys:String x:Key="Settings.ChangementPrendEffetAussitot">Takes effect at once, without going through Save: the interface, the commands you speak and Optimus's replies all change together.</sys:String>
+  <sys:String x:Key="Settings.COPILOTE">COPILOT</sys:String>
+  <sys:String x:Key="Settings.NomCopiloteCreer">Name of the copilot to create</sys:String>
+  <sys:String x:Key="Settings.ChangementPrendEffetAussitot2">Takes effect at once, without going through Save: wake word, voice and character change together.</sys:String>
+  <sys:String x:Key="Settings.ECOUTE">LISTENING</sys:String>
+  <sys:String x:Key="Settings.EcoutePermanenteDeclencheeMot">Always listening, triggered by the wake word</sys:String>
+  <sys:String x:Key="Settings.PushToTalkTouche">Push-to-talk: a key held down</sys:String>
+  <sys:String x:Key="Settings.PresserTouche">Press a key</sys:String>
+  <sys:String x:Key="Settings.ExigerQuandMemeMot">Require the wake word anyway</sys:String>
+  <sys:String x:Key="Settings.MOTDEVEIL">WAKE WORD</sys:String>
+  <sys:String x:Key="Settings.ChangerReconstruitTouteGrammaire">Changing it rebuilds the whole grammar. Pick a word you never say by accident in flight.</sys:String>
+  <sys:String x:Key="Settings.SEUILSRECONNAISSANCE">RECOGNITION THRESHOLDS</sys:String>
+  <sys:String x:Key="Settings.PlancherBruit">Noise floor:</sys:String>
+  <sys:String x:Key="Settings.ExecutionPartir">Execute from:</sys:String>
+  <sys:String x:Key="Settings.VOIX">VOICE</sys:String>
+  <sys:String x:Key="Settings.VoixNeuronaleLocalePiper">Local neural voice (Piper)</sys:String>
+  <sys:String x:Key="Settings.Debit">Rate:</sys:String>
+  <sys:String x:Key="Settings.Volume">Volume:</sys:String>
+  <sys:String x:Key="Settings.EcouterEssai">Hear a sample</sys:String>
+  <sys:String x:Key="Settings.LEssaiEmploieReglages">The sample uses the settings shown, not the saved ones: you hear before you commit.</sys:String>
+  <sys:String x:Key="Settings.APILOCALE">LOCAL API</sys:String>
+  <sys:String x:Key="Settings.OuvrirLInterfaceLocale">Open the local interface (Stream Deck, Discord, overlay)</sys:String>
+  <sys:String x:Key="Settings.Port">Port</sys:String>
+  <sys:String x:Key="Settings.ExecutionsMin">Executions/min</sys:String>
+  <sys:String x:Key="Settings.Jeton">Token</sys:String>
+  <sys:String x:Key="Settings.RegenererJeton">Regenerate the token</sys:String>
+  <sys:String x:Key="Settings.PAROLELIBREWHISPER">FREE SPEECH (WHISPER)</sys:String>
+  <sys:String x:Key="Settings.EteintGrammaireFermeeSeulement">Off — closed grammar only</sys:String>
+  <sys:String x:Key="Settings.QuandMoteurRapideDoute">When the fast engine is unsure — your commands stay instant</sys:String>
+  <sys:String x:Key="Settings.ToutCommandesComprisesPlus">On everything — commands included, slower</sys:String>
+  <sys:String x:Key="Settings.FenetreReduitePlusRapide">Shorter window (faster, less accurate)</sys:String>
+  <sys:String x:Key="Settings.ETAGECONVERSATIONNEL">CONVERSATIONAL LAYER</sys:String>
+  <sys:String x:Key="Settings.FaireAppelModeleQuand">Call a model when nothing is understood</sys:String>
+  <sys:String x:Key="Settings.Fournisseur">Provider</sys:String>
+  <sys:String x:Key="Settings.Ollama">ollama</sys:String>
+  <sys:String x:Key="Settings.Openai">openai</sys:String>
+  <sys:String x:Key="Settings.Adresse">Address</sys:String>
+  <sys:String x:Key="Settings.Modele">Model</sys:String>
+  <sys:String x:Key="Settings.AppelsMax">Max calls</sys:String>
+  <sys:String x:Key="Settings.VerifierConnexion">Check the connection</sys:String>
+  <sys:String x:Key="Settings.CARACTERE">CHARACTER</sys:String>
+  <sys:String x:Key="Settings.Formalite">Formality</sys:String>
+  <sys:String x:Key="Settings.Humour">Humour</sys:String>
+  <sys:String x:Key="Settings.Ironie">Irony</sys:String>
+  <sys:String x:Key="Settings.Chaleur">Warmth</sys:String>
+  <sys:String x:Key="Settings.Calme">Calm</sys:String>
+  <sys:String x:Key="Settings.Verbosite">Verbosity</sys:String>
+  <sys:String x:Key="Settings.CADONNE">WHAT IT SOUNDS LIKE</sys:String>
+  <sys:String x:Key="Settings.TroisRepliquesTireesVrai">Three replies drawn from the real catalogue, composed with the sliders opposite. An ironic variant only appears above a certain threshold.</sys:String>
+  <sys:String x:Key="Settings.Enregistrer">Save</sys:String>
+  <sys:String x:Key="Settings.AnnulerModifications">Discard changes</sys:String>
+  <sys:String x:Key="Settings.ModificationsNonEnregistrees">Unsaved changes</sys:String>
+
+  <!-- ================= Macros ================= -->
+  <sys:String x:Key="Macros.Macros">Macros</sys:String>
+  <sys:String x:Key="Macros.Nouvelle">New</sys:String>
+  <sys:String x:Key="Macros.NOM">NAME</sys:String>
+  <sys:String x:Key="Macros.QuOptimusPrononceQuand">What Optimus says when it mentions this macro.</sys:String>
+  <sys:String x:Key="Macros.FORMULATIONSLIGNE">PHRASINGS — ONE PER LINE</sys:String>
+  <sys:String x:Key="Macros.EcrivezAccentueesMoteurDeduit">Write them the way they are spelled: the engine derives the pronunciation from that.</sys:String>
+  <sys:String x:Key="Macros.TEMPORISATION">COOLDOWN</sys:String>
+  <sys:String x:Key="Macros.MillisecondesEmpecheRelancerPendant">In milliseconds. Prevents restarting it while it is still running.</sys:String>
+  <sys:String x:Key="Macros.ETAPECHOISIE">SELECTED STEP</sys:String>
+  <sys:String x:Key="Macros.ChoisissezEtapeSequenceModifier">Pick a step in the sequence to edit it.</sys:String>
+  <sys:String x:Key="Macros.Commande">Command</sys:String>
+  <sys:String x:Key="Macros.Sens">Direction</sys:String>
+  <sys:String x:Key="Macros.Basculer">toggle</sys:String>
+  <sys:String x:Key="Macros.Allumer">turn on</sys:String>
+  <sys:String x:Key="Macros.Eteindre">turn off</sys:String>
+  <sys:String x:Key="Macros.ExigerSensGaranti">Require a guaranteed direction</sys:String>
+  <sys:String x:Key="Macros.RenonceLEtapePlutot">Gives up the step rather than toggling blind. Tick it when the starting state is uncertain — doors, for instance.</sys:String>
+  <sys:String x:Key="Macros.Interroge">What is being asked</sys:String>
+  <sys:String x:Key="Macros.CommandeToutesTouches">the command has all its keys</sys:String>
+  <sys:String x:Key="Macros.SensGarantiJeu">the direction is guaranteed by the game</sys:String>
+  <sys:String x:Key="Macros.OptimusSimule">Optimus is simulating</sys:String>
+  <sys:String x:Key="Macros.ModeVol">the flight mode</sys:String>
+  <sys:String x:Key="Macros.LEtatSupposeD">the assumed state of a toggle</sys:String>
+  <sys:String x:Key="Macros.CommandeVisee">Target command</sys:String>
+  <sys:String x:Key="Macros.ValeurAttendue">Expected value</sys:String>
+  <sys:String x:Key="Macros.InverserCondition">Invert the condition</sys:String>
+  <sys:String x:Key="Macros.EtapesSuivantesIndenteesForment">The indented steps below form the “then”. Those placed under “else” only play if the condition does not hold.</sys:String>
+  <sys:String x:Key="Macros.NombreTours">Number of passes</sys:String>
+  <sys:String x:Key="Macros.CompteFixeEntre1">A fixed count, between 1 and 20. A “while” loop could not be planned in advance, and the guard could no longer check the whole sequence before a single key leaves.</sys:String>
+  <sys:String x:Key="Macros.AttenteMs">Wait (ms)</sys:String>
+  <sys:String x:Key="Macros.JeuRepondDeuxTouches">The game does not answer two keys sent in the same millisecond.</sys:String>
+  <sys:String x:Key="Macros.CleReplique">Reply key</sys:String>
+  <sys:String x:Key="Macros.EntreeResponsesFrJson">An entry from responses.en.json. Optimus stays silent if it does not exist.</sys:String>
+  <sys:String x:Key="Macros.Commande2">+ Command</sys:String>
+  <sys:String x:Key="Macros.Attente">+ Wait</sys:String>
+  <sys:String x:Key="Macros.Parole">+ Speech</sys:String>
+  <sys:String x:Key="Macros.Si">+ If</sys:String>
+  <sys:String x:Key="Macros.Repeter">+ Repeat</sys:String>
+  <sys:String x:Key="Macros.Monter">Move up</sys:String>
+  <sys:String x:Key="Macros.Descendre">Move down</sys:String>
+  <sys:String x:Key="Macros.Annuler">Cancel</sys:String>
+  <sys:String x:Key="Macros.EssayerSimulation">Try in simulation</sys:String>
+
+  <!-- ================= Understanding ================= -->
+  <sys:String x:Key="Understanding.Comprehension">Understanding</sys:String>
+  <sys:String x:Key="Understanding.GrammaireFermeeOptimusPeut">The grammar is closed: Optimus can only give back a phrasing it already knows. This list says which command it hesitated over, not what you said — writing down the way you actually say it is up to you.</sys:String>
+  <sys:String x:Key="Understanding.ENTENDU">HEARD</sys:String>
+  <sys:String x:Key="Understanding.QUILFAIT">WHAT IT DID WITH IT</sys:String>
+  <sys:String x:Key="Understanding.COMMANDEENVISAGEE">COMMAND CONSIDERED</sys:String>
+  <sys:String x:Key="Understanding.FREQUENCE">COUNT</sys:String>
+  <sys:String x:Key="Understanding.IgnorerCetteLigne">Ignore this line</sys:String>
+  <sys:String x:Key="Understanding.ViderListe">Empty the list</sys:String>
+  <sys:String x:Key="Understanding.VOSFORMULATIONS">YOUR PHRASINGS</sys:String>
+  <sys:String x:Key="Understanding.FORMULATION">PHRASING</sys:String>
+  <sys:String x:Key="Understanding.SENS">DIRECTION</sys:String>
+  <sys:String x:Key="Understanding.APPRENDREFORMULATION">TEACH A PHRASING</sys:String>
+  <sys:String x:Key="Understanding.VousDitesReellement">What you actually say</sys:String>
+  <sys:String x:Key="Understanding.EcrivezAccentueeMoteurDeduit">Write it the way it is spelled: the engine derives the pronunciation from that.</sys:String>
+  <sys:String x:Key="Understanding.CommandeDeclencher">Command to trigger</sys:String>
+  <sys:String x:Key="Understanding.AucunBascule">none — toggle</sys:String>
+  <sys:String x:Key="Understanding.Activation">turn on</sys:String>
+  <sys:String x:Key="Understanding.Extinction">turn off</sys:String>
+  <sys:String x:Key="Understanding.Apprendre">Teach</sys:String>
+  <sys:String x:Key="Understanding.FormulationEnregistreeHorsCatalogue">The phrasing is stored outside the shipped catalogue: it survives Optimus updates.</sys:String>
+
+  <!-- ================= App ================= -->
+  <sys:String x:Key="App.OPTIMUS">OPTIMUS</sys:String>
+  <sys:String x:Key="App.STARCITIZEN">STAR CITIZEN</sys:String>
+  <sys:String x:Key="App.MODE">MODE</sys:String>
+  <sys:String x:Key="App.VOL">FLIGHT</sys:String>
+  <sys:String x:Key="App.Navigation">navigation</sys:String>
+  <sys:String x:Key="App.COMBAT">COMBAT</sys:String>
+
+</ResourceDictionary>

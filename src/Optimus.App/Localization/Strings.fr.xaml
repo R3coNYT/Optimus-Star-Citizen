@@ -24,6 +24,7 @@
   <sys:String x:Key="Cockpit.ESSAYERENONCE">ESSAYER UN ÉNONCÉ</sys:String>
   <sys:String x:Key="Cockpit.Envoyer">Envoyer</sys:String>
   <sys:String x:Key="Cockpit.PasseMemeChaineVoix">Passe par la même chaîne que la voix, sans le micro. Utile pour vérifier une formulation.</sys:String>
+  <sys:String x:Key="Cockpit.WakeHint">Dites «&#160;{0},&#160;…&#160;» pour être entendu.</sys:String>
   <sys:String x:Key="Cockpit.JOURNAL">JOURNAL</sys:String>
   <sys:String x:Key="Cockpit.JournauxDisque">Journaux sur disque</sys:String>
   <sys:String x:Key="Cockpit.OuvreDossierContenantJournaux">Ouvre le dossier contenant les journaux et les rapports de plantage.</sys:String>

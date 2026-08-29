@@ -1022,6 +1022,10 @@ public sealed class SettingsViewModel : ObservableObject
         {
             await _runtime.SwitchLanguageAsync(language).ConfigureAwait(true);
 
+            // Les mots de l'ecran suivent le moteur. Sans cette ligne, Optimus obeirait en
+            // anglais derriere une interface restee francaise.
+            Localization.Localizer.Apply(language);
+
             _log($"langue « {displayName} »",
                 $"{_runtime.Catalog.Count} commandes · {_runtime.Copilot.Language}",
                 ActivityLevel.Normal);
