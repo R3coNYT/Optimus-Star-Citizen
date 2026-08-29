@@ -1,8 +1,8 @@
 {
   "$schema": "optimus://schemas/userprofile-1.json",
   "id": "default",
-  "display_name": "Pilote",
-  "language": "fr-FR",
+  "display_name": "Pilot",
+  "language": "en-US",
   "preferred_copilot": "optimus",
   "active_binding_profile": "Standard",
   "voice_input": {

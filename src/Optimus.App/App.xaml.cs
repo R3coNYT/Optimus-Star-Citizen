@@ -62,7 +62,8 @@ public partial class App : Application
             DiagnosticLog.Info(
                 "données chargées",
                 $"{runtime.Catalog.Count} commandes · {runtime.Bindings.BoundCount} actions liées · "
-                + $"copilote « {runtime.Copilot.Name} » · voix « {runtime.Copilot.Voice.VoiceId} »");
+                + $"copilote « {runtime.Copilot.Name} » · langue {runtime.User.Language}"
+                + $" · voix {runtime.Copilot.Voice.VoiceId ?? "par défaut du système"}");
 
             foreach (Core.Loading.LoadIssue issue in runtime.Issues)
             {

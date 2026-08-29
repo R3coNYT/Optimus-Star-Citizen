@@ -14,8 +14,17 @@ namespace Optimus.Core.Tests;
 /// </summary>
 public sealed class PersonalityTests
 {
-    private static Copilot LoadOptimus() =>
-        CopilotLoader.Load(Path.Combine(TestData.RepositoryRoot, "data", "copilots", "optimus")).Value;
+    /// <summary>
+    /// Le copilote du dépôt, dans une langue <b>nommée</b>.
+    ///
+    /// Nommée et non laissée au fichier : ces tests portent sur du contenu — « porte »,
+    /// « tomber dehors » — et suivraient donc la langue livrée par défaut. Le jour où celle-ci
+    /// change, ils tomberaient tous ensemble en donnant l'impression d'une régression du
+    /// moteur, alors que seule une valeur de configuration aurait bougé. C'est arrivé.
+    /// </summary>
+    private static Copilot LoadOptimus(string language = Optimus.Core.Localization.Language.French) =>
+        CopilotLoader.Load(
+            Path.Combine(TestData.RepositoryRoot, "data", "copilots", "optimus"), language).Value;
 
     [Fact]
     public void Le_copilote_du_depot_se_charge_sans_anomalie()
@@ -26,7 +35,11 @@ public sealed class PersonalityTests
         Assert.Empty(result.Issues);
         Assert.Equal("optimus", result.Value.Id);
         Assert.Equal("Optimus", result.Value.WakeWord);
-        Assert.Equal("Microsoft Paul", result.Value.Voice.VoiceId);
+
+        // Aucune voix n'est nommée dans le copilote livré, et c'est délibéré : une voix
+        // française nommée en dur n'existe pas sur un Windows anglais, et lirait l'anglais
+        // avec un accent sur un Windows français. Vide, Windows choisit la sienne.
+        Assert.Null(result.Value.Voice.VoiceId);
         Assert.True(result.Value.Responses.EntryCount >= 25, $"{result.Value.Responses.EntryCount} entrées");
         Assert.True(result.Value.Responses.VariantCount >= 60, $"{result.Value.Responses.VariantCount} variantes");
     }

@@ -3,13 +3,13 @@
   "id": "optimus",
   "name": "Optimus",
   "version": "0.1.0",
-  "description": "Copilote militaire. Calme, professionnel, loyal, humour sec.",
-  "language": "fr-FR",
+  "description": "Military copilot. Calm, professional, loyal, dry humour.",
+  "language": "en-US",
   "wake_word": "Optimus",
   "accent_color": "#22d3ee",
   "voice": {
     "provider": "windows-onecore",
-    "voice_id": "Microsoft Paul",
+    "voice_id": null,
     "rate": 1.0,
     "volume": 0.9
   },
