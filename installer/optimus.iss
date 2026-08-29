@@ -160,12 +160,18 @@ Name: "piper\alan"; Description: "{cm:ComponentAlan}"; ExtraDiskSpaceRequired: 6
 Name: "piper\amy"; Description: "{cm:ComponentAmy}"; ExtraDiskSpaceRequired: 63515997
 Name: "whisper"; Description: "{cm:ComponentWhisper}"; Types: complet; ExtraDiskSpaceRequired: 169165161
 
-; Coche dans « Complete », mais les fichiers ne partent QUE si un Stream Deck existe :
-; voir « Check: StreamDeckPresent » plus bas. Sans cette garde, choisir l'installation
-; complete creait une arborescence Elgato dans les donnees d'un pilote qui n'a jamais eu
-; de boitier - inoffensif, mais c'est exactement le genre de trace qu'on reproche a un
-; installateur.
-Name: "streamdeck"; Description: "{cm:ComponentStreamDeck}"; Types: complet
+; Dans AUCUN type, donc jamais coche d'office : il faut le vouloir. C'est la seule
+; facon d'eviter qu'une installation « complete » ne creuse une arborescence Elgato
+; chez un pilote qui n'a jamais eu de boitier.
+;
+; La premiere version cochait la case dans « Complete » et gardait un « Check » pour ne
+; rien ecrire faute de Stream Deck. Mauvaise idee : Inno evalue ce Check AUSSI quand il
+; calcule l'espace requis, si bien que la case pesait zero et que le total affiche ne
+; bougeait pas en la cochant. Une case qui ne change rien a l'ecran passe pour une case
+; qui ne fait rien.
+;
+; Cocher installe, decocher n'installe pas. Rien d'autre a comprendre - et le poids suit.
+Name: "streamdeck"; Description: "{cm:ComponentStreamDeck}"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:TaskDesktop}"; Flags: unchecked
@@ -197,7 +203,7 @@ Source: "{#SourceDir}\data\copilots\optimus\personality.json"; DestDir: "{app}\d
 ; que le sien. Il est donc pose ailleurs, et retire a la desinstallation - « filesandordirs »
 ; plutot que la simple reprise des fichiers, pour emporter aussi ce qu'une copie manuelle
 ; anterieure aurait laisse a cote.
-Source: "{#PluginRoot}\{#PluginId}\*"; DestDir: "{userappdata}\Elgato\StreamDeck\Plugins\{#PluginId}";     Components: streamdeck; Check: StreamDeckPresent;     Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#PluginRoot}\{#PluginId}\*"; DestDir: "{userappdata}\Elgato\StreamDeck\Plugins\{#PluginId}";     Components: streamdeck;     Flags: ignoreversion recursesubdirs createallsubdirs
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{userappdata}\Elgato\StreamDeck\Plugins\{#PluginId}"; Components: streamdeck
