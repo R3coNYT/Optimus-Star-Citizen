@@ -55,6 +55,28 @@ public static class CopilotLoader
                 : Localization.Language.Localized(directory, "responses", ".json", spoken)
                   ?? Path.Combine(directory, "responses.fr.json");
 
+        // Le repli était MUET, et c'est ce qui l'a rendu coûteux. Mesuré le 2026-08-29 sur le
+        // poste de jeu : le catalogue passait bien à l'anglais, les répliques restaient
+        // françaises, et le journal n'en disait pas un mot. Optimus reconnaissait « open the
+        // doors » pour répondre « Sas ouverts », et rien n'expliquait pourquoi.
+        //
+        // Un copilote copié par le pilote suffit à provoquer le cas : sa copie masque celle
+        // qui est livrée, fichiers non modifiés compris, et elle date d'avant la traduction.
+        string expected = $"responses.{Localization.Language.Short(spoken)}.json";
+
+        if (!string.Equals(Path.GetFileName(responsePath), expected, StringComparison.OrdinalIgnoreCase))
+        {
+            issues.Add(new LoadIssue(directory, "responses", $"{expected} est absent."));
+
+            // Au journal aussi, et pas seulement dans les anomalies de chargement : c'est un
+            // symptome qu'on entend avant de le lire, et il faut pouvoir remonter du son a
+            // la cause sans ouvrir l'ecran des donnees.
+            Diagnostics.DiagnosticLog.Warn(
+                $"aucune réplique en « {spoken} » pour le copilote « {id} »",
+                $"{expected} est absent de {directory}. "
+                + $"Optimus parlera avec {Path.GetFileName(responsePath)}.");
+        }
+
         ResponseSet responses = ReadResponses(responsePath, issues, out Lexicon? spokenLexicon);
 
         // Le lexique des REPLIQUES l'emporte sur celui du caractere, quand il existe.

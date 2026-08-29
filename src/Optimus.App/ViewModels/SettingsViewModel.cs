@@ -270,7 +270,13 @@ public sealed class SettingsViewModel : ObservableObject
     public string? VoiceId
     {
         get => _voiceId;
-        set => Track(ref _voiceId, value);
+        set
+        {
+            if (Track(ref _voiceId, value))
+            {
+                AlignEngineToVoice();
+            }
+        }
     }
 
     public double Rate
@@ -421,6 +427,11 @@ public sealed class SettingsViewModel : ObservableObject
     /// </summary>
     private void AlignVoiceToEngine()
     {
+        if (_aligning)
+        {
+            return;
+        }
+
         bool selectedIsNeural = IsNeural(VoiceId);
 
         if (selectedIsNeural == NeuralVoice)
@@ -430,11 +441,65 @@ public sealed class SettingsViewModel : ObservableObject
 
         string? replacement = Voices.FirstOrDefault(v => IsNeural(v) == NeuralVoice);
 
-        if (replacement is not null)
+        if (replacement is null)
+        {
+            return;
+        }
+
+        _aligning = true;
+
+        try
         {
             VoiceId = replacement;
         }
+        finally
+        {
+            _aligning = false;
+        }
     }
+
+    /// <summary>
+    /// L'inverse : ramène le moteur sur la voix choisie.
+    ///
+    /// Sans lui, choisir une voix Windows alors que la case neuronale reste cochée produisait
+    /// un couple impossible — « piper » chargé de dire « Microsoft David » — que rien ne
+    /// corrigeait ni ne signalait. Mesuré le 2026-08-29 sur le poste de jeu : quatre échecs
+    /// de Piper d'affilée, puis l'abandon définitif du moteur neuronal pour la session.
+    ///
+    /// La bascule de langue rendait le cas courant plutôt qu'exceptionnel : passer à l'anglais
+    /// avec seulement des voix Piper françaises installées ne laisse aucun choix neuronal.
+    ///
+    /// C'est la VOIX qui l'emporte, et non le moteur : elle est le choix le plus précis des
+    /// deux, et c'est celui que le pilote vient de faire.
+    /// </summary>
+    private void AlignEngineToVoice()
+    {
+        if (_aligning || VoiceId is null)
+        {
+            return;
+        }
+
+        bool selectedIsNeural = IsNeural(VoiceId);
+
+        if (selectedIsNeural == NeuralVoice)
+        {
+            return;
+        }
+
+        _aligning = true;
+
+        try
+        {
+            NeuralVoice = selectedIsNeural;
+        }
+        finally
+        {
+            _aligning = false;
+        }
+    }
+
+    /// <summary>Garde-fou : les deux alignements s'appellent l'un l'autre sans lui.</summary>
+    private bool _aligning;
 
     /// <summary>Cette voix appartient-elle au moteur neuronal ?</summary>
     private static bool IsNeural(string? voiceId) =>
