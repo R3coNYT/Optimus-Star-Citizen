@@ -14,7 +14,13 @@ namespace Optimus.Core.Loading;
 public static class CopilotLoader
 {
     /// <summary>Charge le copilote contenu dans <paramref name="directory"/>.</summary>
-    public static LoadResult<Copilot> Load(string directory)
+    /// <param name="directory">Dossier du copilote.</param>
+    /// <param name="language">
+    /// Langue imposée par le profil. Elle prime sur celle du manifeste : le pilote choisit sa
+    /// langue une fois, à l'écran, et tous ses copilotes la suivent. Sans cela, changer de
+    /// copilote changerait la langue à son insu.
+    /// </param>
+    public static LoadResult<Copilot> Load(string directory, string? language = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(directory);
 
@@ -32,7 +38,7 @@ public static class CopilotLoader
 
         string id = GetString(root, "id") ?? Path.GetFileName(directory);
         string name = GetString(root, "name") ?? id;
-        string language = GetString(root, "language") ?? "fr-FR";
+        string spoken = Localization.Language.Resolve(language ?? GetString(root, "language"));
         string wakeWord = GetString(root, "wake_word") ?? name;
 
         VoiceConfig voice = ReadVoice(root);
@@ -41,12 +47,18 @@ public static class CopilotLoader
             Path.Combine(directory, GetString(root, "personality_ref") ?? "personality.json"),
             issues);
 
-        ResponseSet responses = ReadResponses(
-            Path.Combine(directory, GetString(root, "responses_ref") ?? $"responses.{language[..2]}.json"),
-            issues);
+        // « responses_ref » reste un passe-droit pour un copilote qui tiendrait à un fichier
+        // nommé autrement ; sans lui, le fichier se déduit de la langue, avec repli.
+        string responsePath =
+            GetString(root, "responses_ref") is string reference
+                ? Path.Combine(directory, reference)
+                : Localization.Language.Localized(directory, "responses", ".json", spoken)
+                  ?? Path.Combine(directory, "responses.fr.json");
+
+        ResponseSet responses = ReadResponses(responsePath, issues);
 
         Copilot copilot = new(
-            id, name, language, wakeWord, voice, personality, responses,
+            id, name, spoken, wakeWord, voice, personality, responses,
             GetString(root, "description"),
             GetString(root, "accent_color"));
 

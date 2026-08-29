@@ -93,11 +93,35 @@ public sealed class SettingsWriterTests : IDisposable
         Assert.Equal("Microsoft Hortense", root.GetProperty("voice").GetProperty("voice_id").GetString());
         Assert.Equal(1.2, root.GetProperty("voice").GetProperty("rate").GetDouble(), 3);
 
-        // Sans ces deux references, le copilote se chargerait sans personnalite ni repliques -
-        // et sans la moindre erreur, ce qui est le pire des symptomes.
+        // Sans cette reference, le copilote se chargerait sans personnalite - et sans la
+        // moindre erreur, ce qui est le pire des symptomes.
         Assert.Equal("personality.json", root.GetProperty("personality_ref").GetString());
-        Assert.Equal("responses.fr.json", root.GetProperty("responses_ref").GetString());
         Assert.Equal("windows-onecore", root.GetProperty("voice").GetProperty("provider").GetString());
+
+        // « responses_ref » a disparu du copilote livre : le fichier de repliques se deduit
+        // desormais de la langue. L'ecriture ne doit pas en inventer un, sans quoi elle
+        // figerait le francais et le choix de langue n'aurait plus aucun effet.
+        Assert.False(root.TryGetProperty("responses_ref", out _));
+    }
+
+    [Fact]
+    public void Ecrire_la_voix_preserve_une_reference_de_repliques_explicite()
+    {
+        // Un copilote peut tenir a nommer son fichier autrement - c'est le passe-droit que
+        // « responses_ref » conserve. L'ecriture ne doit pas l'effacer au passage.
+        string path = Copy(Path.Combine("data", "copilots", "optimus", "copilot.json"), "copilot.json");
+
+        string source = File.ReadAllText(path);
+        File.WriteAllText(path, source.Replace(
+            "\"personality_ref\": \"personality.json\"",
+            "\"personality_ref\": \"personality.json\", \"responses_ref\": \"repliques.json\""));
+
+        SettingsWriter.SaveCopilotVoice(
+            path, new VoiceConfig("windows-onecore", "Microsoft Hortense", 1.0, 0.9), "Optimus");
+
+        using JsonDocument document = JsonDocument.Parse(File.ReadAllText(path));
+
+        Assert.Equal("repliques.json", document.RootElement.GetProperty("responses_ref").GetString());
     }
 
     [Fact]

@@ -13,6 +13,6 @@
     "rate": 1.0,
     "volume": 0.9
   },
-  "personality_ref": "personality.json",
-  "responses_ref": "responses.fr.json"
+  "personality_ref": "personality.json"
 }
+

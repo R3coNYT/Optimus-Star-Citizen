@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using Optimus.Core.Domain.Profiles;
+using Optimus.Core.Localization;
 
 namespace Optimus.Core.Loading;
 
@@ -7,6 +8,7 @@ namespace Optimus.Core.Loading;
 /// <param name="Id">Identifiant du profil.</param>
 /// <param name="DisplayName">Nom affiché.</param>
 /// <param name="PreferredCopilot">Copilote actif.</param>
+/// <param name="Language">Langue de l'interface ET de la voix : une seule valeur pour les deux.</param>
 /// <param name="VoiceInput">Mode d'écoute et réglages de capture.</param>
 /// <param name="KillSwitchKey">Raccourci d'arrêt d'urgence.</param>
 /// <param name="SimulationMode">Mode simulation actif au démarrage.</param>
@@ -17,6 +19,7 @@ public sealed record UserProfile(
     string DisplayName,
     string PreferredCopilot,
     VoiceInputSettings VoiceInput,
+    string Language = Localization.Language.Fallback,
     string KillSwitchKey = "CTRL+ALT+PAUSE",
     bool SimulationMode = false,
     bool RequireGameForeground = true,
@@ -75,6 +78,7 @@ public static class ProfileLoader
             GetString(root, "display_name") ?? "Pilote",
             GetString(root, "preferred_copilot") ?? "optimus",
             voiceInput,
+            Localization.Language.Resolve(GetString(root, "language")),
             GetString(root, "hotkeys", "kill_switch") ?? "CTRL+ALT+PAUSE",
             GetBool(root, "safety", "simulation_mode") ?? false,
             GetBool(root, "safety", "require_game_foreground") ?? true,

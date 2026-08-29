@@ -14,6 +14,7 @@ using Optimus.Core.Domain.Profiles;
 using Optimus.Core.Execution;
 using Optimus.Core.Intent;
 using Optimus.Core.Loading;
+using Optimus.Core.Localization;
 using Optimus.Core.Personality;
 using Optimus.Infrastructure.Game;
 using Optimus.Infrastructure.Input;
@@ -248,8 +249,18 @@ public sealed class OptimusRuntime : IAsyncDisposable
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(dataRoot);
 
+        // Le profil d'abord, contrairement a l'ordre naturel : c'est lui qui porte la langue,
+        // et la langue decide quel catalogue et quelles repliques charger. Le lire apres aurait
+        // impose de tout recharger une fois la langue connue.
+        LoadResult<UserProfile> user = ProfileLoader.Load(
+            Path.Combine(dataRoot, "data", "profiles", "default.json"));
+
+        string language = user.Value.Language;
+
         LoadResult<CommandCatalog> catalog = JsonCatalogLoader.LoadCatalog(
-            Path.Combine(dataRoot, "data", "commands", "starcitizen.core.json"));
+            Language.Localized(
+                Path.Combine(dataRoot, "data", "commands"), "starcitizen.core", ".json", language)
+            ?? Path.Combine(dataRoot, "data", "commands", "starcitizen.core.json"));
 
         // Les macros ecrites par le pilote se superposent au catalogue livre : celui-ci est
         // remplace a chaque publication, celles-la doivent survivre.
@@ -272,15 +283,14 @@ public sealed class OptimusRuntime : IAsyncDisposable
 
         LoadResult<BindingProfile> bindings = JsonCatalogLoader.LoadBindingProfile(
             Path.Combine(dataRoot, "data", "bindings", "starcitizen", "defaults-4.9.json"));
-        LoadResult<UserProfile> user = ProfileLoader.Load(
-            Path.Combine(dataRoot, "data", "profiles", "default.json"));
         // Le copilote enregistre s'il existe encore, le premier venu sinon : un pilote qui
         // supprime son favori doit retrouver Optimus qui parle, pas un ecran muet.
         string copilotId = CopilotSet.Resolve(user.Value.PreferredCopilot, dataRoot);
 
         LoadResult<Copilot> copilot = CopilotLoader.Load(
             CopilotSet.DirectoryOf(copilotId, dataRoot)
-            ?? Path.Combine(dataRoot, "data", "copilots", copilotId));
+            ?? Path.Combine(dataRoot, "data", "copilots", copilotId),
+            language);
 
         // « Passe a Synthia » doit se dire, plutot que de se cliquer. La fusion a lieu ici,
         // apres le chargement : le copilote actif n'a pas de commande pour se rappeler lui-meme.
@@ -450,7 +460,7 @@ public sealed class OptimusRuntime : IAsyncDisposable
         User = ProfileLoader.Load(ProfilePath).Value;
 
         Copilot previous = Copilot;
-        Copilot = CopilotLoader.Load(CopilotDirectory).Value;
+        Copilot = CopilotLoader.Load(CopilotDirectory, User.Language).Value;
         Composer = new ResponseComposer(Copilot.Personality, Copilot.Responses);
 
         // Le catalogue depend du copilote actif — il ne porte pas de commande pour se rappeler
