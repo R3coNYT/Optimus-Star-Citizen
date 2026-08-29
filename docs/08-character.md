@@ -1,134 +1,134 @@
-# PHASE 7 — Architecture de personnalité (« l'âme »)
+# PHASE 7 — Character architecture (“the soul”)
 
-## 8.1 Le problème à résoudre
+## 8.1 The problem to solve
 
-Une personnalité crédible ne se réduit ni à une voix, ni à un prompt système. Elle se manifeste
-dans **quatre dimensions indépendantes** :
+A believable character is not a voice, and it is not a system prompt. It shows itself in **four
+independent dimensions**:
 
-| Dimension | Question | Support technique |
+| Dimension | Question | Technical support |
 |---|---|---|
-| **Quoi dire** | quelle information transmettre | `ResponseSet` + `intent` |
-| **Comment le dire** | ton, longueur, vocabulaire | `PersonalityEngine` (traits) |
-| **Quand parler** | accuser réception ? se taire ? relancer ? | `BehaviorRules` + contexte |
-| **Avec quelle voix** | timbre, débit, hauteur | `VoiceConfig` (modulée par les traits) |
+| **What to say** | which information to convey | `ResponseSet` + `intent` |
+| **How to say it** | tone, length, vocabulary | `PersonalityEngine` (traits) |
+| **When to speak** | acknowledge? stay quiet? follow up? | `BehaviorRules` + context |
+| **With which voice** | timbre, rate, pitch | `VoiceConfig` (modulated by the traits) |
 
-Jean-Bot résout tout par la force brute (8 000 WAV enregistrés). Optimus doit obtenir le même
-résultat de façon **paramétrique et déterministe** — sans dépendre d'un LLM, qui reste optionnel.
+Jean-Bot solves all of it by brute force (8,000 recorded WAVs). Optimus has to reach the same
+result **parametrically and deterministically** — without depending on an LLM, which stays
+optional.
 
 ---
 
-## 8.2 Modèle de données
+## 8.2 Data model
 
 ```
 Personality
-├── traits{}          8 curseurs 0–100     ← le cœur
-├── style{}           drapeaux booléens    ← registre (militaire, sci-fi, technique…)
-├── speech{}          débit, pitch, longueur max de phrase
-├── lexicon{}         formes d'adresse, phrases préférées/interdites, remplacements
-├── rules[]           when → behavior (priorisées)
-└── llm{}             (optionnel) fragments de prompt système générés depuis les traits
+├── traits{}          8 sliders, 0–100     ← the core
+├── style{}           boolean flags        ← register (military, sci-fi, technical…)
+├── speech{}          rate, pitch, maximum sentence length
+├── lexicon{}         forms of address, preferred and forbidden phrases, replacements
+├── rules[]           when → behavior (prioritised)
+└── llm{}             (optional) system-prompt fragments generated from the traits
 ```
 
-### Les huit traits et leur effet **mécanique**
+### The eight traits and their **mechanical** effect
 
-| Trait | Effet concret et mesurable |
+| Trait | Concrete, measurable effect |
 |---|---|
-| `formality` | Choix du registre : tutoiement/vouvoiement, « reçu » vs « ok », forme d'adresse |
-| `verbosity` | Budget de mots de la réponse : `max_words = 4 + verbosity × 0.20` (30 → 10 mots) |
-| `humor` | Débloque les variantes `requires.humor_min`, et pondère leur tirage |
-| `sarcasm` | Idem, avec un **plafond contextuel** : jamais en combat, jamais après un échec |
-| `aggression` | Ponctuation et attaque de phrase (« Exécution. » vs « C'est fait, prenez votre temps. ») |
-| `calmness` | Vitesse de parole (`speed` modulée −10 %/+15 %) et réaction aux alertes |
-| `warmth` | Marqueurs d'attention (« bien reçu, commandant », vœux, encouragements) |
-| `confidence` | Présence ou non de modalisateurs (« je pense que », « probablement ») |
+| `formality` | Choice of register: familiar or formal address, “copy” vs “ok”, form of address |
+| `verbosity` | The reply's word budget: `max_words = 4 + verbosity × 0.20` (30 → 10 words) |
+| `humor` | Unlocks the variants marked `requires.humor_min`, and weights their draw |
+| `sarcasm` | The same, with a **contextual ceiling**: never in combat, never after a failure |
+| `aggression` | Punctuation and sentence opening (“Executing.” vs “It's done, take your time.”) |
+| `calmness` | Speaking rate (`speed` modulated −10%/+15%) and reaction to alerts |
+| `warmth` | Markers of attention (“copy that, commander”, well-wishes, encouragement) |
+| `confidence` | Whether hedges appear (“I think that”, “probably”) |
 
-Chaque trait doit avoir **au moins un effet observable sans LLM**. Un curseur qui ne change rien
-en mode local est un curseur décoratif — interdit.
-
----
-
-## 8.3 Algorithme de sélection de réponse
-
-```
-Entrée : response_key, événement (success/fail/unknown), contexte, personnalité, historique récent
-
-1. CANDIDATS      variantes de responses[response_key][event]
-                  + variantes génériques de l'événement (fallback)
-2. ÉLIGIBILITÉ    filtre sur requires{} : humor_min, sarcasm_min, formality_range,
-                  style flags, langue, contexte (combat/calme)
-3. CONTEXTE       règles actives (voir §8.4) :
-                  combat_active   → ne garder que les variantes courtes (< 8 mots)
-                  command_failed  → interdire humour et sarcasme, exiger une cause
-4. ANTI-RÉPÉTITION  on écarte les N=3 dernières variantes utilisées pour cette clé
-                    (mémoire circulaire en session) — le point qui fait TOUT le naturel
-5. PONDÉRATION    poids_final = weight × affinité_traits × récence_inverse
-                  affinité_traits = produit des proximités entre les traits requis et réels
-6. TIRAGE         aléatoire pondéré (graine dérivée du trace_id → reproductible en test)
-7. COMPOSITION    interpolation {variables}, application du lexique
-                  (address_user, replacements), suppression des phrases interdites,
-                  troncature au budget de mots
-8. PROSODIE       speed/pitch ajustés : calmness, urgence de l'événement, longueur
-```
-
-Aucune étape n'appelle le réseau. Le LLM, s'il est activé, n'intervient qu'à l'étape 1 pour
-**ajouter** une variante générée (pour les commandes conversationnelles ou quand aucune variante
-n'existe) — puis subit les étapes 3 à 8 comme les autres. Il ne court-circuite jamais le filtre
-de phrases interdites.
+Every trait must have **at least one observable effect without an LLM**. A slider that changes
+nothing in local mode is a decorative slider — forbidden.
 
 ---
 
-## 8.4 Règles comportementales
+## 8.3 The reply selection algorithm
+
+```
+Input: response_key, event (success/fail/unknown), context, character, recent history
+
+1. CANDIDATES     the variants of responses[response_key][event]
+                  + the event's generic variants (fallback)
+2. ELIGIBILITY    filter on requires{}: humor_min, sarcasm_min, formality_range,
+                  style flags, language, context (combat/calm)
+3. CONTEXT        the active rules (see §8.4):
+                  combat_active   → keep only the short variants (< 8 words)
+                  command_failed  → forbid humour and sarcasm, demand a cause
+4. ANTI-REPETITION  drop the last N=3 variants used for this key
+                    (a circular memory within the session) — the point that makes ALL the naturalness
+5. WEIGHTING      final_weight = weight × trait_affinity × inverse_recency
+                  trait_affinity = the product of the proximities between required and actual traits
+6. DRAW           a weighted random draw (seeded from the trace_id → reproducible in tests)
+7. COMPOSITION    interpolate {variables}, apply the lexicon
+                  (address_user, replacements), remove forbidden phrases,
+                  truncate to the word budget
+8. PROSODY        speed and pitch adjusted: calmness, the event's urgency, the length
+```
+
+No step calls the network. The LLM, when enabled, steps in only at stage 1 to **add** a generated
+variant (for conversational commands, or when no variant exists) — and then goes through stages 3
+to 8 like all the others. It never short-circuits the forbidden-phrase filter.
+
+---
+
+## 8.4 Behaviour rules
 
 ```json
 { "when": "combat_active", "behavior": "short_responses", "priority": 100,
   "params": { "max_words": 8, "disable_humor": true } }
 ```
 
-| `when` | Détection | `behavior` |
+| `when` | Detection | `behavior` |
 |---|---|---|
-| `combat_active` | `GameContext.mode == combat` (déclaratif v0.1) | `short_responses` |
-| `command_failed` | résultat = failed | `explain_reason` |
-| `command_unknown` | résolution < seuil | `ask_clarification` |
-| `user_is_angry` | lexique/prosodie (V1) | `remain_calm` |
-| `repeated_failure` | ≥ 3 échecs du même intent | `suggest_fix` (propose le Keybind Manager) |
-| `idle_long` | ≥ N min sans interaction | `occasional_banter` (désactivable, off par défaut) |
-| `startup` / `game_launched` / `game_closed` | événements système | `greet` / `announce` |
+| `combat_active` | `GameContext.mode == combat` (declarative in v0.1) | `short_responses` |
+| `command_failed` | result = failed | `explain_reason` |
+| `command_unknown` | resolution below the threshold | `ask_clarification` |
+| `user_is_angry` | lexicon/prosody (V1) | `remain_calm` |
+| `repeated_failure` | ≥ 3 failures of the same intent | `suggest_fix` (offers the Keybind Manager) |
+| `idle_long` | ≥ N minutes without interaction | `occasional_banter` (can be disabled, off by default) |
+| `startup` / `game_launched` / `game_closed` | system events | `greet` / `announce` |
 | `dangerous_command` | `command.dangerous` | `require_confirmation` |
 
-Résolution : les règles applicables sont triées par priorité, leurs `params` sont fusionnés,
-la plus prioritaire l'emporte en cas de conflit. L'ensemble actif est affiché en mode debug —
-sans quoi le comportement du copilote devient inexplicable pour l'utilisateur.
+Resolution: the applicable rules are sorted by priority, their `params` are merged, and the
+highest priority wins on conflict. The active set is shown in debug mode — without which the
+copilot's behaviour becomes inexplicable to the user.
 
 ---
 
-## 8.5 Génération du prompt système (quand le LLM est activé)
+## 8.5 Generating the system prompt (when the LLM is enabled)
 
-Le prompt n'est **pas** écrit à la main par l'utilisateur : il est **composé** depuis les traits,
-avec un fragment libre optionnel. Cela garantit la cohérence entre le mode local et le mode LLM.
+The prompt is **not** written by hand by the user: it is **composed** from the traits, with an
+optional free fragment. This keeps local mode and LLM mode consistent with each other.
 
 ```
-Tu es {name}, {role} à bord du vaisseau de {user}.
-Registre : {style_sentences}                        ← dérivé de style{} + formality
-Ton : {tone_sentences}                              ← dérivé de humor/sarcasm/warmth/confidence
-Longueur : {max_words} mots maximum, une à deux phrases.
-Adresse-toi à l'utilisateur par : {address_user}.
-N'utilise jamais : {forbidden_phrases}.
-Tu ne peux JAMAIS exécuter d'action toi-même : tu proposes un intent parmi la liste fournie.
-Si aucun intent ne correspond, réponds en conversation.
+You are {name}, {role} aboard {user}'s ship.
+Register: {style_sentences}                        ← derived from style{} + formality
+Tone: {tone_sentences}                             ← derived from humor/sarcasm/warmth/confidence
+Length: {max_words} words at most, one or two sentences.
+Address the user as: {address_user}.
+Never use: {forbidden_phrases}.
+You can NEVER execute an action yourself: you propose an intent from the list supplied.
+If no intent matches, answer conversationally.
 {custom_prompt_fragment}
 ```
 
-**Verrou** : le prompt système est concaténé côté application, jamais fourni brut par une source
-externe (plugin, pack importé, Discord). Un pack `.optcopilot` ne peut proposer qu'un
-`custom_prompt_fragment` **borné en longueur et échappé**, jamais remplacer les règles de sécurité.
+**The lock**: the system prompt is concatenated on the application side, never supplied raw by an
+external source (a plugin, an imported pack, Discord). An `.optcopilot` pack can only offer a
+`custom_prompt_fragment` **bounded in length and escaped**, never replace the safety rules.
 
 ---
 
-## 8.6 Trois personnalités de référence
+## 8.6 Three reference characters
 
 | | **Optimus** | **Synthia** | **Virgil** |
 |---|---|---|---|
-| Rôle | Copilote militaire | Assistante synthétique | Officier d'armement |
+| Role | Military copilot | Synthetic assistant | Weapons officer |
 | `formality` | 80 | 45 | 95 |
 | `humor` | 40 | 75 | 5 |
 | `sarcasm` | 25 | 65 | 0 |
@@ -137,26 +137,27 @@ externe (plugin, pack importé, Discord). Un pack `.optcopilot` ne peut proposer
 | `calmness` | 90 | 55 | 85 |
 | `confidence` | 85 | 70 | 95 |
 | `aggression` | 10 | 25 | 45 |
-| Adresse | commandant / capitaine | pilote / *(prénom)* | monsieur / commandant |
-| Quantum | « Calcul de trajectoire terminé. Accrochez-vous, commandant. » | « Trajectoire prête. Essaie de ne rien percuter cette fois. » | « Vecteur quantique verrouillé. Exécution. » |
-| Échec | « Négatif. Aucun raccourci n'est configuré pour cette action. » | « Ça n'a pas marché — tu n'as pas configuré la touche. » | « Action impossible. Raccourci non assigné. » |
+| Address | commander / captain | pilot / *(first name)* | sir / commander |
+| Quantum | “Trajectory computed. Hold on, commander.” | “Course is ready. Try not to hit anything this time.” | “Quantum vector locked. Executing.” |
+| Failure | “Negative. No shortcut is configured for that action.” | “That didn't work — you never set the key.” | “Action impossible. Shortcut unassigned.” |
 
-Ces trois profils sont livrés comme **exemples pédagogiques** : ils démontrent que le même moteur
-produit trois copilotes distincts sans une ligne de code spécifique (§30, §78).
+These three profiles ship as **teaching examples**: they demonstrate that the same engine produces
+three distinct copilots with no line of special code (§30, §78).
 
 ---
 
-## 8.7 Ce qui rend l'illusion crédible (détails à ne pas négliger)
+## 8.7 What makes the illusion believable (details not to neglect)
 
-1. **Ne jamais répéter la même formule deux fois de suite** — l'anti-répétition est le levier
-   n°1 du réalisme, bien avant la qualité de la voix.
-2. **Accuser réception avant d'agir sur les séquences longues** (« Séquence de combat engagée… »)
-   plutôt que de laisser 2 s de silence.
-3. **Se taire quand il faut** : en combat, un copilote bavard est insupportable. `verbosity` doit
-   pouvoir tomber à ~0 avec une simple confirmation sonore (bip d'accusé) au lieu d'une phrase.
-4. **Réagir aux événements système**, pas seulement aux ordres : lancement du jeu, perte de
-   focus, échec répété, retour après une longue absence.
-5. **Assumer l'erreur avec une cause** : « Je n'ai pas compris » est nul ; « Je n'ai pas compris —
-   j'ai entendu *ouvre les ports* » est utile *et* immersif.
-6. **Cohérence voix/traits** : un copilote militaire à `calmness: 90` ne doit pas parler à
-   1,3× la vitesse. Le `PersonalityEngine` module la prosodie, ce n'est pas un réglage isolé.
+1. **Never repeat the same phrasing twice in a row** — anti-repetition is the number-one lever of
+   realism, well ahead of voice quality.
+2. **Acknowledge before acting on long sequences** (“Combat sequence engaged…”) rather than
+   leaving two seconds of silence.
+3. **Keep quiet when it matters**: in combat, a talkative copilot is unbearable. `verbosity` must
+   be able to fall to nearly zero, with a simple audio confirmation (an acknowledgement beep)
+   instead of a sentence.
+4. **React to system events**, not only to orders: the game launching, focus being lost, repeated
+   failure, coming back after a long absence.
+5. **Own the error with a cause**: “I didn't understand” is worthless; “I didn't understand — I
+   heard *open the ports*” is useful *and* immersive.
+6. **Consistency between voice and traits**: a military copilot at `calmness: 90` must not speak
+   at 1.3× the rate. The `PersonalityEngine` modulates the prosody; it is not a separate setting.

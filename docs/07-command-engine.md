@@ -1,134 +1,134 @@
-# PHASE 6 — Architecture des commandes
+# PHASE 6 — Command architecture
 
-## 7.1 Les huit concepts et leurs relations
+## 7.1 The eight concepts and how they relate
 
 ```
-   phrase vocale                                       « ouvre-moi les portes »
+   spoken phrase                                       “open the doors for me”
         │
         ▼
-   ┌─────────┐  ce que l'utilisateur veut (abstrait, scoré, paramétrable)
+   ┌─────────┐  what the user wants (abstract, scored, parameterisable)
    │ INTENT  │  { intent_id, parameters, confidence, source }
    └────┬────┘
-        │ 1:1  (un intent_id désigne exactement une Command)
+        │ 1:1  (one intent_id names exactly one Command)
         ▼
-   ┌─────────┐  l'unité fonctionnelle déclarée : phrases, conditions, réponses
+   ┌─────────┐  the declared functional unit: phrases, conditions, replies
    │ COMMAND │  kind = action | macro | dialogue | lore | query
    └────┬────┘
         │ 1:n
         ▼
-   ┌─────────┐  une étape exécutable
+   ┌─────────┐  one executable step
    │ ACTION  │  type = game_action | key | mouse | wait | repeat | if | say | plugin
    └────┬────┘
-        │ (si type = game_action)  action_id abstrait, jamais une touche
+        │ (when type = game_action)  an abstract action_id, never a key
         ▼
-   ┌─────────┐  la table locale (action_id, actionmap) → InputSpec
-   │ BINDING │  propre à la machine, importée de Star Citizen, éditable
+   ┌─────────┐  the local table (action_id, actionmap) → InputSpec
+   │ BINDING │  specific to the machine, imported from Star Citizen, editable
    └────┬────┘
         ▼
-   ┌───────────┐  ordre matériel : scancode down/up, bouton souris, molette
+   ┌───────────┐  the hardware order: scancode down/up, mouse button, wheel
    │ INPUTSPEC │
    └───────────┘
 
-   SEQUENCE  = liste ordonnée d'ACTIONs, exécutée par le SequenceRunner
-   MACRO     = SEQUENCE nommée, réutilisable, déclenchable par la voix (= une Command kind=macro)
-   CONDITION = prédicat évaluable (requirements d'une Command, branches `if` d'une Macro)
-   RESPONSE  = ce que le copilote dit ; jamais le résultat direct de l'action, toujours filtré
-               par la personnalité
+   SEQUENCE  = an ordered list of ACTIONs, run by the SequenceRunner
+   MACRO     = a named, reusable SEQUENCE, triggerable by voice (= a Command with kind=macro)
+   CONDITION = an evaluable predicate (a Command's requirements, a Macro's `if` branches)
+   RESPONSE  = what the copilot says; never the direct result of the action, always filtered
+               through the character
 ```
 
-**L'invariant fondamental** : le seul lien entre le monde « sens » (intent/command) et le monde
-« matériel » (touche) est la table `BINDING`. Cette table est une **donnée**, jamais du code
-(RT-02). Corollaire : on peut exécuter tout le moteur en CI, sans clavier, en injectant un
-`BindingProfile` de test et un `SimulatedInputEngine`.
+**The fundamental invariant**: the only link between the world of “meaning” (intent/command) and
+the world of “hardware” (a key) is the `BINDING` table. That table is **data**, never code
+(RT-02). It follows that the whole engine can run in CI, with no keyboard, by injecting a test
+`BindingProfile` and a `SimulatedInputEngine`.
 
 ---
 
-## 7.2 Types de commande (`kind`)
+## 7.2 Command kinds (`kind`)
 
-| `kind` | Exécute | Répond | Exemple | Origine de l'idée |
+| `kind` | Executes | Answers | Example | Where the idea came from |
 |---|---|---|---|---|
-| `action` | 1..n étapes | oui | « ouvre les portes » | — |
-| `macro` | séquence complexe avec conditions | oui | « passe en mode combat » | §46 |
-| `dialogue` | **rien** | oui, variantes de personnalité | « t'as vu ça ?! » | 46 entrées « Dialogue » chez Jean-Bot |
-| `lore` | rien, consultation de données | oui, contenu long | « parle-moi de Crusader » | 17 « Fiche » + catégorie LORE |
-| `query` | lecture d'état interne | oui | « rapport système », « quelle est ma latence ? » | §39 |
+| `action` | 1..n steps | yes | “open the doors” | — |
+| `macro` | a complex sequence with conditions | yes | “go to combat mode” | §46 |
+| `dialogue` | **nothing** | yes, character variants | “did you see that?!” | Jean-Bot's 46 “Dialogue” entries |
+| `lore` | nothing, a data lookup | yes, long-form content | “tell me about Crusader” | 17 “Fiche” + the LORE category |
+| `query` | reads internal state | yes | “system report”, “what's my latency?” | §39 |
 
-Ce champ évite l'écueil du « programme qui appuie sur des touches » : 20 % du catalogue peut
-n'appuyer sur rien et rester la partie la plus appréciée du produit.
+This field avoids the trap of “a program that presses keys”: 20% of the catalogue may press
+nothing at all and still be the most appreciated part of the product.
 
 ---
 
-## 7.3 Catégories (énumération fermée)
+## 7.3 Categories (a closed enumeration)
 
 `ship` · `flight` · `navigation` · `quantum` · `combat` · `weapons` · `shields` · `power` ·
 `targeting` · `scanning` · `mining` · `salvage` · `cargo` · `exploration` · `landing` ·
 `takeoff` · `camera` · `communication` · `vehicle` · `fps` · `social` · `immersion` · `lore` ·
 `system` · `ai` · `media` · `plugin`
 
-Validées par schéma au chargement. Une catégorie inconnue = erreur de lint, pas un fallback
-silencieux (leçon `category.id` cassé de Jean-Bot).
+Validated by schema at load. An unknown category is a lint error, not a silent fallback (the
+lesson of Jean-Bot's broken `category.id`).
 
 ---
 
-## 7.4 Algorithme de résolution d'intent
+## 7.4 The intent resolution algorithm
 
 ```
-Entrée : texte brut de la transcription, contexte, copilote actif
+Input: the raw transcript text, the context, the active copilot
 
 1. NORMALISATION
-   minuscules → suppression des accents → ponctuation → élisions ("ouvre-moi" → "ouvre moi")
-   → nombres en lettres → chiffres ("trois" → "3")
-   → retrait des mots vides de commande ("stp", "s'il te plait", "euh", "allez")
-   → retrait du wake word en tête
+   lower case → strip accents → punctuation → elisions ("ouvre-moi" → "ouvre moi")
+   → spelled-out numbers → digits ("three" → "3")
+   → drop command filler words ("please", "er", "come on")
+   → drop the leading wake word
 
-2. CANDIDATS
-   a. Correspondance EXACTE sur l'index des voice_phrases normalisées   → score 1.00
-   b. Correspondance de PRÉFIXE / d'inclusion de phrase                 → 0.90–0.98
-   c. Correspondance FLOUE : token-set ratio + Levenshtein normalisé    → 0.50–0.92
-      pondérée par : longueur de phrase, usage récent (command_stats),
-      catégorie compatible avec le GameContext, favoris de l'utilisateur
-   d. (V1) Rappel SÉMANTIQUE par embeddings, si a/b/c < seuil           → 0.50–0.85
+2. CANDIDATES
+   a. EXACT match on the index of normalised voice_phrases              → score 1.00
+   b. PREFIX / phrase-inclusion match                                   → 0.90–0.98
+   c. FUZZY match: token-set ratio + normalised Levenshtein             → 0.50–0.92
+      weighted by: phrase length, recent usage (command_stats),
+      category compatible with the GameContext, the user's favourites
+   d. (V1) SEMANTIC recall through embeddings, if a/b/c fall below the threshold → 0.50–0.85
 
-3. FILTRAGE
-   commandes désactivées, hors capacités du copilote, catégories interdites → écartées
+3. FILTERING
+   disabled commands, those outside the copilot's abilities, forbidden categories → dropped
 
-4. DÉCISION
-   meilleur ≥ 0.85 et écart au 2ᵉ ≥ 0.15   → EXÉCUTION
-   meilleur ≥ 0.85 et écart < 0.15         → DÉSAMBIGUÏSATION (question fermée)
-   0.55 ≤ meilleur < 0.85                  → CONFIRMATION ("Vous voulez dire … ?")
-   < 0.55 et LLM activé                    → ESCALADE LLM
-   < 0.55 et LLM désactivé                 → UNKNOWN (réponse + log unknown_phrase)
+4. DECISION
+   best ≥ 0.85 and gap to the runner-up ≥ 0.15   → EXECUTE
+   best ≥ 0.85 and gap < 0.15                    → DISAMBIGUATE (a closed question)
+   0.55 ≤ best < 0.85                            → CONFIRM (“Do you mean … ?”)
+   < 0.55 and the LLM is enabled                 → ESCALATE TO THE LLM
+   < 0.55 and the LLM is disabled                → UNKNOWN (a reply + an unknown_phrase log)
 
-5. EXTRACTION DE PARAMÈTRES
-   patterns déclarés par la commande : {quadrant}, {value:int}, {target}
-   valeurs manquantes → SlotFiller (contexte) → sinon relance ciblée
+5. PARAMETER EXTRACTION
+   patterns declared by the command: {quadrant}, {value:int}, {target}
+   missing values → SlotFiller (context) → otherwise a targeted follow-up
 ```
 
-**Tous les seuils sont des paramètres**, exposés dans les réglages avancés et journalisés dans le
-mode debug. Ils seront ajustés empiriquement avec les données de `unknown_phrases`.
+**Every threshold is a parameter**, exposed in the advanced settings and logged in debug mode.
+They will be tuned empirically from the `unknown_phrases` data.
 
-### Anaphores et slots ouverts (§18)
+### Anaphora and open slots (§18)
 
 ```
-tour 1  « prépare les boucliers »
-        → intent shields.set_quadrant, paramètre {quadrant} manquant
+turn 1  “prepare the shields”
+        → intent shields.set_quadrant, parameter {quadrant} missing
         → ConversationContext.pending_slot = { intent, slot: "quadrant", ttl: 15 s }
-        → réponse : « Quel quadrant ? »
-tour 2  « à l'avant »
-        → le matcher voit pending_slot actif : il tente D'ABORD de résoudre le slot
-        → "avant" ∈ enum{avant, arrière, gauche, droite, équilibré} → OK
-        → exécution de shields.set_quadrant(front)
+        → reply: “Which quadrant?”
+turn 2  “to the front”
+        → the matcher sees an active pending_slot: it FIRST tries to fill the slot
+        → "front" ∈ enum{front, rear, left, right, balanced} → OK
+        → executes shields.set_quadrant(front)
 ```
 
-Le `pending_slot` expire (TTL) et est annulé par : nouvelle commande à score élevé, kill switch,
-ou « laisse tomber ».
+The `pending_slot` expires (TTL) and is cancelled by: a new command with a high score, the kill
+switch, or “never mind”.
 
 ---
 
-## 7.5 Le contrat de l'IA (§73–74, §86)
+## 7.5 The AI's contract (§73–74, §86)
 
-Le LLM ne reçoit qu'un **catalogue d'intents autorisés** (id + description + paramètres), le
-texte, et un résumé de contexte. Il ne renvoie **que** ceci :
+The LLM receives only a **catalogue of allowed intents** (id + description + parameters), the
+text, and a summary of the context. It returns **nothing but** this:
 
 ```json
 {
@@ -137,38 +137,39 @@ texte, et un résumé de contexte. Il ne renvoie **que** ceci :
   "parameters": {},
   "confidence": 0.94,
   "requires_confirmation": false,
-  "reasoning": "l'utilisateur demande l'ouverture des sas"
+  "reasoning": "the user is asking for the airlocks to be opened"
 }
 ```
 
-ou
+or
 
 ```json
-{ "type": "conversation", "reply_hint": "l'utilisateur commente un événement de combat" }
+{ "type": "conversation", "reply_hint": "the user is commenting on a combat event" }
 ```
 
-ou
+or
 
 ```json
 { "type": "clarification", "question_key": "shields.which_quadrant",
   "options": ["front", "rear", "left", "right"] }
 ```
 
-**Cinq verrous appliqués après la réponse du LLM, dans cet ordre :**
-1. Parsing strict du JSON (mode JSON/grammar contrainte côté provider) — échec ⇒ rejet.
-2. `intent` ∈ liste blanche des commandes **activées pour ce copilote** — sinon rejet + log de
-   sécurité `llm_intent_rejected`.
-3. Paramètres validés contre le schéma déclaré par la commande (types, énumérations, bornes).
-4. `ExecutionGuard` appliqué normalement (permissions, dangerous, focus, cooldown).
-5. `confidence` du LLM plafonnée : elle ne peut **jamais** contourner la confirmation exigée par
-   une commande `dangerous`.
+**Five locks applied after the LLM's answer, in this order:**
+1. Strict JSON parsing (JSON/grammar-constrained mode on the provider side) — a failure means
+   rejection.
+2. `intent` ∈ the whitelist of commands **enabled for this copilot** — otherwise rejection plus a
+   `llm_intent_rejected` security log.
+3. Parameters validated against the schema the command declares (types, enumerations, bounds).
+4. The `ExecutionGuard` applied as usual (permissions, dangerous, focus, cooldown).
+5. The LLM's `confidence` is capped: it can **never** bypass the confirmation a `dangerous`
+   command demands.
 
-Le LLM ne voit jamais un keybind, ne peut jamais produire une touche, et n'a aucun accès à
-`IInputEngine`. Le test d'architecture vérifie qu'aucun projet `*.Ai.*` ne référence `*.Input.*`.
+The LLM never sees a keybind, can never produce a key, and has no access to `IInputEngine`. An
+architecture test verifies that no `*.Ai.*` project references `*.Input.*`.
 
 ---
 
-## 7.6 Langage de séquence
+## 7.6 The sequence language
 
 ```jsonc
 [
@@ -186,61 +187,60 @@ Le LLM ne voit jamais un keybind, ne peut jamais produire une touche, et n'a auc
 ]
 ```
 
-**Garanties d'exécution du `SequenceRunner` :**
+**Guarantees the `SequenceRunner` makes:**
 
-| Garantie | Mécanisme |
+| Guarantee | Mechanism |
 |---|---|
-| Aucune touche ne reste enfoncée | `try/finally` : toutes les touches/boutons `press` sans `release` sont relâchés à la sortie, y compris sur exception, annulation ou kill switch |
-| Annulation immédiate | `CancellationToken` propagé à chaque étape ; kill switch = `Cancel()` + relâchement global |
-| Pas de chevauchement | Une seule séquence à la fois par profil ; une nouvelle commande annule ou est mise en file selon `sequence_policy` |
-| Délais réalistes | `hold` par défaut 45 ms (un jeu ignore souvent < 16 ms) ; jitter optionnel ±10 ms |
-| Perte de focus en cours | La séquence est interrompue et le résultat marqué `aborted_focus_lost` |
-| Traçabilité | Chaque étape journalisée avec son `trace_id`, visible dans le mode debug |
+| No key is left held down | `try/finally`: every key or button pressed without a matching release is released on the way out, including on exception, cancellation or kill switch |
+| Immediate cancellation | A `CancellationToken` propagated to every step; the kill switch means `Cancel()` + a global release |
+| No overlap | One sequence at a time per profile; a new command either cancels or queues depending on `sequence_policy` |
+| Realistic delays | `hold` defaults to 45 ms (a game often ignores anything under 16 ms); optional ±10 ms jitter |
+| Focus lost mid-run | The sequence is interrupted and the result marked `aborted_focus_lost` |
+| Traceability | Every step logged with its `trace_id`, visible in debug mode |
 
 ---
 
-## 7.7 Conditions disponibles (`requirements` et `if`)
+## 7.7 Available conditions (`requirements` and `if`)
 
-| Type | Vrai quand | Dispo |
+| Type | True when | Available |
 |---|---|---|
-| `game_running` | `StarCitizen.exe` détecté | M |
-| `game_foreground` | le jeu a le focus | M |
-| `binding_available` | l'`action_id` a un binding non vide | M |
-| `simulation_off` | on n'est pas en mode simulation | M |
-| `cooldown_elapsed` | implicite, géré par le guard | M |
-| `copilot_capability` | la capacité est activée sur le copilote | M |
-| `game_mode_is` | `GameContext.mode` (déclaratif en v0.1) | 1 |
-| `previous_command_was` | dernier intent exécuté | 1 |
-| `plugin_condition` | prédicat fourni par un plugin | 1 |
-| `telemetry` | état de jeu réel (V2) | 2 |
+| `game_running` | `StarCitizen.exe` is detected | M |
+| `game_foreground` | the game has focus | M |
+| `binding_available` | the `action_id` has a non-empty binding | M |
+| `simulation_off` | we are not in simulation mode | M |
+| `cooldown_elapsed` | implicit, handled by the guard | M |
+| `copilot_capability` | the ability is enabled on the copilot | M |
+| `game_mode_is` | `GameContext.mode` (declarative in v0.1) | 1 |
+| `previous_command_was` | the last executed intent | 1 |
+| `plugin_condition` | a predicate supplied by a plugin | 1 |
+| `telemetry` | real game state (V2) | 2 |
 
-Une condition non satisfiable produit **toujours** un message explicite (RF-ERR), jamais un
-échec silencieux : « aucun raccourci configuré pour *ouvrir les portes* — voulez-vous le
-définir maintenant ? »
+An unsatisfiable condition **always** produces an explicit message (RF-ERR), never a silent
+failure: “no shortcut configured for *open the doors* — would you like to set one now?”
 
 ---
 
-## 7.8 Cycle de vie d'une commande utilisateur (Command Builder, §48)
+## 7.8 The life of a user command (Command Builder, §48)
 
 ```
-UI Command Builder
-   nom, catégorie, phrases vocales
-   étapes : [Appuyer F] [Attendre 100 ms] [Appuyer 1] [Maintenir clic droit]
+Command Builder UI
+   name, category, spoken phrases
+   steps: [Press F] [Wait 100 ms] [Press 1] [Hold right click]
       │
       ▼
- Validation : phrases non ambiguës vs catalogue existant (avertissement si score > 0.85
-              avec une commande existante), action_id connus, durées plausibles
+ Validation: phrases unambiguous against the existing catalogue (a warning if the score
+             exceeds 0.85 against an existing command), known action_ids, plausible durations
       │
       ▼
- Écriture dans commands/user.custom.json  (source: "user", jamais mélangé au catalogue livré)
+ Written to commands/user.custom.json  (source: "user", never mixed into the shipped catalogue)
       │
       ▼
- Rechargement à chaud du CommandRegistry + réindexation du PhraseIndex
+ Hot reload of the CommandRegistry + reindexing of the PhraseIndex
       │
       ▼
- Test en un clic : exécution en mode simulation avec affichage pas-à-pas
+ One-click test: run in simulation mode with a step-by-step display
 ```
 
-La génération assistée par IA (§49) s'insère **avant la validation** : le LLM propose un
-brouillon de commande, qui suit ensuite exactement le même chemin de validation humaine. L'IA
-n'écrit jamais directement dans le catalogue.
+AI-assisted generation (§49) slots in **before validation**: the LLM proposes a draft command,
+which then follows exactly the same path of human validation. The AI never writes into the
+catalogue directly.
