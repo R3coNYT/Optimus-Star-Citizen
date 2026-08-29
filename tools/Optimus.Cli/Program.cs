@@ -9,6 +9,7 @@ using Optimus.Core.Domain.Profiles;
 using Optimus.Core.Execution;
 using Optimus.Core.Intent;
 using Optimus.Core.Loading;
+using Optimus.Core.Localization;
 using Optimus.Core.Personality;
 using Optimus.Infrastructure.Game;
 using Optimus.Infrastructure.Input;
@@ -66,8 +67,21 @@ public static class Program
             return 1;
         }
 
-        string catalogPath = Path.Combine(repoRoot, "data", "commands", "starcitizen.core.json");
         string profilePath = Path.Combine(repoRoot, "data", "bindings", "starcitizen", "defaults-4.9.json");
+
+        // Le profil du pilote AVANT le catalogue : c'est lui qui dit la langue, et le
+        // catalogue en depend. L'ordre inverse chargeait le catalogue francais quel que soit
+        // le reglage, et le banc repondait « je ne connais pas cette commande » a toutes les
+        // phrases anglaises — celles-la memes que l'application execute sans broncher.
+        _userProfilePath = Path.Combine(repoRoot, "data", "profiles", "default.json");
+
+        LoadResult<UserProfile> user = ProfileLoader.Load(_userProfilePath);
+
+        string catalogPath =
+            Language.Localized(
+                Path.Combine(repoRoot, "data", "commands"),
+                "starcitizen.core", ".json", user.Value.Language)
+            ?? Path.Combine(repoRoot, "data", "commands", "starcitizen.core.json");
 
         foreach (string path in new[] { catalogPath, profilePath })
         {
@@ -80,10 +94,6 @@ public static class Program
 
         LoadResult<CommandCatalog> catalog = JsonCatalogLoader.LoadCatalog(catalogPath);
         LoadResult<BindingProfile> profile = JsonCatalogLoader.LoadBindingProfile(profilePath);
-
-        _userProfilePath = Path.Combine(repoRoot, "data", "profiles", "default.json");
-
-        LoadResult<UserProfile> user = ProfileLoader.Load(_userProfilePath);
 
         // Les touches choisies par le pilote se posent par-dessus le profil du jeu, qui reste
         // intact et donc remplacable a chaque mise a jour (« defauts + deltas »).
@@ -103,7 +113,10 @@ public static class Program
         // Le banc doit connaitre les memes commandes que l'application, bascules de profil
         // comprises : un banc qui repondrait « je ne connais pas cette commande » a une phrase
         // qu'Optimus execute serait pire qu'inutile, il induirait en erreur.
-        catalog = catalog with { Value = BindingProfileSet.Augment(catalog.Value) };
+        catalog = catalog with
+        {
+            Value = BindingProfileSet.Augment(catalog.Value, language: user.Value.Language),
+        };
         LoadResult<Copilot> copilot = CopilotLoader.Load(
             Path.Combine(repoRoot, "data", "copilots", user.Value.PreferredCopilot));
 
