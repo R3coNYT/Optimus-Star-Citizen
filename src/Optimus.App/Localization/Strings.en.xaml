@@ -347,6 +347,7 @@
   <sys:String x:Key="Log.ProfileWas">Formerly “{0}”.</sys:String>
   <sys:String x:Key="Log.ProfileDeleted">profile “{0}” deleted</sys:String>
   <sys:String x:Key="Log.Ignored">ignored · {0}</sys:String>
+  <sys:String x:Key="Log.Heard">heard · {0}</sys:String>
   <sys:String x:Key="Log.Confidence">confidence {0}</sys:String>
   <sys:String x:Key="Log.CalledNotUnderstood" xml:space="preserve"> — called, but not understood</sys:String>
   <sys:String x:Key="Log.Rules">rules: {0}</sys:String>

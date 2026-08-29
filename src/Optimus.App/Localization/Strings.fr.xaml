@@ -343,6 +343,7 @@
   <sys:String x:Key="Log.ProfileWas">Anciennement « {0} ».</sys:String>
   <sys:String x:Key="Log.ProfileDeleted">profil « {0} » supprimé</sys:String>
   <sys:String x:Key="Log.Ignored">ignoré · {0}</sys:String>
+  <sys:String x:Key="Log.Heard">entendu · {0}</sys:String>
   <sys:String x:Key="Log.Confidence">confiance {0}</sys:String>
   <sys:String x:Key="Log.CalledNotUnderstood" xml:space="preserve"> — interpellé, mais pas compris</sys:String>
   <sys:String x:Key="Log.Rules">règles : {0}</sys:String>

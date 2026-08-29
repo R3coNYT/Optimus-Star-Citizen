@@ -28,7 +28,7 @@
     <NeutralLanguage>en-US</NeutralLanguage>
     <Company>Optimus</Company>
     <Product>Optimus</Product>
-    <Version>0.1.10</Version>
+    <Version>0.1.11</Version>
   </PropertyGroup>
 
 </Project>
