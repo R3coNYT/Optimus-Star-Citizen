@@ -1,6 +1,6 @@
 # Spike S0-1 — Injection clavier / souris
 
-> Répond à la question bloquante du projet (risque **R1** de [`docs/13`](../../docs/13-risques-tests-decisions.md)) :
+> Répond à la question bloquante du projet (risque **R1** de [`docs/13`](../../docs/13-risks-tests-decisions.md)) :
 > **Star Citizen accepte-t-il une injection `SendInput` en scancode ?**
 > Tant que la réponse n'est pas connue, toute la couche d'exécution d'Optimus est hypothétique.
 

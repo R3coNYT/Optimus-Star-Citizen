@@ -1,40 +1,42 @@
-# OPTIMUS — Dossier de conception
+# OPTIMUS — design dossier
 
-Copilote vocal IA pour Star Citizen. Application Windows locale, autonome, extensible.
+An AI voice copilot for Star Citizen. A local Windows application: self-contained and extensible.
 
-## Sommaire
+## Contents
 
-| Doc | Phase du brief | Contenu |
+| Doc | Brief phase | Content |
 |---|---|---|
-| [01 — Analyse de Jean-Bot](01-analyse-jean-bot.md) | Phase 1 | Fonctionnalités confirmées / déduites / inconnues, endpoints réels, schéma du catalogue, analyse UX, ce qu'Optimus fait mieux |
-| [02 — Keybinds Star Citizen](02-analyse-keybinds-star-citizen.md) | Phase 1bis | Analyse de l'export XML fourni, format `ActionMaps`, lecture de la capture d'écran, stratégie de binding |
-| [03 — Besoins](03-besoins.md) | Phase 2 | Exigences fonctionnelles, non fonctionnelles, techniques, de sécurité, UX |
-| [04 — Architecture](04-architecture.md) | Phase 3 | Couches, responsabilités, modèle de processus, flux nominal, isolation par utilisateur, nomenclature |
-| [05 — Stack technique](05-stack.md) | Phase 4 | Comparatif des socles, décisions par composant, points de vigilance |
-| [06 — Modèle de données](06-modele-donnees.md) | Phase 5 | ERD, arborescence utilisateur, schémas JSON, SQLite, migrations |
-| [07 — Moteur de commandes](07-moteur-commandes.md) | Phase 6 | Command / Intent / Action / Binding / Sequence / Macro / Condition / Response, résolution, contrat de l'IA |
-| [08 — Personnalité](08-personnalite.md) | Phase 7 | Traits, sélection de réponse, règles, prompt généré, trois personnalités de référence |
-| [09 — Pipeline vocal](09-pipeline-vocal.md) | Phase 8 | Chaîne complète, budget de latence, modes d'écoute, providers, pièges audio, mode debug |
-| [10 — Interface](10-interface.md) | Phase 9 | Les 12 écrans, maquettes, assistant de premier lancement |
-| [11 — Roadmap](11-roadmap.md) | Phases 10–12 | MVP v0.1 (périmètre, définition de terminé, planning), V1, V2, non-objectifs |
-| [12 — API / Discord / Plugins](12-api-discord-plugins.md) | transverse | API locale, stratégie Discord et isolation, modèle de plugins, multi-copilotes, packs |
-| [13 — Risques, tests, décisions](13-risques-tests-decisions.md) | transverse | Registre des risques, spikes préalables, stratégie de tests, 18 décisions, points à trancher |
-| [14 — Structure du projet](14-structure-projet.md) | Phase 77 | Arborescence de la solution, graphe de dépendances, conventions |
-| [15 — Signature de code](15-signature-de-code.md) | transverse | Conditions de la SignPath Foundation, chaîne de compilation, politique de signature, ce qu'il reste à faire |
+| [01 — Jean-Bot analysis](01-jean-bot-analysis.md) | Phase 1 | Confirmed / inferred / unknown features, real endpoints, catalogue schema, UX analysis, what Optimus does better |
+| [02 — Star Citizen keybinds](02-star-citizen-keybinds.md) | Phase 1bis | Analysis of the supplied XML export, the `ActionMaps` format, reading the screenshot, binding strategy |
+| [03 — Requirements](03-requirements.md) | Phase 2 | Functional, non-functional, technical, safety and UX requirements |
+| [04 — Architecture](04-architecture.md) | Phase 3 | Layers, responsibilities, process model, nominal flow, per-user isolation, naming |
+| [05 — Technical stack](05-stack.md) | Phase 4 | Comparison of the candidate foundations, decisions per component, things to watch |
+| [06 — Data model](06-data-model.md) | Phase 5 | ERD, user directory tree, JSON schemas, SQLite, migrations |
+| [07 — Command engine](07-command-engine.md) | Phase 6 | Command / Intent / Action / Binding / Sequence / Macro / Condition / Response, resolution, the AI's contract |
+| [08 — Character](08-character.md) | Phase 7 | Traits, reply selection, rules, generated prompt, three reference characters |
+| [09 — Voice pipeline](09-voice-pipeline.md) | Phase 8 | The whole chain, latency budget, listening modes, providers, audio pitfalls, debug mode |
+| [10 — Interface](10-interface.md) | Phase 9 | The 12 screens, mockups, first-run wizard |
+| [11 — Roadmap](11-roadmap.md) | Phases 10–12 | MVP v0.1 (scope, definition of done, schedule), V1, V2, non-goals |
+| [12 — API / Discord / plugins](12-api-discord-plugins.md) | cross-cutting | Local API, Discord strategy and isolation, plugin model, multi-copilot, packs |
+| [13 — Risks, tests, decisions](13-risks-tests-decisions.md) | cross-cutting | Risk register, preliminary spikes, test strategy, the decision log, open questions |
+| [14 — Project structure](14-project-structure.md) | Phase 77 | Solution tree, dependency graph, conventions |
+| [15 — Code signing](15-code-signing.md) | cross-cutting | SignPath Foundation conditions, build pipeline, signing policy, what is left to do |
 
-## Les dix règles non négociables
+*The measurement records under [`spikes/`](spikes/) are kept in French, as written on the day.
+They are dated evidence of what was measured on a given machine; a translation would be a
+rewrite, and a rewritten measurement is worth less than none.*
 
-1. **Aucun keybind en dur.** Les touches viennent d'un `BindingProfile` chargé au runtime.
-2. **Le LLM est optionnel** et désactivé par défaut ; tout fonctionne hors ligne.
-3. **L'IA ne produit qu'un intent structuré**, validé contre une liste blanche ; elle n'a jamais
-   accès au clavier.
-4. **Un seul point de contrôle** (`ExecutionGuard`) pour permissions, kill switch, simulation,
-   cooldown et focus.
-5. **L'exécution est toujours locale.** Discord et le cloud transmettent des intents, jamais des
-   touches.
-6. **Jamais d'échec silencieux** : toute erreur produit une réponse et une trace.
-7. **Le mode simulation existe dès le premier jour.**
-8. **La configuration utilisateur vit dans `%APPDATA%`**, en fichiers versionnables.
-9. **Le cœur est testable sans micro, sans clavier et sans le jeu.**
-10. **Un copilote est une donnée**, pas du code : créer « Optimus Combat » ne demande aucune
-    ligne de C#.
+## The ten non-negotiable rules
+
+1. **No hard-coded key bindings.** Keys come from a `BindingProfile` loaded at runtime.
+2. **The LLM is optional** and off by default; everything works offline.
+3. **The AI only produces a structured intent**, validated against a whitelist; it never has
+   access to the keyboard.
+4. **A single point of control** (`ExecutionGuard`) for permissions, kill switch, simulation,
+   cooldown and focus.
+5. **Execution is always local.** Discord and the cloud carry intents, never keystrokes.
+6. **Never fail silently**: every error produces a reply and a trace.
+7. **Simulation mode exists from day one.**
+8. **User configuration lives in `%APPDATA%`**, in files you can put under version control.
+9. **The core is testable with no microphone, no keyboard and no game.**
+10. **A copilot is data**, not code: creating “Optimus Combat” takes no line of C#.

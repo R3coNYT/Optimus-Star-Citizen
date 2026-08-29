@@ -168,7 +168,7 @@ En attendant, l'état d'Optimus se lit dans sa fenêtre, et un client branché s
 (D66) peut déjà l'afficher où il veut — sur un second écran, une tablette, un Stream Deck.
 
 **Dernier chantier, ouvert le 2026-08-29 : la signature de code (R16).**
-Le détail vit désormais dans [`15-signature-de-code.md`](15-signature-de-code.md) : conditions relevées chez la fondation, chaîne de compilation, politique de signature et ce qu'il reste à faire. **Trois des conditions manquent, et elles tiennent toutes à une seule décision du pilote** — rendre le dépôt public sous une licence libre.
+Le détail vit désormais dans [`15-code-signing.md`](15-code-signing.md) : conditions relevées chez la fondation, chaîne de compilation, politique de signature et ce qu'il reste à faire. **Trois des conditions manquent, et elles tiennent toutes à une seule décision du pilote** — rendre le dépôt public sous une licence libre.
 
 Voie retenue le 2026-08-27 : **SignPath Foundation**, qui signe gratuitement les projets open
 source. Les certificats commerciaux coûtent de 100 à 600 € par an, ce qui est hors budget — et un

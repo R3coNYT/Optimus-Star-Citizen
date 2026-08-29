@@ -1,132 +1,131 @@
 # OPTIMUS
 
-**Copilote vocal IA pour Star Citizen.** Application Windows locale : Optimus écoute, comprend,
-exécute les actions du jeu via *tes* raccourcis, et répond avec une voix et une personnalité
-configurables.
+**An AI voice copilot for Star Citizen.** A local Windows application: Optimus listens,
+understands, runs the game's actions through *your* key bindings, and answers with a voice and a
+character you choose.
 
 ```
-voix → STT local → intent → validation → binding local → clavier local → Star Citizen
-                                    ↑
-                        LLM optionnel (jamais requis, jamais aux commandes)
+voice → local STT → intent → validation → local binding → local keyboard → Star Citizen
+                                      ↑
+                     optional LLM (never required, never at the controls)
 ```
 
 ## Installation
 
-Prends l'installateur dans [les versions publiées](../../releases) et lance-le. Installation par
-utilisateur, sans droits administrateur, dans `%LOCALAPPDATA%\Programs\Optimus`.
+Take the installer from [the releases](../../releases) and run it. Per-user installation, no
+administrator rights, into `%LOCALAPPDATA%\Programs\Optimus`.
 
-Une page de l'assistant propose les composants facultatifs — voix neuronales et parole libre —
-qui se téléchargent alors, chacun vérifié par son empreinte. Sans eux, Optimus fonctionne
-entièrement : voix Windows et grammaire fermée.
+One page of the wizard offers the optional components — neural voices and free speech — which are
+downloaded then, each verified against its hash. Without them Optimus works in full: Windows
+voices and a closed grammar.
 
-> **L'installateur n'est pas encore signé.** SmartScreen affichera « Windows a protégé votre
-> ordinateur » : le bouton pour continuer se cache derrière *Informations complémentaires*. La
-> signature est en cours, voir plus bas. Vérifie l'empreinte SHA-256 publiée à côté du fichier.
+> **The installer is not signed yet.** SmartScreen will show “Windows protected your PC”: the
+> button to continue hides behind *More info*. Signing is under way, see below. Check the SHA-256
+> published next to the file.
 
-## Statut
+## Status
 
-**Application complète, moteur éprouvé.** Les spikes de risque sont passés (`docs/13`) :
-l'injection scancode est validée dans le jeu, les 627 bindings réels de Star Citizen 4.9 sont
-importés, et le pipeline `énoncé → intention → garde → binding → entrées` tourne de bout en bout.
+**The application is complete and the engine has been put to work.** The risk spikes are behind
+us (`docs/13`): scancode injection is proven inside the game, the 627 real Star Citizen 4.9
+bindings are imported, and the `utterance → intent → guard → binding → input` pipeline runs end
+to end.
 
-L'application de bureau couvre l'écoute, le catalogue, les touches, les macros, les réglages et
-ce qu'Optimus n'a pas compris. Un banc d'essai en ligne de commande double le tout, sans micro,
-sans clavier et sans le jeu.
+The desktop application covers listening, the catalogue, key bindings, macros, settings, and what
+Optimus failed to understand. A command-line test bench doubles all of it, with no microphone, no
+keyboard and no game.
 
 ```bash
-dotnet run --project tools/Optimus.Cli -- "Optimus, allume les lumieres"
+dotnet run --project tools/Optimus.Cli -- "Optimus, lights on"
 ```
 
 ```
 trace f06bb79f · Simulated · 13.5 ms
-  énoncé      « Optimus allume les lumieres »
-  normalisé   « allume les lumieres »
+  utterance   « Optimus lights on »
+  normalised  « lights on »
   intent      ship.lights.toggle  score 1.00  (Exact)
-  garde       Allowed
-  étape 0     lights_controller/v_lights → L
+  guard       Allowed
+  step 0      lights_controller/v_lights → L
 ```
 
-Sans argument, le programme passe en mode interactif ; `?` liste les commandes et leurs touches,
-`--status` détaille la détection du jeu. `dotnet test` exécute la suite contre les données réelles
-du dépôt.
+With no argument the program goes interactive; `?` lists the commands and their keys, `--status`
+details game detection. `dotnet test` runs the suite against the repository's real data.
 
-**La simulation est le mode par défaut** : aucune touche ne part tant que `--real` n'est pas
-demandé explicitement. Le mode réel exige que Star Citizen soit lancé, au premier plan, et refuse
-de démarrer si le jeu est élevé alors qu'Optimus ne l'est pas — Windows filtrerait les entrées
-sans rien dire.
+**Simulation is the default mode**: not one key leaves the machine until `--real` is asked for
+explicitly. Real mode requires Star Citizen to be running and in the foreground, and refuses to
+start if the game is elevated while Optimus is not — Windows would silently filter the input.
 
 ```bash
-dotnet run --project tools/Optimus.Cli -- --real "Optimus, allume les lumieres"
+dotnet run --project tools/Optimus.Cli -- --real "Optimus, lights on"
 ```
 
-## Parler à Optimus
+## Talking to Optimus
 
 ```bash
 dotnet run --project tools/Optimus.Cli -- --listen
 ```
 
-Optimus écoute, reconnaît la commande, l'exécute et répond à voix haute.
+Optimus listens, recognises the command, runs it, and answers out loud.
 
-Deux modes, réglés dans [`data/profiles/default.json`](data/profiles/default.json) :
+Two modes, set in [`data/profiles/default.json`](data/profiles/default.json):
 
-| Mode | Déclenchement | Grammaire |
+| Mode | Trigger | Grammar |
 |---|---|---|
-| `always_on` *(défaut)* | le mot d'éveil | uniquement `Optimus <commande>` |
-| `push_to_talk` | une touche configurable | les deux formes, désactivée hors appui |
+| `always_on` *(default)* | the wake word | only `Optimus <command>` |
+| `push_to_talk` | a key you choose | both forms, disabled while the key is up |
 
-En écoute permanente, la grammaire n'accepte que les phrases commençant par « Optimus » :
-une conversation ordinaire ne correspond à aucune alternative et n'est pas même transcrite.
+While always listening, the grammar only accepts sentences that begin with “Optimus”: ordinary
+conversation matches no alternative and is not even transcribed.
 
 ## Architecture
 
-| Projet | Cible | Rôle |
+| Project | Target | Role |
 |---|---|---|
-| `Optimus.Core` | `net8.0` **neutre** | Domaine, intentions, exécution, simulation. Aucune API système : testable partout. |
-| `Optimus.Infrastructure` | `net8.0-windows` | `SendInput` en scancodes, table de touches, détection du jeu. |
-| `Optimus.Cli` | `net8.0-windows` | Banc d'essai du moteur. |
+| `Optimus.Core` | `net8.0`, **platform-neutral** | Domain, intents, execution, simulation. No system API: testable anywhere. |
+| `Optimus.Infrastructure` | `net8.0-windows` | `SendInput` in scancodes, key table, game detection. |
+| `Optimus.Cli` | `net8.0-windows` | Engine test bench. |
 
-## Principes
+## Principles
 
-- **Local d'abord** : fonctionne hors ligne, sans compte, sans coût d'API.
-- **Zéro keybind en dur** : les touches sont importées de Star Citizen et éditables.
-- **L'IA propose, le moteur dispose** : le LLM ne peut émettre qu'un intent d'une liste blanche.
-- **Isolation par machine** : une commande n'agit que sur le PC qui l'a reçue.
-- **Autonome** : aucune dépendance à VoiceAttack.
-- **Un copilote est une donnée** : personnalité, voix, capacités et commandes sont des fichiers.
+- **Local first**: works offline, with no account and no API bill.
+- **No hard-coded key bindings**: keys are imported from Star Citizen and editable.
+- **The AI proposes, the engine disposes**: the LLM can only emit an intent from a whitelist.
+- **Isolation per machine**: a command only acts on the PC that received it.
+- **Self-contained**: no dependency on VoiceAttack.
+- **A copilot is data**: character, voice, abilities and commands are files.
 
-## Ce qu'Optimus ne fera pas
+## What Optimus will not do
 
-Pas d'automatisation continue du gameplay (visée, farming, macros en boucle), pas de contrôle
-d'une machine tierce, pas de télémétrie sans consentement. Un énoncé vocal = une action
-délibérée du joueur.
+No continuous gameplay automation (aiming, farming, looping macros), no control of someone else's
+machine, no telemetry without consent. One spoken utterance means one deliberate action by the
+player.
 
 ## Documentation
 
-Voir [docs/00-INDEX.md](docs/00-INDEX.md) — l'analyse, l'architecture, la stack, les modèles de
-données, le moteur de commandes, la personnalité, le pipeline vocal, l'interface, la roadmap, les
-risques et les décisions.
+See [docs/00-INDEX.md](docs/00-INDEX.md) — the analysis, the architecture, the stack, the data
+models, the command engine, the character system, the voice pipeline, the interface, the roadmap,
+the risks and the decisions.
 
-## Signature de code
+## Code signing
 
-Les binaires publiés seront signés par la [SignPath Foundation](https://signpath.org), qui offre
-ce service aux projets libres. La **politique de signature** — qui signe, ce qui est signé, ce qui
-ne l'est jamais — vit dans [docs/15](docs/15-signature-de-code.md).
+Published binaries will be signed by the [SignPath Foundation](https://signpath.org), which
+offers this service to open source projects. The **code signing policy** — who signs, what is
+signed, what is never signed — lives in [docs/15](docs/15-code-signing.md).
 
-Rien n'est signé depuis un poste de développement : seule la [chaîne de
-compilation](.github/workflows/release.yml), déclenchée par un tag de ce dépôt, peut soumettre un
-artefact à la signature.
+Nothing is signed from a development machine: only the [build
+pipeline](.github/workflows/release.yml), triggered by a tag on this repository, can submit an
+artefact for signing.
 
 ## Licence
 
-[GNU General Public License v3.0](LICENSE). Tu peux utiliser, étudier, modifier et redistribuer
-Optimus ; toute version redistribuée doit rester libre sous la même licence.
+[GNU General Public License v3.0](LICENSE). You may use, study, modify and redistribute Optimus;
+any redistributed version must stay free under the same licence.
 
-Les composants facultatifs téléchargés à l'installation ne sont ni recompilés ni redistribués par
-ce dépôt, et gardent leur propre licence : [Piper](https://github.com/rhasspy/piper) (MIT),
-[whisper.cpp](https://github.com/ggml-org/whisper.cpp) (MIT) et leurs modèles.
+The optional components downloaded at install time are neither rebuilt nor redistributed by this
+repository, and keep their own licences: [Piper](https://github.com/rhasspy/piper) (MIT),
+[whisper.cpp](https://github.com/ggml-org/whisper.cpp) (MIT) and their models.
 
 ---
 
-*Optimus est un projet indépendant, sans lien avec Cloud Imperium Games. Star Citizen est une
-marque de Cloud Imperium Rights LLC. Aucun fichier du jeu n'est redistribué ici : Optimus lit les
-raccourcis que tu exportes toi-même depuis le jeu.*
+*Optimus is an independent project, unaffiliated with Cloud Imperium Games. Star Citizen is a
+trademark of Cloud Imperium Rights LLC. No game file is redistributed here: Optimus reads the key
+bindings you export yourself from the game.*
