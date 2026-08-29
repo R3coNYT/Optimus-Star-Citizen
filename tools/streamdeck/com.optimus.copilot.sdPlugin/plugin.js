@@ -41,6 +41,20 @@ let state = { listening: null, kill_switch: null, simulation: null };
 /** Les touches actuellement visibles, par contexte. */
 const visible = new Map();
 
+/**
+ * Ce que chaque touche « executer » croit avoir fait, par contexte.
+ *
+ * Optimus ne sait pas si vos portes sont ouvertes : le jeu ne remonte rien. Il
+ * ne connait que les commutations qu'il a lui-meme provoquees, et le plugin ne
+ * peut pas en savoir plus que lui. Cette memoire vaut donc pour ce qu'elle est
+ * - le dernier geste reussi depuis CETTE touche, et rien d'autre.
+ *
+ * C'est deja utile : une touche « portes » qui montre le sens de son prochain
+ * appui vaut mieux qu'une touche muette. Ce serait mentir que de l'appeler
+ * l'etat du vaisseau, et le panneau de reglages le dit au pilote.
+ */
+const believed = new Map();
+
 /** Relance de la liaison Optimus, en secondes, plafonnee. */
 let backoff = 1;
 
@@ -66,11 +80,12 @@ function connectElgatoStreamDeckSocket(port, uuid, registerEvent, info) {
 
       case 'willAppear':
         visible.set(data.context, data);
-        paint(data.context, data.action);
+        paint(data.context, data.action, (data.payload && data.payload.settings) || {});
         break;
 
       case 'willDisappear':
         visible.delete(data.context);
+        believed.delete(data.context);
         break;
 
       case 'keyDown':
@@ -225,6 +240,20 @@ async function press(data) {
       if (result.status === 'executed' || result.status === 'simulated'
           || result.status === 'answered' || result.status === 'nochangeneeded') {
         ok(data.context);
+
+        // Le SENS DEMANDE decide, pas le sens obtenu : « allume » laisse la touche
+        // sur allume meme si c'etait deja le cas, et une bascule inverse ce qu'on
+        // croyait. Se fier au resultat serait plus fragile - « nochangeneeded »
+        // ne dit pas dans quel sens rien n'a change.
+        if (own.polarity === 'on') {
+          believed.set(data.context, true);
+        } else if (own.polarity === 'off') {
+          believed.set(data.context, false);
+        } else {
+          believed.set(data.context, !believed.get(data.context));
+        }
+
+        paint(data.context, action, own);
       } else {
         alert(data.context);
       }
@@ -243,10 +272,11 @@ async function press(data) {
 }
 
 function repaint() {
-  visible.forEach((data, context) => paint(context, data.action));
+  visible.forEach((data, context) =>
+    paint(context, data.action, (data.payload && data.payload.settings) || {}));
 }
 
-function paint(context, action) {
+function paint(context, action, own) {
   switch (action) {
     case 'com.optimus.copilot.listening':
       setState(context, state.listening ? 1 : 0);
@@ -258,6 +288,15 @@ function paint(context, action) {
 
     case 'com.optimus.copilot.simulation':
       setState(context, state.simulation ? 1 : 0);
+      return;
+
+    case 'com.optimus.copilot.command':
+      // Une commande a sens unique n'a rien a montrer d'autre que son etat de
+      // repos : basculer l'image d'un « leurre » ou d'un « nettoie la visiere »
+      // ferait croire a un etat qui n'existe pas.
+      if (own && (own.polarity === 'on' || own.polarity === 'off' || believed.has(context))) {
+        setState(context, believed.get(context) ? 1 : 0);
+      }
       return;
   }
 }

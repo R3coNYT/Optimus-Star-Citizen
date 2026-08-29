@@ -104,21 +104,38 @@ $alert = @(
     @(0.55, 0.08, 0.08)
 )
 
-Write-Host '==> Categorie' -ForegroundColor Cyan
+# Chaque nom sort du manifeste : une image manquante ne fait pas echouer le
+# chargement du plugin, elle donne une touche noire, ce qui se cherche longtemps.
+# Ces fichiers sont des SUPPLEANTS - ils tiennent la place jusqu'a ce que le
+# pilote pose les siens, au meme nom.
+
+Write-Host '==> Categorie  (28 / 56)' -ForegroundColor Cyan
 New-Icon -Size 28  -Name 'category.png'
 New-Icon -Size 56  -Name 'category@2x.png'
 
-Write-Host '==> Actions' -ForegroundColor Cyan
-New-Icon -Size 20  -Name 'action.png'
-New-Icon -Size 40  -Name 'action@2x.png'
+Write-Host '==> Vignettes des actions  (20 / 40)' -ForegroundColor Cyan
+foreach ($name in @('action-mic', 'action-stop', 'action-sim', 'action-command', 'action-speak')) {
+    New-Icon -Size 20 -Name "$name.png"
+    New-Icon -Size 40 -Name "$name@2x.png"
+}
 
-Write-Host '==> Touches' -ForegroundColor Cyan
-New-Icon -Size 72  -Name 'key-on.png'
-New-Icon -Size 144 -Name 'key-on@2x.png'
-New-Icon -Size 72  -Name 'key-off.png'     -Matrix $dim
-New-Icon -Size 144 -Name 'key-off@2x.png'  -Matrix $dim
-New-Icon -Size 72  -Name 'key-alert.png'   -Matrix $alert
-New-Icon -Size 144 -Name 'key-alert@2x.png' -Matrix $alert
+Write-Host '==> Touches  (72 / 144)' -ForegroundColor Cyan
+
+# Les etats « allume » gardent le logo entier ; les « eteint » sont attenues.
+foreach ($name in @('mic-on', 'sim-on', 'command-on', 'speak')) {
+    New-Icon -Size 72  -Name "$name.png"
+    New-Icon -Size 144 -Name "$name@2x.png"
+}
+
+foreach ($name in @('mic-off', 'stop-off', 'sim-off', 'command-off')) {
+    New-Icon -Size 72  -Name "$name.png"     -Matrix $dim
+    New-Icon -Size 144 -Name "$name@2x.png"  -Matrix $dim
+}
+
+# L'arret d'urgence engage est le seul rouge : c'est le seul etat qu'on doit
+# reconnaitre du coin de l'oeil, sans lire.
+New-Icon -Size 72  -Name 'stop-on.png'    -Matrix $alert
+New-Icon -Size 144 -Name 'stop-on@2x.png' -Matrix $alert
 
 $logo.Dispose()
 
