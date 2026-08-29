@@ -10,12 +10,28 @@ voix → STT local → intent → validation → binding local → clavier local
                         LLM optionnel (jamais requis, jamais aux commandes)
 ```
 
+## Installation
+
+Prends l'installateur dans [les versions publiées](../../releases) et lance-le. Installation par
+utilisateur, sans droits administrateur, dans `%LOCALAPPDATA%\Programs\Optimus`.
+
+Une page de l'assistant propose les composants facultatifs — voix neuronales et parole libre —
+qui se téléchargent alors, chacun vérifié par son empreinte. Sans eux, Optimus fonctionne
+entièrement : voix Windows et grammaire fermée.
+
+> **L'installateur n'est pas encore signé.** SmartScreen affichera « Windows a protégé votre
+> ordinateur » : le bouton pour continuer se cache derrière *Informations complémentaires*. La
+> signature est en cours, voir plus bas. Vérifie l'empreinte SHA-256 publiée à côté du fichier.
+
 ## Statut
 
-**Moteur en cours, exécutable en simulation.** Les spikes de risque sont passés (`docs/13`) :
+**Application complète, moteur éprouvé.** Les spikes de risque sont passés (`docs/13`) :
 l'injection scancode est validée dans le jeu, les 627 bindings réels de Star Citizen 4.9 sont
-importés, et le pipeline `énoncé → intention → garde → binding → entrées` tourne de bout en bout
-sans micro, sans clavier et sans le jeu.
+importés, et le pipeline `énoncé → intention → garde → binding → entrées` tourne de bout en bout.
+
+L'application de bureau couvre l'écoute, le catalogue, les touches, les macros, les réglages et
+ce qu'Optimus n'a pas compris. Un banc d'essai en ligne de commande double le tout, sans micro,
+sans clavier et sans le jeu.
 
 ```bash
 dotnet run --project tools/Optimus.Cli -- "Optimus, allume les lumieres"
@@ -86,6 +102,31 @@ délibérée du joueur.
 
 ## Documentation
 
-Voir [docs/00-INDEX.md](docs/00-INDEX.md) — 14 documents couvrant l'analyse, l'architecture, la
-stack, les modèles de données, le moteur de commandes, la personnalité, le pipeline vocal,
-l'interface, la roadmap, les risques et la structure du projet.
+Voir [docs/00-INDEX.md](docs/00-INDEX.md) — l'analyse, l'architecture, la stack, les modèles de
+données, le moteur de commandes, la personnalité, le pipeline vocal, l'interface, la roadmap, les
+risques et les décisions.
+
+## Signature de code
+
+Les binaires publiés seront signés par la [SignPath Foundation](https://signpath.org), qui offre
+ce service aux projets libres. La **politique de signature** — qui signe, ce qui est signé, ce qui
+ne l'est jamais — vit dans [docs/14](docs/14-signature-de-code.md).
+
+Rien n'est signé depuis un poste de développement : seule la [chaîne de
+compilation](.github/workflows/release.yml), déclenchée par un tag de ce dépôt, peut soumettre un
+artefact à la signature.
+
+## Licence
+
+[GNU General Public License v3.0](LICENSE). Tu peux utiliser, étudier, modifier et redistribuer
+Optimus ; toute version redistribuée doit rester libre sous la même licence.
+
+Les composants facultatifs téléchargés à l'installation ne sont ni recompilés ni redistribués par
+ce dépôt, et gardent leur propre licence : [Piper](https://github.com/rhasspy/piper) (MIT),
+[whisper.cpp](https://github.com/ggml-org/whisper.cpp) (MIT) et leurs modèles.
+
+---
+
+*Optimus est un projet indépendant, sans lien avec Cloud Imperium Games. Star Citizen est une
+marque de Cloud Imperium Rights LLC. Aucun fichier du jeu n'est redistribué ici : Optimus lit les
+raccourcis que tu exportes toi-même depuis le jeu.*

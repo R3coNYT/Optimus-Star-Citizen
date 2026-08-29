@@ -19,6 +19,7 @@ Copilote vocal IA pour Star Citizen. Application Windows locale, autonome, exten
 | [11 — Roadmap](11-roadmap.md) | Phases 10–12 | MVP v0.1 (périmètre, définition de terminé, planning), V1, V2, non-objectifs |
 | [12 — API / Discord / Plugins](12-api-discord-plugins.md) | transverse | API locale, stratégie Discord et isolation, modèle de plugins, multi-copilotes, packs |
 | [13 — Risques, tests, décisions](13-risques-tests-decisions.md) | transverse | Registre des risques, spikes préalables, stratégie de tests, 18 décisions, points à trancher |
+| [14 — Signature de code](14-signature-de-code.md) | transverse | Conditions de la SignPath Foundation, chaîne de compilation, politique de signature, ce qu'il reste à faire |
 | [14 — Structure du projet](14-structure-projet.md) | Phase 77 | Arborescence de la solution, graphe de dépendances, conventions |
 
 ## Les dix règles non négociables

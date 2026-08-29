@@ -35,12 +35,12 @@ Relevé sur [signpath.org/terms.html](https://signpath.org/terms.html) le 2026-0
 | Condition | Où en est Optimus |
 |---|---|
 | Pas de logiciel malveillant | ✅ |
-| **Licence libre approuvée par l'OSI**, sans double licence commerciale | ❌ **aucune licence** |
+| **Licence libre approuvée par l'OSI**, sans double licence commerciale | ✅ GPL-3.0, choisie le 2026-08-29 |
 | Aucun composant propriétaire | ✅ Piper et whisper.cpp sont sous MIT, téléchargés et non embarqués |
 | Projet activement maintenu | ✅ |
-| **Base de code publiquement accessible** | ❌ **le dépôt est privé** |
+| **Base de code publiquement accessible** | ⚠️ décidé le 2026-08-29, reste à basculer |
 | **Déjà publié sous la forme à signer** | ❌ aucune publication publique |
-| Fonctionnement décrit sur la page de téléchargement | ⚠️ le README existe, il faudra une page de publication |
+| Fonctionnement décrit sur la page de téléchargement | ✅ README refait pour ça le 2026-08-29 |
 | L'équipe qui signe est celle qui développe, et possède le dépôt | ✅ |
 | Ne signer que ce qu'on a compilé soi-même | ✅ |
 | **Double authentification** pour tous les contributeurs | ⚠️ à vérifier sur le compte GitHub |
@@ -48,9 +48,13 @@ Relevé sur [signpath.org/terms.html](https://signpath.org/terms.html) le 2026-0
 | **Politique de signature publiée** sur la page d'accueil du projet | ✅ voir plus bas |
 | Compilations automatisées et vérifiables | ✅ `.github/workflows/release.yml` |
 
-**Trois manques, et ils tiennent tous à une seule décision** : rendre le dépôt public sous une
-licence libre. C'est un choix du pilote, pas une étape technique — il engage ce qu'il pourra faire
-du code ensuite, et il expose le code à qui veut le lire.
+**Décision du pilote, le 2026-08-29 : dépôt public sous GPL-3.0.** Le copyleft a été préféré aux
+licences permissives pour une raison précise — il empêche qu'on reprenne Optimus pour en faire un
+produit fermé et payant, sans rien contraindre à qui l'utilise simplement. À noter : la fondation
+interdisant la double licence commerciale, cette voie est fermée pour de bon, et c'est assumé.
+
+Il ne reste donc qu'un geste : **basculer le dépôt en public**, une fois la licence et le README
+en place — ce qui est fait.
 
 ## La chaîne de compilation
 
@@ -121,14 +125,15 @@ personnes qui installent le logiciel.
 
 ## Ce qui reste à faire, dans l'ordre
 
-1. **Décider** de la licence et rendre le dépôt public. *Pilote.*
-2. Poser le fichier `LICENSE` et lier la politique ci-dessus depuis le README.
-3. Vérifier que la double authentification est active sur le compte GitHub.
-4. Publier une première version **non signée** par la chaîne, pour satisfaire « déjà publié sous
+1. ~~Décider de la licence.~~ **GPL-3.0**, le 2026-08-29.
+2. ~~Poser le fichier `LICENSE` et lier la politique depuis le README.~~ Fait.
+3. **Basculer le dépôt en public.** *Pilote.*
+4. Vérifier que la double authentification est active sur le compte GitHub. *Pilote.*
+5. Publier une première version **non signée** par la chaîne, pour satisfaire « déjà publié sous
    la forme à signer » et éprouver le pipeline.
-5. **Déposer la demande** sur signpath.org. *Pilote — je ne peux ni créer le compte ni signer la
+6. **Déposer la demande** sur signpath.org. *Pilote — je ne peux ni créer le compte ni signer la
    demande à sa place.* Délai annoncé : de quelques jours à quelques semaines.
-6. Une fois acceptée : renseigner le secret et les deux variables, créer les configurations
+7. Une fois acceptée : renseigner le secret et les deux variables, créer les configurations
    d'artefact, retagger.
-7. Vérifier sur une machine tierce que SmartScreen se tait et que Smart App Control laisse
+8. Vérifier sur une machine tierce que SmartScreen se tait et que Smart App Control laisse
    passer.
