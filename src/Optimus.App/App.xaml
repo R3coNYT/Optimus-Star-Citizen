@@ -699,5 +699,97 @@
       </Setter>
     </Style>
 
+
+    <!-- ==================================================================== menu du plateau
+
+         Le menu de la zone de notification est la SEULE partie d'Optimus que WPF dessine
+         hors de la fenetre. Sans style, il herite du gabarit clair de Windows tout en
+         gardant la couleur de texte du theme sombre : gris pale sur blanc, illisible.
+
+         Il ne peut pas non plus reprendre le style des cartes : un menu systeme se pose
+         par-dessus n'importe quoi, souvent au-dessus du jeu, et doit rester lisible sur
+         un fond qu'on ne choisit pas. D'ou un gris franc et opaque, plutot que le panneau
+         translucide de l'interface.
+    -->
+
+    <SolidColorBrush x:Key="MenuBg"    Color="#232B30" />
+    <SolidColorBrush x:Key="MenuLine"  Color="#3A464D" />
+    <SolidColorBrush x:Key="MenuText"  Color="#FFFFFF" />
+    <SolidColorBrush x:Key="MenuHover" Color="#33434B" />
+
+    <Style TargetType="ContextMenu">
+      <Setter Property="Background" Value="{StaticResource MenuBg}" />
+      <Setter Property="Foreground" Value="{StaticResource MenuText}" />
+      <Setter Property="FontFamily" Value="{StaticResource Face}" />
+      <Setter Property="FontSize" Value="13" />
+
+      <!-- L'ombre porte la transparence du popup : sans elle, les coins arrondis
+           laisseraient voir quatre carres blancs. -->
+      <Setter Property="HasDropShadow" Value="True" />
+
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="ContextMenu">
+            <Border Background="{TemplateBinding Background}"
+                    BorderBrush="{StaticResource MenuLine}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="4"
+                    SnapsToDevicePixels="True">
+              <Border.Effect>
+                <DropShadowEffect BlurRadius="12" ShadowDepth="2" Direction="270"
+                                  Color="#000000" Opacity="0.55" />
+              </Border.Effect>
+              <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle" />
+            </Border>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <Style TargetType="MenuItem">
+      <Setter Property="Foreground" Value="{StaticResource MenuText}" />
+      <Setter Property="FontFamily" Value="{StaticResource Face}" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="Padding" Value="14,7" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="MenuItem">
+            <Border x:Name="Fond" Background="Transparent" CornerRadius="5"
+                    Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
+              <ContentPresenter ContentSource="Header" RecognizesAccessKey="True"
+                                VerticalAlignment="Center" />
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsHighlighted" Value="True">
+                <Setter TargetName="Fond" Property="Background" Value="{StaticResource MenuHover}" />
+              </Trigger>
+
+              <!-- Une commande indisponible se voit, sans disparaitre : le pilote doit
+                   comprendre qu'elle existe et pourquoi elle ne repond pas. -->
+              <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Foreground" Value="{StaticResource TextMuted}" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <!-- Le separateur d'un menu a sa propre cle : le styler par TargetType toucherait
+         aussi ceux du reste de l'interface. -->
+    <Style x:Key="{x:Static MenuItem.SeparatorStyleKey}" TargetType="Separator">
+      <Setter Property="Height" Value="1" />
+      <Setter Property="Margin" Value="8,5" />
+      <Setter Property="Background" Value="{StaticResource MenuLine}" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Separator">
+            <Rectangle Height="1" Fill="{TemplateBinding Background}" />
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
   </Application.Resources>
 </Application>
